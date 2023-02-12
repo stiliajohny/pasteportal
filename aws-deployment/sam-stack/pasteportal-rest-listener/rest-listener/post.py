@@ -43,8 +43,11 @@ def post_request(event, context):
         body = event["body"]
         table = os.environ["TABLE_NAME"]
         json_body = json.loads(body)
-        if (("paste" not in json_body) or ("creator_gh_user" not in json_body)
-                or ("recipient_gh_username" not in json_body)):
+        if (
+            ("paste" not in json_body)
+            or ("creator_gh_user" not in json_body)
+            or ("recipient_gh_username" not in json_body)
+        ):
             return generate_response(
                 400,
                 "Missing required fields: paste, creator_gh_user, recipient_gh_username",
@@ -53,8 +56,8 @@ def post_request(event, context):
         creator_gh_user = json_body["creator_gh_user"]
         recipient_gh_username = json_body["recipient_gh_username"]
 
-        db_input(table, id, paste, timestamp, creator_gh_user,
-                 recipient_gh_username)
+        db_input(table, id, paste, timestamp,
+                 creator_gh_user, recipient_gh_username)
         message = {
             "message": "The paste was successfully inserted into the database",
             "id": str(id),
@@ -71,8 +74,7 @@ def post_request(event, context):
         return generate_response(500, str(e))
 
 
-def db_input(table_name, id, paste, timestamp, creator_gh_user,
-             recipient_gh_username):
+def db_input(table_name, id, paste, timestamp, creator_gh_user, recipient_gh_username):
     """
     Insert data into the DynamoDB table with the given id and timestamp or generate a random id and timestamp if none are provided.
     The function also validate the table name and handle specific exception if table not found,
@@ -111,21 +113,11 @@ def db_input(table_name, id, paste, timestamp, creator_gh_user,
         dynamodb_data = client.put_item(
             TableName=str(table_name),
             Item={
-                "id": {
-                    "S": str(id)
-                },
-                "timestamp": {
-                    "S": str(timestamp)
-                },
-                "creator_gh_user": {
-                    "S": str(creator_gh_user)
-                },
-                "recipient_gh_username": {
-                    "S": str(recipient_gh_username)
-                },
-                "paste": {
-                    "S": str(paste)
-                },
+                "id": {"S": str(id)},
+                "timestamp": {"S": str(timestamp)},
+                "creator_gh_user": {"S": str(creator_gh_user)},
+                "recipient_gh_username": {"S": str(recipient_gh_username)},
+                "paste": {"S": str(paste)},
             },
         )
         print("DynamoDB response: ", dynamodb_data)
@@ -136,8 +128,10 @@ def db_input(table_name, id, paste, timestamp, creator_gh_user,
             dynamodb_data["ResponseMetadata"]["HTTPStatusCode"],
         )
 
-        if ("ResponseMetadata" in dynamodb_data and
-                dynamodb_data["ResponseMetadata"]["HTTPStatusCode"] == 200):
+        if (
+            "ResponseMetadata" in dynamodb_data
+            and dynamodb_data["ResponseMetadata"]["HTTPStatusCode"] == 200
+        ):
             print("Record inserted successfully")
             return True
         else:
@@ -187,14 +181,13 @@ def check_data_size(data):
     if sys.getsizeof(data) > size_limit:
         print("Size is not within the limit" + str(sys.getsizeof(data)))
         return {
-            "statusCode":
-            500,
-            "body":
-            json.dumps({
-                "message":
-                "That was a big one. Try to send a smaller one just in case.",
-                "joke": generate_banter_comment(),
-            }),
+            "statusCode": 500,
+            "body": json.dumps(
+                {
+                    "message": "That was a big one. Try to send a smaller one just in case.",
+                    "joke": generate_banter_comment(),
+                }
+            ),
             "headers": {
                 "Content-Type": "application/json",
                 "Access-Control-Allow-Origin": "*",
