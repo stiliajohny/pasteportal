@@ -1,7 +1,7 @@
-name: sam-deploy
+name: sam-validate-pr
 
 on:
-  push:
+  pull_request:
     branches:
       - master
     paths:
@@ -22,11 +22,3 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         with:
           cmd: "sam validate -t aws-deployment/sam-stack/pasteportal-rest-listener/template.yaml"
-      - name: sam deploy
-        uses: tkt-actions/aws-sam-cli@v1
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-        with:
-          cmd: "sam deploy --template-file aws-deployment/sam-stack/pasteportal-rest-listener/template.yaml"
