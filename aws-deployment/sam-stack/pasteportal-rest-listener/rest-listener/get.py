@@ -38,19 +38,15 @@ def get_request(event, context):
     body = event
     queryStringParameters = body["queryStringParameters"]
     queryStringParameters = {
-        k.lower(): v
-        for k, v in queryStringParameters.items()
-    }
+        k.lower(): v for k, v in queryStringParameters.items()}
     first_queryStringParameters_key = list(queryStringParameters.keys())[0]
     table_name = os.environ["TABLE_NAME"]
     # if the table name is not configured return a 500 with a message
 
     # check if the first key is data and if the length of the dictionary is 1 if is not return a 400 with a message
-    if first_queryStringParameters_key != "id" or len(
-            queryStringParameters) != 1:
+    if first_queryStringParameters_key != "id" or len(queryStringParameters) != 1:
         message = {
-            "message":
-            "The paste was unsuccessfully retrived from the database. Parameter is not correct",
+            "message": "The paste was unsuccessfully retrived from the database. Parameter is not correct",
             "joke": generate_banter_comment(),
         }
         logger.info(message)
@@ -62,8 +58,7 @@ def get_request(event, context):
         # alternatively you can return a 200 with a message that says the paste was not found
         if returned_data is None:
             message = {
-                "message":
-                "The paste was unsuccessfully retrived from the database",
+                "message": "The paste was unsuccessfully retrived from the database",
                 "id": "Not Found",
                 "joke": generate_banter_comment(),
             }
@@ -78,8 +73,7 @@ def get_request(event, context):
             recipient_gh_username = returned_data["recipient_gh_username"]
 
             message = {
-                "message":
-                "The paste was successfully retrived from the database",
+                "message": "The paste was successfully retrived from the database",
                 "id": str(id),
                 "paste": str(paste),
                 "joke": generate_banter_comment(),
@@ -102,10 +96,8 @@ def db_output(table_name, id):
     """
     try:
         client = boto3.client("dynamodb")
-        response = client.get_item(TableName=table_name,
-                                   Key={"id": {
-                                       "S": str(id)
-                                   }})
+        response = client.get_item(TableName=table_name, Key={
+                                   "id": {"S": str(id)}})
         # Check if the response was successful
         if "Item" not in response:
             raise ValueError("No item found for the provided id.")
