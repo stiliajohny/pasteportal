@@ -54,6 +54,8 @@
   cursor: pointer;
   margin: 0;
   padding: 0;
+  color: var(--text);
+  size-adjust: 100%;
 }
 
 /* make the toggle icon to rotate when the mouse hovers  */
