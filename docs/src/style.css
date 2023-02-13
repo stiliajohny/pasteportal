@@ -8,17 +8,30 @@
   --text: #BDBEBF;
 }
 
-
-
 .wrapper {
   display: flexbox;
   margin: 0;
   padding: 0;
   background-color: var(--background);
+  height: 100vh;
 }
 
 .side-panel {
   width: 48px;
+  height: 100vh;
+  background-color: var(--side-panel-background);
+  transition: width 0.3s;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden
+}
+
+.side-panel.open {
+  width: 250px;
   height: 100vh;
   background-color: var(--side-panel-background);
   transition: width 0.3s;
@@ -29,10 +42,7 @@
   right: 0;
   margin: 0;
   padding: 0;
-}
 
-.side-panel.open {
-  width: 250px;
 }
 
 .toggle-icon {
@@ -104,7 +114,6 @@
   display: none;
   position: absolute;
   left: 60px;
-  /* font-size: 14px; */
   margin: 0;
   padding: 0;
 }
@@ -114,30 +123,39 @@
 }
 
 .textarea {
-  width: calc(100% - 70px);
+  width: 100vw;
   height: 100vh;
-  margin-left: 60px;
+  margin-left: 50px;
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-right: 0;
   transition: all 0.3s ease-in-out;
   color: var(--text);
-  margin-top: 10px;
-  margin-bottom: 40px;
   border: none;
   background-color: var(--background);
   padding: 10px;
-  font-size: 16px;
-  font-family: "Roboto", sans-serif;
+  font-size: 1em;
+  display: flex;
+  flex-direction: row;
 
 }
 
 .textarea.open {
+  width: calc(100vw - 250px);
+  height: auto;
   margin-left: 250px;
-  width: calc(100% - 260px);
-  height: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+  transition: all 0.3s ease-in-out;
+  color: var(--text);
+  border: none;
+  background-color: var(--background);
+  padding: 10px;
+  font-size: 16px;
 
 }
 
 
-/* Style for the notification window */
 .notification-window-success {
   position: absolute;
   top: 50%;
@@ -145,7 +163,7 @@
   width: 300px;
   height: 60px;
   background-color: var(--background);
-  border: 1px solid var(--positive-highlight);
+  border: 4px double var(--positive-highlight);
   color: var(--text);
   border-radius: 5px;
   display: flex;
@@ -162,7 +180,7 @@
   width: 300px;
   height: 60px;
   background-color: #444654;
-  border: 1px solid #D9307F;
+  border: 4px double #D9307F;
   border-radius: 5px;
   display: flex;
   justify-content: center;
@@ -182,6 +200,6 @@
 
 
   .textarea {
-    margin-left: 60px;
+    margin-left: 50px;
   }
 }
