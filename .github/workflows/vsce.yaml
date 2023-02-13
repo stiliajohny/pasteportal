@@ -17,7 +17,9 @@ jobs:
         with:
           node-version: 16
       # - run: npm ci on a specific folder
-      - run: npm ci --prefix ./vscode-extension
+      - run: |
+          cd vscode-extension
+          npm ci --prefix ./vscode-extension
 
       # - name: Publish to Visual Studio Marketplace
       #   uses: HaaLeo/publish-vscode-extension@v1
