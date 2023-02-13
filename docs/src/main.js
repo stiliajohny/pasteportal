@@ -39,6 +39,9 @@ https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal
 const sidePanel = document.querySelector('.side-panel');
 const text_Area = document.getElementById("text-area");
 const toggleIcon = document.querySelector('.toggle-icon');
+var modal = document.getElementById("myModal");
+var btn = document.getElementById("getPaste");
+var span = document.getElementsByClassName("close")[0];
 
 
 // Add event listener to toggle icon
@@ -133,8 +136,11 @@ async function notificationWindowError(text) {
 }
 
 
-async function getResponse() {
+
+
+async function getResponse(id) {
   console.log("getResponse() called");
+  id = id || searchParams.get('id');
   try {
     randonLoadingJoke().then(joke => {
       document.getElementById("text-area").value = joke;
@@ -166,3 +172,37 @@ async function getResponse() {
     console.error("There has been a problem with your fetch operation:", error);
   }
 }
+
+var modal = document.getElementById("myModal");
+var btn = document.getElementById("getPaste");
+var span = document.getElementsByClassName("close")[0];
+var submitPasteIdBtn = document.getElementById("submitPasteId");
+
+// Hide the modal when the page loads
+modal.style.display = "none";
+
+// When the user clicks the button, open the modal
+btn.onclick = function () {
+  modal.style.display = "block";
+}
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function () {
+  modal.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function (event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+submitPasteIdBtn.addEventListener("click", function () {
+  var pasteId = document.getElementById("pasteId").value;
+  console.log(pasteId);
+  // clear the text area
+  document.getElementById("pasteId").value = "";
+  modal.style.display = "none"
+  getResponse(pasteId);
+});
