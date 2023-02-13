@@ -87,37 +87,38 @@ function decrypt(password, encryptedText) {
 
 function getPasteId(text) {
   /**
-   * Extract the id from the url
+   * Get the paste id from the text
    * @param {string} text
    * @returns {string}
    * @throws {TypeError}
    * @throws {Error}
+   * @throws {null}
+   * @throws {string}
+   *
+   * @example
+   * getPasteId('http://pasteportal.info/?id=123456') // returns '123456'
+   * getPasteId('123456') // returns '123456'
    */
-
-  const urlRegex = /(?:https:\/\/pasteportal\.info\/\?id=)([a-zA-Z0-9]+)/;
-  const idRegex = /[a-zA-Z0-9]{6}/;
-  console.log(text);
-
-
-  const urlMatch = text.match(urlRegex);
-  console.log(urlMatch);
-
   try {
-    if (typeof text !== 'string') throw new TypeError('Text must be a string');
-    if (text.length < 1) throw new Error('Text cannot be empty');
-
-    if (urlMatch) {
-      return urlMatch[1];
-    } else if (idRegex.test(text)) {
-      return text;
+    if (typeof text !== 'string' || !text) {
+      throw new Error('Input must be a non-empty string.');
     }
 
+    const idRegex = /^(?:http:\/\/|https:\/\/)pasteportal\.info\/?\?id=([a-fA-F0-9]{6})$/;
+    const match = text.match(idRegex);
+
+    if (match) {
+      return match[1];
+    } else if (/^[a-fA-F0-9]{6}$/.test(text)) {
+      return text;
+    } else {
+      throw new Error('Invalid id or URL format');
+    }
   } catch (error) {
-    vscode.window.showErrorMessage(error);
-    console.error(error);
-    throw error;
+    return null;
   }
 }
+
 
 function multiLineClipboard(id, password) {
   /**
