@@ -64,18 +64,24 @@
 }
 
 .toggle-icon i {
-  /* font-size: 24px; */
+  font-size: 24px;
   transition: transform 1s;
+  /* HOVER OFF */
 }
 
 .toggle-icon i:hover {
-  transform: rotate(360deg);
+  transform: rotate(999deg);
+
 }
+
+
 
 /* Change color after click */
 .toggle-icon i:active {
   color: var(--negative-highlight);
 }
+
+
 
 .nav {
   display: flex;
@@ -88,6 +94,7 @@
   align-items: center;
   justify-content: flex-start;
   padding: 1px 10px;
+
 }
 
 .nav-item {
@@ -124,6 +131,13 @@
   display: block;
 }
 
+.textarea-container {
+  z-index: 999;
+  /* position: absolute; */
+
+
+}
+
 .textarea {
   width: 100vw;
   height: 100vh;
@@ -144,7 +158,7 @@
 
 .textarea.open {
   width: calc(100vw - 250px);
-  height: auto;
+  height: 100vh;
   margin-left: 250px;
   margin-top: 0;
   margin-bottom: 0;
@@ -153,8 +167,7 @@
   border: none;
   background-color: var(--background);
   padding: 10px;
-  font-size: 16px;
-
+  font-size: 1em;
 }
 
 
@@ -189,6 +202,59 @@
   align-items: center;
   box-shadow: 0px 0px 3px 0px #0A0B0D;
   z-index: 1000;
+}
+
+a .modal {
+  display: none;
+  /* Hidden by default */
+  position: relative;
+  /* Stay in place */
+  z-index: 1001;
+  /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%;
+  /* Full width */
+  height: 100%;
+  /* Full height */
+  overflow: auto;
+  /* Enable scroll if needed */
+  background-color: rgb(255, 0, 0);
+  /* Fallback color */
+  background-color: rgba(0, 0, 0, 0.4);
+  /* Black w/ opacity */
+}
+
+.modal-content {
+  background-color: var(--side-panel-background);
+  color: var(--text);
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid var(--positive-highlight);
+  width: 20%;
+  align-items: center;
+  z-index: 1000;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.unavailableButton {
+  color: rgba(65, 65, 65, 0.46);
 }
 
 @media (max-width: 720px) {
