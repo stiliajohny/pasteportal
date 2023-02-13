@@ -4,6 +4,9 @@ on:
     tags:
       - "*"
   workflow_dispatch:
+  pull_request:
+    branches:
+      - "*"
 
 jobs:
   deploy:
@@ -16,9 +19,9 @@ jobs:
       # - run: npm ci on a specific folder
       - run: npm ci --prefix ./vscode-extension
 
-      - name: Publish to Visual Studio Marketplace
-        uses: HaaLeo/publish-vscode-extension@v1
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
-          packagePath: ./vscode-extension/
+      # - name: Publish to Visual Studio Marketplace
+      #   uses: HaaLeo/publish-vscode-extension@v1
+      #   with:
+      #     pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+      #     registryUrl: https://marketplace.visualstudio.com
+      #     packagePath: ./vscode-extension/
