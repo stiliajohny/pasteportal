@@ -4,7 +4,7 @@ const crypto = require('crypto');
 
 axios.defaults.headers.common['x-api-key'] = 'qVP1XsKWJF2vud7zo1jzS6BQ22xy4xXH4DY634py';
 const api_endpoint = 'https://api.pasteportal.info';
-const tos_link = "[Terms of Service](https://github.com/stiliajohny/vscode-ext-pasteportal/blob/master/TOS.md)";
+const tos_link = "[Terms of Service](https://github.com/stiliajohny/pasteportal/blob/master/vscode-extension/TOS.md)";
 const passwordLengthMin = 8;
 const passwordLengthMax = 30;
 

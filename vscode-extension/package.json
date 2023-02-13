@@ -140,14 +140,14 @@
     "viewsWelcome": [
       {
         "view": "package-welcome",
-        "contents": "PastePortal is a text sharing extension for developers.\nIt eliminates traditional copy-paste method, making it easy to share context without any additional complexity.\nCheck our [ToS](https://github.com/stiliajohny/vscode-ext-pasteportal/blob/master/TOS.md) or find out [more](https://pasteportal.info) \n[Get Paste](command:pasteportal.get-paste)\n\n[Store Paste](command:pasteportal.store-paste)\n\n[🔒 Get Encrypted Paste](command:pasteportal.get-encrypted-paste)\n\n[🔒 Store Encrypted Paste](command:pasteportal.store-encrypted-paste) ",
+        "contents": "PastePortal is a text sharing extension for developers.\nIt eliminates traditional copy-paste method, making it easy to share context without any additional complexity.\nCheck our [ToS](https://github.com/stiliajohny/pasteportal/blob/master/vscode-extension/TOS.md) or find out [more](https://pasteportal.info) \n[Get Paste](command:pasteportal.get-paste)\n\n[Store Paste](command:pasteportal.store-paste)\n\n[🔒 Get Encrypted Paste](command:pasteportal.get-encrypted-paste)\n\n[🔒 Store Encrypted Paste](command:pasteportal.store-encrypted-paste) ",
         "when": "pasteportal.serviceAgreementAccepted == false"
       }
     ]
   },
   "repository": {
     "type": "https",
-    "url": "https://github.com/stiliajohny/vscode-ext-pasteportal.git"
+    "url": "https://github.com/stiliajohny/pasteportal"
   },
   "scripts": {
     "lint": "eslint .",
