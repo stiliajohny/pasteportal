@@ -83,7 +83,6 @@ function decrypt(password, encryptedText) {
     console.error(error);
     throw error;
   }
-
 }
 
 function getPasteId(text) {
@@ -95,13 +94,18 @@ function getPasteId(text) {
    * @throws {Error}
    */
 
-  const urlRegex = /https:\/\/pasteportal\.info\?id=([a-zA-Z0-9]+)/;
+  const urlRegex = /(?:https:\/\/pasteportal\.info\/\?id=)([a-zA-Z0-9]+)/;
   const idRegex = /[a-zA-Z0-9]{6}/;
+  console.log(text);
+
 
   const urlMatch = text.match(urlRegex);
-  if (typeof text !== 'string') throw new TypeError('Text must be a string');
-  if (text.length < 1) throw new Error('Text cannot be empty');
+  console.log(urlMatch);
+
   try {
+    if (typeof text !== 'string') throw new TypeError('Text must be a string');
+    if (text.length < 1) throw new Error('Text cannot be empty');
+
     if (urlMatch) {
       return urlMatch[1];
     } else if (idRegex.test(text)) {
@@ -222,7 +226,7 @@ function activate(context) {
       console.log('Paste ID: ', pasteId);
 
       if (!pasteId) throw new Error('Paste ID/URL cannot be empty');
-      console.log('Paste ID/URL is not empty');
+      console.log('Paste ID/URL is empty');
 
       const baseURL = `${api_endpoint}/get-paste?id=${pasteId}`;
       axios.get(baseURL)
