@@ -173,9 +173,6 @@ async function getResponse(id) {
   }
 }
 
-var modal = document.getElementById("myModal");
-var btn = document.getElementById("getPaste");
-var span = document.getElementsByClassName("close")[0];
 var submitPasteIdBtn = document.getElementById("submitPasteId");
 
 // Hide the modal when the page loads
