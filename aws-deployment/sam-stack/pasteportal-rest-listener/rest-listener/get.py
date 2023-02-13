@@ -147,11 +147,10 @@ def generate_response(status_code, message, data=None):
             "body": json.dumps({"response": message}),
             "headers": {
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "'127.0.0.1'",
-                "Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
-                "Access-Control-Allow-Methods": "'GET,OPTIONS'",
-                "Access-Control-Allow-Credentials": "'true'",
-                "Secret": "Writen by ChatGPT-3",
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                "Secret": "Writen by ChatGPT-3"
             },
         }
         return response
@@ -161,8 +160,10 @@ def generate_response(status_code, message, data=None):
             "body": json.dumps({"error": str(e)}),
             "headers": {
                 "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*",
-                "Secret": "Writen by ChatGPT-3",
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+                "Secret": "Writen by ChatGPT-3"
             },
         }
 
