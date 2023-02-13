@@ -1,0 +1,173 @@
+{
+  "name": "pasteportal",
+  "displayName": "PastePortal",
+  "author": "stiliajohny",
+  "license": "GPL-3.0",
+  "homepage": "https://pasteportal.info",
+  "publisher": "JohnStilia",
+  "description": "A text sharing tool for developers",
+  "icon": "resources/pasteportal_icon.png",
+  "version": "0.7.2",
+  "preview": true,
+  "sponsor": {
+    "url": "https://github.com/sponsors/stiliajohny"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "paste",
+    "portal",
+    "share",
+    "text",
+    "code",
+    "snippet",
+    "pasteportal"
+  ],
+  "activationEvents": [
+    "onView:paste-history"
+  ],
+  "contributors": [
+    {
+      "name": "stiliajohny",
+      "url": "https://github.com/stiliajohny"
+    },
+    {
+      "name": "cur5or",
+      "url": "https://github.com/Cur50r"
+    },
+    {
+      "name": "DanutEne",
+      "url": "https://github.com/DanutEne"
+    }
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pasteportal.get-paste",
+        "title": "PastePortal: Get Paste"
+      },
+      {
+        "command": "pasteportal.store-paste",
+        "title": "PastePortal: Send Paste"
+      },
+      {
+        "command": "pasteportal.get-encrypted-paste",
+        "title": "PastePortal: Get Encrypted Paste"
+      },
+      {
+        "command": "pasteportal.store-encrypted-paste",
+        "title": "PastePortal: Send Encrypted Paste"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "pasteportal.get-paste",
+        "mac": "ctrl+cmd+alt+v",
+        "key": "ctrl+cmd+alt+v",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pasteportal.store-paste",
+        "mac": "ctrl+cmd+alt+c",
+        "key": "ctrl+cmd+alt+c",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pasteportal.get-encrypted-paste",
+        "mac": "ctrl+cmd+alt+e",
+        "key": "ctrl+cmd+alt+e",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pasteportal.store-encrypted-paste",
+        "mac": "ctrl+cmd+alt+s",
+        "key": "ctrl+cmd+alt+s",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "properties": {
+        "pasteportal.serviceAgreementAccepted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Accept PastePortal's Terms of Service"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "pasteportal.get-paste",
+          "group": "10_cutcopypaste"
+        },
+        {
+          "command": "pasteportal.store-paste",
+          "group": "10_cutcopypaste"
+        },
+        {
+          "command": "pasteportal.get-encrypted-paste",
+          "group": "10_cutcopypaste"
+        },
+        {
+          "command": "pasteportal.store-encrypted-paste",
+          "group": "10_cutcopypaste"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pasteportal-container",
+          "title": "PastePortal",
+          "icon": "resources/pasteportal_icon.svg",
+          "contextualTitle": "PastePortal"
+        }
+      ]
+    },
+    "views": {
+      "pasteportal-container": [
+        {
+          "id": "package-welcome",
+          "name": "Welcome"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "package-welcome",
+        "contents": "PastePortal is a text sharing extension for developers.\nIt eliminates traditional copy-paste method, making it easy to share context without any additional complexity.\nCheck our [ToS](https://github.com/stiliajohny/vscode-ext-pasteportal/blob/master/TOS.md) or find out [more](https://pasteportal.info) \n[Get Paste](command:pasteportal.get-paste)\n\n[Store Paste](command:pasteportal.store-paste)\n\n[🔒 Get Encrypted Paste](command:pasteportal.get-encrypted-paste)\n\n[🔒 Store Encrypted Paste](command:pasteportal.store-encrypted-paste) ",
+        "when": "pasteportal.serviceAgreementAccepted == false"
+      }
+    ]
+  },
+  "repository": {
+    "type": "https",
+    "url": "https://github.com/stiliajohny/vscode-ext-pasteportal.git"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@vscode/test-electron": "^2.2.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.1.0",
+    "typescript": "^4.9.3",
+    "treeify": "^1.0.3"
+  },
+  "dependencies": {
+    "axios": "^0.24.0",
+    "treeify": "^1.0.3"
+  }
+}

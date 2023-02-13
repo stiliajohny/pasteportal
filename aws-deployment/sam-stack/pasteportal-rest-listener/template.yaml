@@ -18,11 +18,6 @@ Globals:
     Environment:
       Variables:
         TABLE_NAME: !Ref DynamoDBTable
-    Api:
-      Cors:
-        AllowMethods: "'GET,POST,OPTIONS'"
-        AllowHeaders: "'content-type'"
-        AllowOrigin: "'*'"
 
 Resources:
   PasteportalRestListenerApiPOST:
@@ -54,6 +49,12 @@ Resources:
             Method: get
             Auth:
               ApiKeyRequired: true
+        OptionsMethod:
+          Type: Api
+          Properties:
+            Path: /get-paste
+            Method: OPTIONS
+            RestApiId: !Ref PasteportalRestListenerApi
 
   PasteportalRestListenerApiDynamoDBPolicy:
     Type: AWS::IAM::Policy
@@ -71,7 +72,17 @@ Resources:
         - !Ref PasteportalRestListenerApiPOSTRole
         - !Ref PasteportalRestListenerApiGETRole
 
+  PasteportalRestListenerApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'POST, GET, OPTIONS'"
+        AllowHeaders: "'Content-Type'"
+        AllowOrigin: "'*'"
+
 Outputs:
+  # output the url for both apis
   PasteportalRestListenerApiPOSTUrl:
     Description: "URL for API POST"
     Value: !Sub "https://api.pasteportal.info/store-paste"
