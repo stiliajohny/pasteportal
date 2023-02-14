@@ -5,6 +5,7 @@
 [![GPL3 License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 [![Ask Me Anything][ask-me-anything]][personal-page]
+<br>
 [![DeepScan grade](https://deepscan.io/api/teams/20369/projects/23831/branches/728049/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=20369&pid=23831&bid=728049)
 [![DeepSource](https://deepsource.io/gh/stiliajohny/pasteportal.svg/?label=active+issues&show_trend=true&token=F76XWAtTJtrlBz2eJT6wo8ym)](https://deepsource.io/gh/stiliajohny/pasteportal/?ref=repository-badge)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af53234fa6cb427cbc96a8078d8daceb)](https://www.codacy.com/gh/stiliajohny/pasteportal/dashboard?utm_source=github.com&utm_medium=referral&utm_content=stiliajohny/pasteportal&utm_campaign=Badge_Grade)
@@ -188,7 +189,7 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 [issues-url]: https://github.com/stiliajohny/pasteportal/issues
 [license-shield]: https://img.shields.io/github/license/stiliajohny/pasteportal
 [license-url]: https://github.com/stiliajohny/pasteportal/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg&logo=linkedin&colorB=555
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg
 
 [linkedin-url]: https://linkedin.com/in/]/
 [product-screenshot]: .assets/screenshot.png
