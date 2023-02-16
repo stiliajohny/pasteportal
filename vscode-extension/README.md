@@ -1,13 +1,11 @@
-
 # Pasteportal
 
 PastePortal is a text sharing extension for developers.<br>
 It eliminates traditional copy-paste method, making it easy to share context without any additional complexity.<br>
-Comes with VSCode extension  accessible to wide range of users.<br>
+Comes with VSCode extension accessible to wide range of users.<br>
 User-friendly interface and powerful functionality makes it the go-to choice for developers.<br>
 
 Try it out today!
-
 
 <img src="https://github.com/stiliajohny/vscode-ext-pasteportal/raw/master/resources/demo.gif" width=70%>
 
