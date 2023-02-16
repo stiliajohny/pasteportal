@@ -1,6 +1,27 @@
 version = 1
 
 [[analyzers]]
+name = "test-coverage"
+
+[[analyzers]]
+name = "sql"
+
+[[analyzers]]
+name = "shell"
+
+[[analyzers]]
+name = "secrets"
+
+[[analyzers]]
+name = "terraform"
+
+[[analyzers]]
+name = "javascript"
+
+  [analyzers.meta]
+  plugins = ["react"]
+
+[[analyzers]]
 name = "python"
 
   [analyzers.meta]
@@ -17,3 +38,9 @@ name = "yapf"
 
 [[transformers]]
 name = "isort"
+
+[[transformers]]
+name = "standardjs"
+
+[[transformers]]
+name = "prettier"
