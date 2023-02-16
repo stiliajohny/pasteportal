@@ -70,7 +70,6 @@ def get_request(event, context):
             logger.info(message)
             return generate_response(400, message)
         else:
-
             id = returned_data["id"]
             paste = returned_data["paste"]
             timestamp = returned_data["timestamp"]
