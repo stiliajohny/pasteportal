@@ -16,7 +16,8 @@
 
 <br />
 <p align="center">
-  <a href="https://github.com/stiliajohny/pasteportal/raw/master/.assets/icon_revised/png/__256.png" alt="Main Logo" width="80" height="80">
+  <a href="https://github.com/stiliajohny/pasteportal">
+    <img src="https://raw.githubusercontent.com/stiliajohny/pasteportal/master/.assets/icon_revised/png/__256.png" alt="Main Logo" width="80" height="80">
   </a>
 
   <h3 align="center">PastePortal</h3>
