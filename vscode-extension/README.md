@@ -7,7 +7,6 @@ User-friendly interface and powerful functionality makes it the go-to choice for
 
 Try it out today!
 
-
 ## Features
 
 - Eliminates traditional copy-paste method
