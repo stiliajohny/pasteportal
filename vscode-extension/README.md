@@ -1,15 +1,11 @@
-
 # Pasteportal
 
 PastePortal is a text sharing extension for developers.<br>
 It eliminates traditional copy-paste method, making it easy to share context without any additional complexity.<br>
-Comes with VSCode extension  accessible to wide range of users.<br>
+Comes with VSCode extension accessible to wide range of users.<br>
 User-friendly interface and powerful functionality makes it the go-to choice for developers.<br>
 
 Try it out today!
-
-
-<img src="https://github.com/stiliajohny/vscode-ext-pasteportal/raw/master/resources/demo.gif" width=70%>
 
 ## Features
 
@@ -33,9 +29,7 @@ None yet. If you find any issues, please report them to the PastePortal team.
 
 ## Release Notes (latest)
 
-For an extended list of changes, please see the [CHANGELOG](CHANGELOG).
-
-### [v0.7.1] - 03-02-2023
+### [v0.7.8] - 17-02-2023
 
 #### Added
 
@@ -43,7 +37,7 @@ For an extended list of changes, please see the [CHANGELOG](CHANGELOG).
 
 #### Changed
 
-- Nothing yet!
+- Rename Get and Store to Retrive and Share respectively.
 
 #### Removed
 
@@ -57,8 +51,6 @@ For an extended list of changes, please see the [CHANGELOG](CHANGELOG).
 
 - Nothing yet!
 
-### [v0.7.0] - 03-02-2023
-
 ---
 
 Contributors:
@@ -66,4 +58,4 @@ Contributors:
 - [cur50r](https://github.com/cur50r)
 - [danutene](https://github.com/DanutEne)
 
-[v0.7.1]: https://github.com/stiliajohny/vscode-ext-pasteportal/releases/tag/v0.7.1
+[v0.7.8]: https://github.com/stiliajohny/vscode-ext-pasteportal/releases/tag/v0.7.1
