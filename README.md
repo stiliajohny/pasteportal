@@ -135,10 +135,6 @@ terraform apply
 
 ## Usage
 
-~~### Using the API~~
-
-~~Have a look on the Swagger UI [here]()~~
-~~TODO add API Docs~~
 
 ## Using the VSCode Extension
 
@@ -150,7 +146,7 @@ In order to retrive the content of a paste, you can use the command `PastePortal
 
 ## Using the Frontend
 
-The frontend is available [here](https://pasteporta.info).
+The frontend is available [here](https://pasteportal.info).
 
 ---
 
