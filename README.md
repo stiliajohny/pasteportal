@@ -135,7 +135,6 @@ terraform apply
 
 ## Usage
 
-
 ## Using the VSCode Extension
 
 The VSCode extension is available on the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal).
