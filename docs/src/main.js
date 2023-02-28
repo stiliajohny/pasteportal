@@ -6,13 +6,19 @@ const pasteportalApiKey = 'qVP1XsKWJF2vud7zo1jzS6BQ22xy4xXH4DY634py';
 const headers = {
   "x-api-key": pasteportalApiKey
 };
-const introParagraph = `Welcome to Paste Portal!
+const introParagraph = `
+Welcome to Paste Portal!
 
 Paste Portal is a free, open-source, and user-friendly online copy-paste service.
 
 It appears that you have not provided a valid ID. Please revisit us with a valid ID!
 https://pasteportal.info?id=2ba4f3
 
+Are you tired of copying your code from VScode and losing all the syntax highlighting gone?
+Now you can directly share from your VSCode and share the link, and the receiver will see the code with the syntax highlighting!
+A two steps process to share your code:
+1. Select your code
+2. Press Ctrl+Alt+Cmd+P, and you get a link to share with your friends!
 
 --
 
@@ -25,7 +31,7 @@ Download the VSCode Extension and use the Command pallet, Sidebar or Shortcut
 A brief overview of how PastePortal was created (shout out for the prompt @craigmillerdev):
 
 Once upon a time, I was tasked with creating a technical challenge for a job candidate, one that would involve building a service for posting and retrieving messages using their preferred tech stack.
-I wanted to see how the candidate would approach the problem and come up with a solution. This led to the development of PastePortal.
+I wanted to see how the candidate would approach the problem and develop a solution. This led to the development of PastePortal.
 In addition, you can enhance your experience by downloading the PastePortal VSCode extension, which allows you to access PastePortal directly from your code editor!
 
 https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal
@@ -37,17 +43,14 @@ https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal
 
 // Get the elements
 const sidePanel = document.querySelector('.side-panel');
-const text_Area = document.getElementById("text-area");
 const toggleIcon = document.querySelector('.toggle-icon');
-var modal = document.getElementById("myModal");
-var btn = document.getElementById("getPaste");
-var span = document.getElementsByClassName("close")[0];
+const container = document.querySelector('.container');
 
 
 // Add event listener to toggle icon
 toggleIcon.addEventListener('click', function () {
   sidePanel.classList.toggle('open');
-  text_Area.classList.toggle('open');
+  container.classList.toggle('open');
 });
 
 
@@ -55,7 +58,6 @@ toggleIcon.addEventListener('click', function () {
 
 // check if there is an id in the url
 if (id) {
-  console.log("Paste ID detected in URL: ", id);
   // do fetch request
   getResponse();
 } else {
@@ -65,7 +67,6 @@ if (id) {
   randomJoke().then(joke => {
     document.getElementById("text-area").value += "\n\n" + joke;
   });
-  console.error("The 'id' URL parameter is not present.");
 }
 async function randonLoadingJoke() {
   const messages = [
@@ -91,51 +92,19 @@ async function randomJoke() {
     const data = await response.json();
     return data.joke;
   } catch (error) {
-    console.error("There has been a problem with your fetch operation:", error);
     return "I'm sorry, I couldn't find a joke for you :(";
+
   }
 }
 
 async function copyToClipboard(value) {
   try {
     await navigator.clipboard.writeText(value);
-    console.log('Text copied to clipboard successfully!');
     return true
   } catch (err) {
-    console.error('Failed to copy text: ', err);
     return false
   }
 }
-
-async function notificationWindowSuccess(text) {
-  // Show the notification window with the message "Copied to clipboard"
-  const notificationWindow = document.createElement("div");
-  notificationWindow.innerHTML = text;
-  notificationWindow.classList.add("notification-window-success");
-  document.body.appendChild(notificationWindow);
-
-  // Hide the notification window after 2 seconds
-  setTimeout(() => {
-    notificationWindow.style.display = "none";
-  }, 2000);
-
-}
-
-async function notificationWindowError(text) {
-  // Show the notification window with the message "Copied to clipboard"
-  const notificationWindow = document.createElement("div");
-  notificationWindow.innerHTML = text;
-  notificationWindow.classList.add("notification-window-error");
-  document.body.appendChild(notificationWindow);
-
-  // Hide the notification window after 2 seconds
-  setTimeout(() => {
-    notificationWindow.style.display = "none";
-  }, 100);
-
-}
-
-
 
 
 async function getResponse(id) {
