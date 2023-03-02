@@ -26,6 +26,8 @@ resource "aws_api_gateway_usage_plan" "pasteportal-usage-plan" {
 
 resource "aws_api_gateway_api_key" "pasteportal-api-key" {
   name = "pasteportal-api-key"
+  value = "qVP1XsKWJF2vud7zo1jzS6BQ22xy4xXH4DY634py"
+
 }
 
 resource "aws_api_gateway_usage_plan_key" "main" {
