@@ -62,7 +62,6 @@ function encrypt (password, text) {
     return iv.toString('hex') + encrypted
   } catch (error) {
     vscode.window.showErrorMessage(error)
-    console.error(error)
     throw error
   }
 }
@@ -140,6 +139,7 @@ function getPasteId (text) {
    */
   try {
     if (typeof text !== 'string' || !text) {
+
       throw new Error('Input must be a non-empty string.')
     }
 
@@ -553,6 +553,7 @@ function activate (context) {
   context.subscriptions.push(get_encrypted_paste)
   context.subscriptions.push(store_encrypted_paste)
 }
+
 
 function deactivate () {}
 
