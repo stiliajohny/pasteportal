@@ -9,11 +9,6 @@ const headers = {
 const introParagraph = `
 Welcome to Paste Portal!
 
-Paste Portal is a free, open-source, and user-friendly online copy-paste service.
-
-It appears that you have not provided a valid ID. Please revisit us with a valid ID!
-https://pasteportal.info?id=2ba4f3
-
 Are you tired of copying your code from VScode and losing all the syntax highlighting gone?
 Now you can directly share from your VSCode and share the link, and the receiver will see the code with the syntax highlighting!
 A two steps process to share your code:
@@ -129,46 +124,49 @@ async function getResponse(id) {
     document.getElementById("text-area").value = paste;
     try {
       copyToClipboard(paste);
-      notificationWindowSuccess("Copied to clipboard");
+      // notificationWindowSuccess("Copied to clipboard");
     } catch (error) {
-      notificationWindowError("Error: " + error);
+      // notificationWindowError("Error: " + error);
       console.error("There has been a problem with Clipboard:", error);
     }
     return data;
 
   } catch (error) {
-    notificationWindowError("Error: " + error);
+    // notificationWindowError("Error: " + error);
     console.error("There has been a problem with your fetch operation:", error);
   }
 }
 
-var submitPasteIdBtn = document.getElementById("submitPasteId");
 
-// Hide the modal when the page loads
-modal.style.display = "none";
+var getPasteButton = document.getElementById("getPaste-text");
+var hiddenText = document.getElementById("hidden-text");
 
-// When the user clicks the button, open the modal
-btn.onclick = function () {
-  modal.style.display = "block";
-}
-
-// When the user clicks on <span> (x), close the modal
-span.onclick = function () {
-  modal.style.display = "none";
-}
-
-// When the user clicks anywhere outside of the modal, close it
-window.onclick = function (event) {
-  if (event.target == modal) {
-    modal.style.display = "none";
+getPasteButton.addEventListener("click", function () {
+  if (hiddenText.style.display === "none") {
+    hiddenText.style.display = "block";
+  } else {
+    hiddenText.style.display = "none";
   }
-}
+});
 
-submitPasteIdBtn.addEventListener("click", function () {
-  var pasteId = document.getElementById("pasteId").value;
-  console.log(pasteId);
-  // clear the text area
-  document.getElementById("pasteId").value = "";
-  modal.style.display = "none"
-  getResponse(pasteId);
+const textArea = document.getElementById("hidden-text").querySelector("textarea");
+const pasteIcon = document.querySelector(".get-paste-id-icon");
+
+textArea.addEventListener("input", function () {
+  if (textArea.value.length === 6) {
+    pasteIcon.classList.add("active");
+  } else {
+    pasteIcon.classList.remove("active");
+  }
+});
+
+
+const getPasteBtn = document.getElementById('id-submit');
+const getIdTextArea = document.getElementById('id-textarea');
+
+getPasteBtn.addEventListener('click', () => {
+  const id = getIdTextArea.value.trim();
+  if (id.length === 6) {
+    getResponse(id);
+  }
 });

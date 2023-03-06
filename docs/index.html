@@ -6,9 +6,6 @@
   <link rel="icon" href="src/logo.png" type="image/x-icon">
   <link rel="stylesheet" href="src/style.css">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.14.0/css/all.css">
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"
-    crossorigin="anonymous"></script>
   <script src="https://kit.fontawesome.com/064e483e46.js" crossorigin="anonymous"></script>
 </head>
 
@@ -21,9 +18,21 @@
         </div>
 
         <a href="#" id="getPaste" class="nav-item">
-          <span class="nav-text">Get Paste</span>
-          <i class="fa fa-download" aria-hidden="true"></i>
+          <div>
+            <span class="nav-text" id="getPaste-text">Get Paste</span>
+            <i class="fa fa-download" aria-hidden="true"></i>
+          </div>
         </a>
+        <div class="nav-item" id="hidden-text" style="display: none;">
+          <div class="nav-item" style="position: relative;">
+            <div class="get-paste-id-icon">
+              <i class="fas fa-chevron-right" id="id-submit"></i>
+            </div>
+            <textarea id="id-textarea" class="nav-textarea" placeholder="Gimme and ID" maxlength="6"
+              onkeypress="return event.keyCode !== 13;"></textarea>
+          </div>
+        </div>
+
 
         <a href="#" class="nav-item unavailable">
           <span class="nav-text">Get Enc Paste</span>
@@ -35,7 +44,8 @@
           <i class="fa-brands fa-github"></i>
         </a>
 
-        <a href="https://github.com/stiliajohny/pasteportal" target="_blank" class="nav-item">
+        <a href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal" target="_blank"
+          class="nav-item">
           <span class="nav-text">VSCode Ext</span>
           <i class="fa-brands fa-github"></i>
         </a>
@@ -44,10 +54,11 @@
           <span class="nav-text">About</span>
           <i class="fa-solid fa-address-card"></i>
         </a>
-        <div class="nav-item">
+
+        <!-- <div class="nav-item">
           <span class="nav-text">Theme</span>
           <i class="fa-solid fa-circle-half-stroke"></i>
-        </div>
+        </div> -->
       </div>
     </div>
     <div class="textarea-container">
@@ -55,6 +66,7 @@
     </div>
   </div>
   <script src="src/main.js"></script>
+
 </body>
 
 </html>
