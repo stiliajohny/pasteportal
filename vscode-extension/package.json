@@ -7,7 +7,7 @@
   "publisher": "JohnStilia",
   "description": "A text sharing tool for developers",
   "icon": "resources/pasteportal_icon.png",
-  "version": "0.7.5",
+  "version": "0.7.8",
   "preview": true,
   "sponsor": {
     "url": "https://github.com/sponsors/stiliajohny"
@@ -49,19 +49,19 @@
     "commands": [
       {
         "command": "pasteportal.get-paste",
-        "title": "PastePortal: Get Paste"
+        "title": "PastePortal: Retrive Paste"
       },
       {
         "command": "pasteportal.store-paste",
-        "title": "PastePortal: Send Paste"
+        "title": "PastePortal: Share Paste"
       },
       {
         "command": "pasteportal.get-encrypted-paste",
-        "title": "PastePortal: Get Encrypted Paste"
+        "title": "PastePortal: Retrive Encrypted Paste"
       },
       {
         "command": "pasteportal.store-encrypted-paste",
-        "title": "PastePortal: Send Encrypted Paste"
+        "title": "PastePortal: Share Encrypted Paste"
       }
     ],
     "keybindings": [
@@ -140,7 +140,7 @@
     "viewsWelcome": [
       {
         "view": "package-welcome",
-        "contents": "PastePortal is a text sharing extension for developers.\nIt eliminates traditional copy-paste method, making it easy to share context without any additional complexity.\nCheck our [ToS](https://github.com/stiliajohny/pasteportal/blob/master/vscode-extension/TOS.md) or find out [more](https://pasteportal.info) \n[Get Paste](command:pasteportal.get-paste)\n\n[Store Paste](command:pasteportal.store-paste)\n\n[🔒 Get Encrypted Paste](command:pasteportal.get-encrypted-paste)\n\n[🔒 Store Encrypted Paste](command:pasteportal.store-encrypted-paste) ",
+        "contents": "PastePortal is a text sharing extension for developers.\nIt eliminates traditional copy-paste method, making it easy to share context without any additional complexity.\nCheck our [ToS](https://github.com/stiliajohny/pasteportal/blob/master/vscode-extension/TOS.md) or find out [more](https://pasteportal.info) \n[Retrive Paste](command:pasteportal.get-paste)\n\n[Share Paste](command:pasteportal.store-paste)\n\n[🔒 Retrive Encrypted Paste](command:pasteportal.get-encrypted-paste)\n\n[🔒 Share Encrypted Paste](command:pasteportal.store-encrypted-paste) ",
         "when": "pasteportal.serviceAgreementAccepted == false"
       }
     ]
