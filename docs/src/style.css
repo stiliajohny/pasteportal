@@ -12,6 +12,7 @@
 
 body {
   margin: 0;
+  background-color: var(--background);
 }
 
 .container {
@@ -87,8 +88,8 @@ body {
   color: var(--text);
   font-family: var(--main-font);
   font-weight: bold;
-  margin: 0;
-  padding: 0;
+  margin: 0px;
+  padding: 0px;
   /* transition: 0.5s ease-in-out; */
 }
 
