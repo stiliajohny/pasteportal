@@ -1,14 +1,13 @@
 :root {
-  --negative-highlight: #D9307F;
+  --negative-highlight: #d9307f;
   --background: #343540;
-  --positive-highlight: #08A679;
+  --positive-highlight: #08a679;
   --side-panel-background: #202123;
   --other-highlight: #444654;
-  --menu-button: #BDBEBF;
-  --text: #BDBEBF;
+  --menu-button: #bdbebf;
+  --text: #bdbebf;
   --main-font: "Source Code Pro", monospace;
 }
-
 
 body {
   margin: 0;
@@ -93,8 +92,6 @@ body {
   /* transition: 0.5s ease-in-out; */
 }
 
-
-
 .nav-item:hover {
   color: var(--positive-highlight);
 }
@@ -174,12 +171,9 @@ body {
   width: 100%;
 }
 
-
-
-.nav-textarea:focus+div i {
+.nav-textarea:focus + div i {
   color: var(--negative-highlight);
 }
-
 
 .get-paste-id-icon {
   color: var(--negative-highlight);
