@@ -5,6 +5,7 @@
 [![GPL3 License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 [![Ask Me Anything][ask-me-anything]][personal-page]
+<br>
 [![DeepScan grade](https://deepscan.io/api/teams/20369/projects/23831/branches/728049/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=20369&pid=23831&bid=728049)
 [![DeepSource](https://deepsource.io/gh/stiliajohny/pasteportal.svg/?label=active+issues&show_trend=true&token=F76XWAtTJtrlBz2eJT6wo8ym)](https://deepsource.io/gh/stiliajohny/pasteportal/?ref=repository-badge)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af53234fa6cb427cbc96a8078d8daceb)](https://www.codacy.com/gh/stiliajohny/pasteportal/dashboard?utm_source=github.com&utm_medium=referral&utm_content=stiliajohny/pasteportal&utm_campaign=Badge_Grade)
@@ -16,7 +17,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/stiliajohny/pasteportal">
-    <img src="./.assets/icon_revised/svg/__256.svg" alt="Main Logo" width="80" height="80">
+    <img src="https://raw.githubusercontent.com/stiliajohny/pasteportal/master/.assets/icon_revised/png/__256.png" alt="Main Logo" width="80" height="80">
   </a>
 
   <h3 align="center">PastePortal</h3>
@@ -24,10 +25,10 @@
   <p align="center">
 A text sharing tool for developers
     <br />
-    <a href="./README.md"><strong>Explore the docs »</strong></a>
-    <br />
-    <a href="https://github.com/stiliajohny/vscode-ext-pasteportal/raw/master/demo.gif">Demo</a>
+    <a href="https://pasteporta.info">Frontend</a>
     ·
+    <a href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal">VSCode Extension</a>
+    </br>
     <a href="https://github.com/stiliajohny/pasteportal/issues/new?labels=i%3A+bug&template=1-bug-report.md">Report Bug</a>
     ·
     <a href="https://github.com/stiliajohny/pasteportal/issues/new?labels=i%3A+enhancement&template=2-feature-request.md">Request Feature</a>
@@ -47,7 +48,8 @@ A text sharing tool for developers
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
-  - [Using the API](#using-the-api)
+- [Using the VSCode Extension](#using-the-vscode-extension)
+- [Using the Frontend](#using-the-frontend)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
@@ -60,7 +62,7 @@ A text sharing tool for developers
 
 PastePortal is a revolutionary new application that makes sharing text a breeze. Designed with developers in mind, PastePortal eliminates the need for the traditional copy-paste method, making it easy to share context without any additional complexity.
 
-The application comes with a VSCode extension, as well as a frontend, making it accessible to a wide range of users.
+The application comes with a VSCode extension, as well as, a frontend, making it accessible to a wide range of users.
 Whether you're working on a large project with multiple team members or simply need to share a small snippet of code, PastePortal is the perfect solution.
 With its user-friendly interface and powerful functionality, it's no wonder why PastePortal is quickly becoming the go-to choice for developers everywhere.
 
@@ -71,6 +73,9 @@ Try it out today and see the difference for yourself!
 - Python
 - Terraform
 - SAM
+- Javascript
+- HTML
+- CSS
 
 ---
 
@@ -80,7 +85,14 @@ Try it out today and see the difference for yourself!
 
 ### Architecture Diagram
 
+<!-- add a folding section -->
+<details>
+<summary>Click to expand!</summary>
+<p>
+
 ![Architecture Diagram](.assets/architecture.png)
+
+</details>
 
 ### Prerequisites
 
@@ -123,9 +135,19 @@ terraform apply
 
 ## Usage
 
-### Using the API
+## Using the VSCode Extension
 
-Have a look on the Swagger UI [here]() # TODO add link
+The VSCode extension is available on the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal).
+
+After installing the extension, you can use the command `PastePortal: Share` to share the current selection.
+
+In order to retrive the content of a paste, you can use the command `PastePortal: Retrieve` and enter the paste id.
+
+## Using the Frontend
+
+The frontend is available [here](https://pasteportal.info).
+
+---
 
 ## Roadmap
 
@@ -169,7 +191,8 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 
 ## Acknowledgements
 
-- [DanutEne](https://github.com/DanutEne)
+- [Danut](https://github.com/DanutEne)
+- [Ahley](https://github.com/cur50r)
 - [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
 - [Img Shields](https://shields.io)
 - [Choose an Open Source License](https://choosealicense.com)
@@ -188,7 +211,7 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 [issues-url]: https://github.com/stiliajohny/pasteportal/issues
 [license-shield]: https://img.shields.io/github/license/stiliajohny/pasteportal
 [license-url]: https://github.com/stiliajohny/pasteportal/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg&logo=linkedin&colorB=555
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg
 
 [linkedin-url]: https://linkedin.com/in/]/
 [product-screenshot]: .assets/screenshot.png
