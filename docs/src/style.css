@@ -52,7 +52,7 @@ body {
   flex-direction: column;
   justify-content: center;
   /* height: 100%; */
-  overflow: scroll;
+  overflow: hidden;
   padding-top: 10px;
   grid-area: side-panel;
   grid-template-rows: 1fr;
@@ -65,7 +65,7 @@ body {
   flex-direction: column;
   justify-content: center;
   /* height: 100%; */
-  overflow: scroll;
+  overflow: hidden;
   grid-area: side-panel;
   grid-template-rows: 1fr;
 }
