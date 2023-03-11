@@ -12,18 +12,16 @@ logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
+    """Lambda handler. This is the entry point for the lambda function.
 
+        Args:
+            event (string): the event as it was passed to the lambda function
+            context (string): the context as it was passed to the lambda function
 
-"""Lambda handler. This is the entry point for the lambda function.
-
-    Args:
-        event (string): the event as it was passed to the lambda function
-        context (string): the context as it was passed to the lambda function
-
-    Returns:
-        string: the response to the request as a string in JSON format
-    """
-return post_request(event, context)
+        Returns:
+            string: the response to the request as a string in JSON format
+        """
+    return post_request(event, context)
 
 
 def post_request(event, context):
