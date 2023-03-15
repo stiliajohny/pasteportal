@@ -13,7 +13,8 @@
 [![CodeQL](https://github.com/stiliajohny/pasteportal/actions/workflows/codeql.yml/badge.svg)](https://github.com/stiliajohny/pasteportal/actions/workflows/codeql.yml)
 
 <!-- PROJECT LOGO -->
-<br />
+
+<br/>
 <p align="center">
   <a href="https://github.com/stiliajohny/pasteportal">
     <img src="https://raw.githubusercontent.com/stiliajohny/pasteportal/master/.assets/icon_revised/png/__256.png" alt="Main Logo" width="80" height="80">
