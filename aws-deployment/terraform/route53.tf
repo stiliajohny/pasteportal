@@ -27,15 +27,6 @@ resource "aws_route53_record" "github_pages_challenge" {
   zone_id = aws_route53_zone.pasteportal.zone_id
 }
 
-resource "aws_route53_record" "github_pages_challenge" {
-  name = "_github-pages-challenge-stiliajohny"
-  type = "TXT"
-  ttl  = 60
-  records = [
-    "4f558aa0d4ef01dfd2488d8f5fb149"
-  ]
-  zone_id = aws_route53_zone.pasteportal.zone_id
-}
 
 resource "aws_route53_record" "visual-studio-marketplace_challenge" {
   name = "_visual-studio-marketplace-johnstilia.pasteportal.info"
