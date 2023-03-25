@@ -18,16 +18,6 @@ resource "aws_route53_record" "github_pages_servers" {
 }
 
 resource "aws_route53_record" "github_pages_challenge" {
-  name = "_github-pages-challenge-stiliajohny.pasteportal.info."
-  type = "TXT"
-  ttl  = 60
-  records = [
-    "cbe6842bcfd229b4779713d228b749"
-  ]
-  zone_id = aws_route53_zone.pasteportal.zone_id
-}
-
-resource "aws_route53_record" "github_pages_challenge" {
   name = "_github-pages-challenge-stiliajohny"
   type = "TXT"
   ttl  = 60
