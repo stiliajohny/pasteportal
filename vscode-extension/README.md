@@ -29,6 +29,28 @@ None yet. If you find any issues, please report them to the PastePortal team.
 
 ## Release Notes (latest)
 
+### [v0.7.9] - 29-03-2023
+
+#### Added
+
+- Nothing yet!
+
+#### Changed
+
+- None
+
+#### Removed
+
+- None
+
+#### Fixed
+
+- URL format, add a '/' before '?'
+
+#### Security
+
+- Nothing yet!
+
 ### [v0.7.8] - 17-02-2023
 
 #### Added
