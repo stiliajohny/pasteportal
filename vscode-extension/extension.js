@@ -10,7 +10,7 @@ const tos_link =
 const passwordLengthMin = 8
 const passwordLengthMax = 30
 
-function encrypt (password, text) {
+function encrypt(password, text) {
   /**
    * Encrypt the text using the password
    * @param {string} password
@@ -66,7 +66,7 @@ function encrypt (password, text) {
   }
 }
 
-function decrypt (password, encryptedText) {
+function decrypt(password, encryptedText) {
   /**
    * Decrypt the text using the password
    * @param {string} password
@@ -123,7 +123,7 @@ function decrypt (password, encryptedText) {
   }
 }
 
-function getPasteId (text) {
+function getPasteId(text) {
   /**
    * Get the paste id from the text
    * @param {string} text
@@ -159,7 +159,7 @@ function getPasteId (text) {
   }
 }
 
-function multiLineClipboard (id, password) {
+function multiLineClipboard(id, password) {
   /**
    * Create a multiline string to be copied to clipboard
    * @param {string} id
@@ -182,10 +182,10 @@ function multiLineClipboard (id, password) {
       if (password.length < passwordLengthMin) {
         throw new Error('Password cannot be empty')
       }
-      const clipText = `To get the paste, go to https://pasteportal.info?id=${id} and enter the password ${password}\nYou can also use the VSCode command "Paste Portal: Get Encypted Text" to get the paste.\nUse the URL https://pasteportal.info?id=${id} and password ${password} to get the paste.`
+      const clipText = `To get the paste, go to https://pasteportal.info/?id=${id} and enter the password ${password}\nYou can also use the VSCode command "Paste Portal: Get Encypted Text" to get the paste.\nUse the URL https://pasteportal.info/?id=${id} and password ${password} to get the paste.`
       return clipText
     } else {
-      const clipText = `To get the paste, go to https://pasteportal.info?id=${id}\nYou can also use paste VSCode command "Paste Portal: Get Text" to get the text.\nUse the URL https://pasteportal.info?id=${id} to get the paste.`
+      const clipText = `To get the paste, go to https://pasteportal.info/?id=${id}\nYou can also use paste VSCode command "Paste Portal: Get Text" to get the text.\nUse the URL https://pasteportal.info/?id=${id} to get the paste.`
       return clipText
     }
   } catch (error) {
@@ -195,7 +195,7 @@ function multiLineClipboard (id, password) {
   }
 }
 
-async function checkServiceAgreement () {
+async function checkServiceAgreement() {
   /**
    * Check if the user has accepted the service agreement or not
    * If the user has not accepted the service agreement, ask the user to accept the terms of service
@@ -247,7 +247,7 @@ async function checkServiceAgreement () {
   }
 }
 
-function activate (context) {
+function activate(context) {
   /**
    * This method is called when your extension is activated.
    * Your extension is activated the very first time the command is executed.
@@ -555,7 +555,7 @@ function activate (context) {
 }
 
 
-function deactivate () {}
+function deactivate() { }
 
 module.exports = {
   activate,
