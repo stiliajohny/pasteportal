@@ -1,0 +1,81 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        // Neon colors from logo
+        'neon-cyan': {
+          DEFAULT: '#00f5ff',
+          50: '#e6feff',
+          100: '#b3fcff',
+          200: '#80faff',
+          300: '#4df8ff',
+          400: '#1af6ff',
+          500: '#00f5ff',
+          600: '#00c4cc',
+          700: '#009399',
+          800: '#006266',
+          900: '#003133',
+        },
+        'neon-magenta': {
+          DEFAULT: '#ff00ff',
+          50: '#ffe6ff',
+          100: '#ffb3ff',
+          200: '#ff80ff',
+          300: '#ff4dff',
+          400: '#ff1aff',
+          500: '#ff00ff',
+          600: '#cc00cc',
+          700: '#990099',
+          800: '#660066',
+          900: '#330033',
+        },
+        'neon-teal': {
+          DEFAULT: '#00d9ff',
+          50: '#e6f9ff',
+          100: '#b3f0ff',
+          200: '#80e7ff',
+          300: '#4ddeff',
+          400: '#1ad5ff',
+          500: '#00d9ff',
+          600: '#00adcc',
+          700: '#008199',
+          800: '#005566',
+          900: '#002933',
+        },
+        // Theme-aware colors
+        background: 'var(--color-background)',
+        'header-background': 'var(--color-header-background)',
+        'footer-background': 'var(--color-footer-background)',
+        'surface': 'var(--color-surface)',
+        'surface-variant': 'var(--color-surface-variant)',
+        text: 'var(--color-text)',
+        'text-secondary': 'var(--color-text-secondary)',
+        divider: 'var(--color-divider)',
+        'positive-highlight': 'var(--color-positive-highlight)',
+        'negative-highlight': 'var(--color-negative-highlight)',
+      },
+      fontFamily: {
+        mono: ['var(--font-mono)', 'Source Code Pro', 'monospace'],
+      },
+      boxShadow: {
+        'neon-cyan-glow': '0 0 10px rgba(0, 245, 255, 0.5), 0 0 20px rgba(0, 245, 255, 0.3)',
+        'neon-magenta-glow': '0 0 10px rgba(255, 0, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.3)',
+        'neon-teal-glow': '0 0 10px rgba(0, 217, 255, 0.5), 0 0 20px rgba(0, 217, 255, 0.3)',
+        'glow-cyan': '0 0 20px rgba(0, 245, 255, 0.4)',
+        'glow-magenta': '0 0 20px rgba(255, 0, 255, 0.4)',
+      },
+      animation: {
+        'pulse-neon-cyan': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-neon-magenta': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+    },
+  },
+  plugins: [],
+};

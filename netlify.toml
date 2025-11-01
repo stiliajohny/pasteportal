@@ -1,0 +1,72 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirects for API routes
+[[redirects]]
+  from = "/api/store-paste"
+  to = "/api/store-paste"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/api/get-paste"
+  to = "/api/get-paste"
+  status = 200
+  force = false
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for PWA and Security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Strict-Transport-Security (HSTS): Forces browsers to use HTTPS only
+    # - max-age=31536000: Enforce HTTPS for 1 year (31536000 seconds)
+    # - includeSubDomains: Apply to all subdomains
+    # - preload: Eligible for HSTS preload lists (browser hardcoded HTTPS)
+    # Prevents protocol downgrade attacks and man-in-the-middle via HTTP
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    # Content-Security-Policy: Strict CSP to prevent XSS and injection attacks
+    # - default-src 'self': Only allow resources from same origin by default
+    # - script-src: Allow self + inline/eval (required for Next.js) + Supabase scripts
+    # - style-src: Allow self + inline (for Next.js) + Google Fonts CSS
+    # - font-src: Allow self + data URIs (for optimized fonts) + Google Fonts
+    # - img-src: Allow self + data URIs + blob URIs + any HTTPS (for paste content/images)
+    # - connect-src: Allow API calls to self + Supabase (HTTP/WebSocket) + joke API
+    # - frame-src: Allow self + Supabase (for auth modals)
+    # - object-src 'none': Block plugins (Flash, etc.)
+    # - base-uri 'self': Prevent base tag injection
+    # - form-action 'self': Prevent form hijacking
+    # - frame-ancestors 'none': Prevent clickjacking (redundant with X-Frame-Options)
+    # - upgrade-insecure-requests: Force HTTPS
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://supabase.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://icanhazdadjoke.com; frame-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# Custom domain configuration
+# Domain: pasteportal.app
+# Configure this in Netlify dashboard under Domain settings

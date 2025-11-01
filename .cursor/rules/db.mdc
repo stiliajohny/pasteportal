@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+
+
+## SQL Migration File Deletion Rules
+
+When deleting SQL migration files:
+
+1. **Delete migrations that only remove unnecessary features:**
+   - If a migration file's sole purpose was to remove/drop something that is no longer needed (columns, tables, constraints, etc.), the migration file itself should be deleted.
+   - Before deleting, ensure the removal logic is reflected in:
+     - The initial schema migration (if starting fresh), OR
+     - Consolidated into an existing migration file for idempotency
+
+2. **Idempotency requirement:**
+   - All migrations must be idempotent (safe to run multiple times).
+   - Use `IF NOT EXISTS`, `IF EXISTS`, `DO $$ ... END $$` blocks, or `ON CONFLICT` clauses.
+   - When consolidating removal logic into existing migrations, ensure the removal is also idempotent.
+
+3. **Migration sequence preservation:**
+   - If a migration was already applied to remote/production databases, do NOT delete it (even if it only removes something).
+   - Instead, mark it as a no-op migration with clear comments explaining why it exists.
+   - Only delete migrations that have never been applied to any remote database.
+
+4. **Consolidation approach:**
+   - Prefer consolidating removal logic into relevant existing migrations rather than creating new ones.
+   - Example: If removing a column, update the initial schema migration to not create it, and add the removal to an existing migration for idempotency on existing databases.
+
+5. **Documentation:**
+   - When deleting a migration, ensure the removal is documented in:
+     - The migration that consolidates the logic (if consolidated), OR
+     - Commit message explaining why the file was deleted
+
+6. **Ensure all database tables and content are encrypted with the encryption key in the .env file**

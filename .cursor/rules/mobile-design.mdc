@@ -1,0 +1,229 @@
+---
+alwaysApply: true
+---
+
+# Mobile Design and Responsiveness Rules
+
+When designing and implementing UI components for mobile devices, follow these rules:
+
+## 1. Horizontal Scroll Prevention
+
+**NEVER allow horizontal scrolling on mobile devices:**
+
+- Add `overflow-x: hidden` to `html` and `body` elements in global CSS
+- Use `overflow-x-hidden` Tailwind class on main containers
+- Set `width: 100%` and `max-width: 100%` on root elements
+- Ensure all child elements respect container boundaries using `max-w-full` or `w-full`
+- Test all components at mobile breakpoints (320px, 375px, 414px) to ensure no overflow
+
+**Code pattern:**
+
+```css
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+```
+
+## 2. Mobile-First Breakpoints
+
+**Use Tailwind's mobile-first approach:**
+
+- Default styles should target mobile screens
+- Use `sm:` for tablets (640px+), `md:` for small desktops (768px+), `lg:` for desktops (1024px+)
+- Always design for mobile first, then enhance for larger screens
+- Test at minimum width of 320px (smallest common mobile device)
+
+**Example:**
+
+```tsx
+<div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+```
+
+## 3. Touch Targets and Interactive Elements
+
+**Ensure all interactive elements are touch-friendly:**
+
+- Minimum touch target size: 44x44px (iOS) or 48x48px (Android)
+- Add adequate spacing between buttons (minimum 8px)
+- Use `px-4 py-3` or larger for buttons on mobile
+- Ensure buttons don't overlap or crowd on small screens
+
+## 4. Navigation Menu for Mobile
+
+**When implementing mobile navigation (hamburger menu):**
+
+- Hamburger button must have `z-index` higher than other elements (e.g., `z-50`)
+- Menu overlay should use fixed positioning with proper z-index layering
+- Handle both `onClick` (mouse) and `onTouchStart` (touch) events
+- Use `stopPropagation()` on button clicks to prevent event bubbling
+- Lock body scroll when menu is open: `document.body.style.overflow = 'hidden'`
+- Close menu on route navigation or outside clicks
+- Menu should slide in/out with smooth animations
+- Backdrop should be clickable to close menu
+
+**Required structure:**
+
+```tsx
+<button
+  type="button"
+  onClick={(e) => {
+    e.stopPropagation();
+    setMenuOpen(!menuOpen);
+  }}
+  className="z-50" // High z-index
+>
+  {/* Hamburger icon */}
+</button>
+
+{menuOpen && (
+  <>
+    {/* Backdrop */}
+    <div
+      className="fixed inset-0 z-[45]"
+      onClick={(e) => {
+        e.stopPropagation();
+        setMenuOpen(false);
+      }}
+      onTouchStart={(e) => {
+        e.stopPropagation();
+        setMenuOpen(false);
+      }}
+    />
+    {/* Menu Panel */}
+    <div className="fixed inset-0 z-[50]">
+      {/* Menu content */}
+    </div>
+  </>
+)}
+```
+
+## 5. Container Widths and Padding
+
+**Consistent container handling:**
+
+- Use `container mx-auto` for centered content
+- Add `max-w-full` to prevent overflow
+- Use responsive padding: `px-4 sm:px-6 lg:px-8`
+- Never use fixed widths that exceed viewport
+- Ensure flex containers use `flex-wrap` when needed on mobile
+
+## 6. Text and Content Wrapping
+
+**Prevent text overflow:**
+
+- Use `break-words` or `break-all` for long strings (IDs, URLs, code)
+- Truncate long text with `truncate` class when appropriate
+- Use `min-w-0` on flex children to allow shrinking
+- For code blocks, use `overflow-x-auto` within a constrained container
+
+## 7. Button Layouts on Mobile
+
+**Responsive button arrangements:**
+
+- Stack buttons vertically on mobile (`flex-col`), horizontally on desktop (`sm:flex-row`)
+- Full-width buttons on mobile (`w-full sm:w-auto`)
+- Use `gap-2` or larger between buttons
+- Group related actions visually
+
+**Pattern:**
+
+```tsx
+<div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+  <button className="w-full sm:w-auto">Action 1</button>
+  <button className="w-full sm:w-auto">Action 2</button>
+</div>
+```
+
+## 8. Forms and Inputs on Mobile
+
+**Mobile-friendly form design:**
+
+- Full-width inputs on mobile with appropriate padding
+- Use `w-full` for inputs within containers
+- Increase input height for easier tapping: `py-2.5` or `py-3`
+- Ensure labels and inputs stack vertically on small screens
+- Add sufficient spacing between form elements
+
+## 9. Image and Media Responsiveness
+
+**Responsive media handling:**
+
+- Use Next.js `Image` component with responsive `sizes` prop
+- Set `max-w-full` and `h-auto` for images
+- Ensure images don't exceed container width
+- Use `object-contain` or `object-cover` appropriately
+
+## 10. Testing Requirements
+
+**Before deploying, verify:**
+
+- ✅ No horizontal scroll at any mobile width (320px-767px)
+- ✅ All buttons are easily tappable (44px+ touch targets)
+- ✅ Hamburger menu opens and closes correctly
+- ✅ Navigation links work on mobile
+- ✅ Text doesn't overflow containers
+- ✅ Forms are usable on mobile
+- ✅ Touch events work (not just mouse clicks)
+- ✅ Body scroll locks when modals/menus are open
+
+## 11. Code Patterns to Always Use
+
+**Container pattern:**
+
+```tsx
+<div className="w-full overflow-x-hidden">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-full">
+    {/* Content */}
+  </div>
+</div>
+```
+
+**Responsive flex pattern:**
+
+```tsx
+<div className="flex flex-col sm:flex-row gap-3 w-full">
+```
+
+**Responsive grid pattern:**
+
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+```
+
+**Responsive text pattern:**
+
+```tsx
+<h1 className="text-xl sm:text-2xl md:text-3xl">
+```
+
+## 12. Common Pitfalls to Avoid
+
+**DO NOT:**
+
+- ❌ Use fixed widths in pixels that exceed viewport
+- ❌ Forget to add `overflow-x-hidden` to root elements
+- ❌ Use `position: absolute` without considering overflow
+- ❌ Create buttons smaller than 44px on mobile
+- ❌ Use `display: none` instead of responsive visibility (`hidden md:block`)
+- ❌ Forget to handle touch events alongside click events
+- ❌ Use `whitespace: nowrap` on long text without overflow handling
+- ❌ Create layouts that require horizontal scrolling
+- ❌ Use negative margins that cause overflow
+
+**DO:**
+
+- ✅ Test on actual mobile devices or browser dev tools
+- ✅ Use Tailwind's responsive utilities consistently
+- ✅ Add `w-full` and `max-w-full` to containers
+- ✅ Handle both mouse and touch events
+- ✅ Lock body scroll for modals/overlays
+- ✅ Use semantic HTML and proper ARIA labels
+- ✅ Test with content of varying lengths
+- ✅ Use flex-wrap when items might overflow

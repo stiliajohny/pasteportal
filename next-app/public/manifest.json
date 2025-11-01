@@ -1,0 +1,28 @@
+{
+  "name": "PastePortal",
+  "short_name": "PastePortal",
+  "description": "A text sharing tool for developers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#343540",
+  "theme_color": "#343540",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["developer", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Get Paste",
+      "short_name": "Get",
+      "description": "Retrieve a paste by ID",
+      "url": "/?action=get",
+      "icons": [{ "src": "/logo.png", "sizes": "1024x1024" }]
+    }
+  ]
+}

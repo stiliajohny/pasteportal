@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark theme (default) - retro cyberpunk aesthetic */
+  --color-background: #0a0a0f;
+  --color-header-background: #0f0f15;
+  --color-footer-background: #0f0f15;
+  --color-surface: #151520;
+  --color-surface-variant: #1a1a25;
+  --color-text: #e0e0e8;
+  --color-text-secondary: #a0a0b0;
+  --color-divider: rgba(160, 160, 176, 0.2);
+  --color-positive-highlight: #00f5ff;
+  --color-negative-highlight: #ff00ff;
+}
+
+.light {
+  /* Light theme - adapted neon colors for readability */
+  --color-background: #ffffff;
+  --color-header-background: #fafafa;
+  --color-footer-background: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-variant: #f0f0f0;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-divider: rgba(0, 0, 0, 0.1);
+  --color-positive-highlight: #0099cc;
+  --color-negative-highlight: #cc0099;
+}
+
+.dark {
+  /* Dark theme - explicit dark mode */
+  --color-background: #0a0a0f;
+  --color-header-background: #0f0f15;
+  --color-footer-background: #0f0f15;
+  --color-surface: #151520;
+  --color-surface-variant: #1a1a25;
+  --color-text: #e0e0e8;
+  --color-text-secondary: #a0a0b0;
+  --color-divider: rgba(160, 160, 176, 0.2);
+  --color-positive-highlight: #00f5ff;
+  --color-negative-highlight: #ff00ff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-mono), monospace;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* Custom scrollbar - retro neon style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-positive-highlight);
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(0, 245, 255, 0.3);
+  color: var(--color-text);
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-positive-highlight);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease-in-out;
+}
+
+/* Select dropdown styling - dark mode */
+select {
+  background-color: var(--color-surface-variant);
+  color: var(--color-text);
+}
+
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  padding: 0.5rem;
+}
+
+select option:checked,
+select option:focus {
+  background-color: var(--color-positive-highlight);
+  color: var(--color-background);
+}
+
+/* Ensure select options are visible in dark mode */
+@media (prefers-color-scheme: dark) {
+  select option {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+  
+  select option:checked {
+    background-color: var(--color-positive-highlight);
+    color: var(--color-background);
+  }
+}
