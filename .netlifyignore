@@ -1,0 +1,7 @@
+# Exclude build cache directories from secret scanning
+# NEXT_PUBLIC_* environment variables are intentionally bundled into client code
+.netlify/.next/cache/
+.next/cache/
+**/.next/cache/
+*.pack
+
