@@ -487,11 +487,17 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
 
       // Now sign in with Web3 using the connected wallet
       setMessage(`Authenticating with ${walletName}...`);
-      const { data, error: web3Error } = await supabase.auth.signInWithWeb3({
-        chain,
-        wallet,
-        statement: 'I accept the Terms of Service',
-      });
+      const { data, error: web3Error } = await (chain === 'ethereum'
+        ? supabase.auth.signInWithWeb3({
+            chain: 'ethereum',
+            wallet,
+            statement: 'I accept the Terms of Service',
+          })
+        : supabase.auth.signInWithWeb3({
+            chain: 'solana',
+            wallet,
+            statement: 'I accept the Terms of Service',
+          }));
 
       if (web3Error) {
         console.error('Web3 auth error:', web3Error);

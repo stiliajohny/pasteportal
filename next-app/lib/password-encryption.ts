@@ -76,12 +76,12 @@ async function deriveKeyFromPassword(password: string, salt?: Uint8Array): Promi
   );
 
   // Use provided salt or fallback to legacy static salt for backward compatibility
-  const saltBytes = salt || encoder.encode('salt');
+  const saltBytes: Uint8Array = salt || encoder.encode('salt');
   
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: saltBytes,
+      salt: saltBytes as BufferSource,
       iterations: 100000,
       hash: 'SHA-256',
     },

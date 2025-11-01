@@ -1,0 +1,140 @@
+---
+alwaysApply: true
+---
+
+# Git Commit Rules
+
+When making commits, always follow these rules:
+
+## 1. Conventional Commit Format
+
+**ALWAYS use Conventional Commits specification:**
+
+- Format: `<type>(<scope>): <subject>`
+- Types allowed: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `build`, `ci`, `revert`
+- Scope is optional but recommended for clarity
+- Subject should be lowercase and imperative mood
+
+**Examples:**
+```
+feat(auth): add user login functionality
+fix(api): resolve paste encryption issue
+docs(readme): update installation instructions
+refactor(components): simplify header navigation
+chore(deps): update dependencies
+```
+
+## 2. Commit Message Structure
+
+**Keep commit messages simple and short:**
+
+- Subject line: Maximum 72 characters
+- Body (if needed): Simple, concise explanation (optional)
+- No detailed explanations unless absolutely necessary
+- Focus on WHAT changed, not WHY (unless context is critical)
+
+**Good examples:**
+```
+feat(paste): add password protection
+fix(ui): correct mobile menu z-index
+refactor(db): consolidate migration files
+```
+
+**Avoid:**
+```
+feat: implement a comprehensive password protection feature that allows users to secure their pastes with passwords using bcrypt hashing and secure storage
+```
+
+## 3. Commit After Every Feature
+
+**Commit immediately after completing each user-requested feature:**
+
+- After implementing a feature: commit with `feat` type
+- After fixing a bug: commit with `fix` type
+- After refactoring: commit with `refactor` type
+- After updating documentation: commit with `docs` type
+- After other changes: use appropriate type
+
+**When to commit:**
+- ✅ Immediately after the feature is complete and tested
+- ✅ Before moving on to the next feature
+- ✅ After fixing bugs found during implementation
+- ✅ After making related refactoring improvements
+
+**When NOT to commit:**
+- ❌ Multiple unrelated changes in one commit
+- ❌ WIP (Work In Progress) commits unless explicitly requested
+- ❌ Commits with broken code that doesn't build or run
+
+## 4. Commit Message Best Practices
+
+**DO:**
+- ✅ Use imperative mood: "add", "fix", "update", not "added", "fixed", "updated"
+- ✅ Keep scope specific to the area changed (e.g., `auth`, `api`, `ui`, `db`)
+- ✅ Use present tense: "add feature" not "added feature"
+- ✅ Start with lowercase (except for proper nouns)
+- ✅ Be specific but concise
+
+**DON'T:**
+- ❌ Use past tense or past participle
+- ❌ Include detailed explanations in the subject line
+- ❌ Exceed 72 characters in the subject line
+- ❌ Use generic scopes like `misc`, `stuff`, `updates`
+- ❌ Include multiple features in one commit
+
+## 5. Commit Body Guidelines
+
+**If a body is needed, keep it simple:**
+
+- Maximum 2-3 lines
+- Explain the "what" briefly
+- Only include "why" if it's non-obvious
+- Use bullet points for multiple changes
+
+**Example:**
+```
+feat(api): add paste encryption endpoint
+
+- Encrypt paste content before storage
+- Use environment variable for encryption key
+```
+
+## 6. Commit Automation
+
+**Always commit using terminal commands:**
+
+- Use: `git commit -m "type(scope): subject"`
+- For commits with body: `git commit -m "type(scope): subject" -m "body line"`
+- Stage files before committing: `git add <files>`
+- Commit all changes when appropriate: `git add -A` or `git add .`
+
+**Commit workflow:**
+1. Complete the feature/bug fix
+2. Stage relevant files
+3. Create commit with conventional commit format
+4. Continue with next task
+
+## 7. Scope Guidelines
+
+**Common scopes to use:**
+
+- `auth`: Authentication and authorization
+- `api`: API routes and endpoints
+- `ui`: User interface components
+- `db`: Database migrations and schema
+- `config`: Configuration files
+- `deps`: Dependencies
+- `docs`: Documentation
+- `styles`: CSS and styling
+- `utils`: Utility functions
+- `types`: TypeScript types
+- `tests`: Test files
+
+**Example commits:**
+```
+feat(auth): add OAuth login
+fix(api): handle encryption errors gracefully
+refactor(ui): simplify component structure
+docs(readme): add deployment instructions
+chore(deps): update Next.js to latest version
+```

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,7 +15,12 @@ import { validateEmail, validatePassword } from '@/lib/auth-utils';
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return createClient();
+    }
+    return null;
+  }, []);
 
   // Profile state
   const [displayName, setDisplayName] = useState('');
@@ -48,6 +53,7 @@ export default function SettingsPage() {
 
   // Load user profile data from auth metadata
   useEffect(() => {
+    if (!supabase) return;
     if (!user) {
       router.push('/');
       return;
@@ -116,7 +122,7 @@ export default function SettingsPage() {
     maxHeight: number = 1024
   ): Promise<string | null> => {
     return new Promise((resolve) => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         if (img.width > maxWidth || img.height > maxHeight) {
           resolve(`Image dimensions must be at most ${maxWidth}x${maxHeight} pixels.`);
@@ -134,6 +140,7 @@ export default function SettingsPage() {
    * @param e - File input change event
    */
   const handlePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!supabase) return;
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -214,7 +221,7 @@ export default function SettingsPage() {
    * Handles profile picture deletion
    */
   const handleDeletePicture = async () => {
-    if (!user || !profilePictureUrl) return;
+    if (!supabase || !user || !profilePictureUrl) return;
 
     if (!confirm('Are you sure you want to delete your profile picture?')) {
       return;
@@ -232,7 +239,7 @@ export default function SettingsPage() {
       const results = await Promise.all(deletePromises);
       
       // Check if any deletion had an error (other than not found)
-      const deleteError = results.find(result => 
+      const deleteError = results.find((result: any) => 
         result.error && result.error.message !== 'The resource was not found'
       )?.error;
       
@@ -260,6 +267,7 @@ export default function SettingsPage() {
 
   // Update profile (display name and username)
   const handleUpdateProfile = async (e: React.FormEvent) => {
+    if (!supabase) return;
     e.preventDefault();
     setSaving(true);
 
@@ -286,6 +294,7 @@ export default function SettingsPage() {
 
   // Update email
   const handleUpdateEmail = async (e: React.FormEvent) => {
+    if (!supabase) return;
     e.preventDefault();
     setEmailError(null);
     setEmailMessage(null);
@@ -320,6 +329,7 @@ export default function SettingsPage() {
 
   // Update password
   const handleUpdatePassword = async (e: React.FormEvent) => {
+    if (!supabase) return;
     e.preventDefault();
     setPasswordError(null);
     setPasswordMessage(null);

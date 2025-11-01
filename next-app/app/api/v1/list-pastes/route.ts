@@ -4,6 +4,9 @@ import { decrypt } from '@/lib/encryption';
 import { sanitizeError } from '@/lib/utils';
 import { validateCsrf } from '@/lib/csrf';
 
+// Mark route as dynamic since it uses request.headers
+export const dynamic = 'force-dynamic';
+
 /**
  * @swagger
  * /api/v1/list-pastes:
