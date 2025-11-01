@@ -1,32 +1,13 @@
 [build]
+  base = "./next-app"
   command = "npm run build"
   publish = ".next"
-  
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "18"
-
-# Redirects for API routes
-[[redirects]]
-  from = "/api/store-paste"
-  to = "/api/store-paste"
-  status = 200
-  force = false
-
-[[redirects]]
-  from = "/api/get-paste"
-  to = "/api/get-paste"
-  status = 200
-  force = false
-
-# SPA fallback
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
 
 # Headers for PWA and Security
 [[headers]]
