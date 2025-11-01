@@ -34,10 +34,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# netlify
+.netlify/
+**/.netlify/
+.netlify/**
+**/.netlify/**
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-.netlify
 .next/**
 node_modules/**
