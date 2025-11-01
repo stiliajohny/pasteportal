@@ -306,12 +306,14 @@ export default function Header() {
                         <div className="flex items-center gap-3 mb-3">
                           {/* Avatar Circle or Profile Picture */}
                           {user?.user_metadata?.avatar_url ? (
-                            <img
+                            <Image
                               src={user.user_metadata.avatar_url}
                               alt={user?.user_metadata?.display_name || 
                                    user?.user_metadata?.name || 
                                    user?.email?.split('@')[0] || 
                                    'User'}
+                              width={40}
+                              height={40}
                               className="w-10 h-10 rounded-full object-cover border border-divider flex-shrink-0"
                             />
                           ) : (

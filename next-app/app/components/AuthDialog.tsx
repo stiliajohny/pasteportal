@@ -743,7 +743,7 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
                 </button>
               </div>
               <p className="text-sm text-center text-text-secondary">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <button
                   type="button"
                   onClick={() => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { createClient } from '@/lib/supabase-client';
 import { validateEmail, validatePassword } from '@/lib/auth-utils';
@@ -427,6 +428,7 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               {/* Current/Preview Picture */}
               <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {(previewUrl || profilePictureUrl) && (
                   <img
                     src={previewUrl || profilePictureUrl || ''}

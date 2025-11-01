@@ -88,7 +88,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-xl font-semibold text-text mb-3">7. Limitation of Liability</h2>
           <p>
-            PastePortal is provided "as is" without warranties of any kind. We are not liable for any
+            PastePortal is provided &quot;as is&quot; without warranties of any kind. We are not liable for any
             damages arising from your use of the service, including but not limited to direct, indirect,
             incidental, or consequential damages.
           </p>

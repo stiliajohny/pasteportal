@@ -148,6 +148,7 @@ export default function MyPastesPage() {
         fetchPastes();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router]);
 
   if (authLoading || loading) {
@@ -186,7 +187,7 @@ export default function MyPastesPage() {
       {pastes.length === 0 ? (
         <div className="bg-surface border border-divider rounded-lg p-12 text-center">
           <p className="text-text-secondary text-lg mb-4">
-            You haven't created any pastes yet.
+            You haven&apos;t created any pastes yet.
           </p>
           <button
             onClick={() => router.push('/')}

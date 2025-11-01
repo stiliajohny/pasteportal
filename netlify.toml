@@ -66,7 +66,3 @@
   for = "/manifest.json"
   [headers.values]
     Cache-Control = "public, max-age=3600"
-
-# Custom domain configuration
-# Domain: pasteportal.app
-# Configure this in Netlify dashboard under Domain settings

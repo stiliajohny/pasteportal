@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -113,9 +114,11 @@ export default function UserMenu() {
       >
         {/* Avatar Circle or Profile Picture */}
         {profilePictureUrl ? (
-          <img
+          <Image
             src={profilePictureUrl}
             alt={fullDisplayName}
+            width={32}
+            height={32}
             className="w-8 h-8 rounded-full object-cover border border-divider"
           />
         ) : (

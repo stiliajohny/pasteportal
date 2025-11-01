@@ -202,6 +202,7 @@ export default function PasteViewer() {
         setText(introParagraph + '\n\n' + joke);
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -676,7 +677,7 @@ export default function PasteViewer() {
                       <div className="flex-1">
                         <p className="text-sm font-medium text-text mb-1">🔒 Encryption Password</p>
                         <p className="text-xs text-text-secondary mb-3">
-                          ⚠️ Save this password! You'll need it to decrypt the paste.
+                          ⚠️ Save this password! You&apos;ll need it to decrypt the paste.
                         </p>
                       </div>
                     </div>

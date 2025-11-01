@@ -303,16 +303,16 @@ export default function SecurityPage() {
                     </Link>
                   </li>
                   <li>
-                    Use the <strong className="text-text">"Security"</strong> label when creating the issue
+                    Use the <strong className="text-text">&quot;Security&quot;</strong> label when creating the issue
                   </li>
                   <li>
-                    Provide a <strong className="text-text">clear description</strong> of the vulnerability
+                    Provide a <strong className="text-text">&quot;clear description&quot;</strong> of the vulnerability
                   </li>
                   <li>
-                    Include <strong className="text-text">steps to reproduce</strong> if possible
+                    Include <strong className="text-text">&quot;steps to reproduce&quot;</strong> if possible
                   </li>
                   <li>
-                    Do <strong className="text-text">not</strong> publicly disclose the vulnerability until it's been addressed
+                    Do <strong className="text-text">not</strong> publicly disclose the vulnerability until it&apos;s been addressed
                   </li>
                 </ol>
               </div>
