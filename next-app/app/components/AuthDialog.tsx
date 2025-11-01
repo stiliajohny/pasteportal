@@ -491,9 +491,6 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
         chain,
         wallet,
         statement: 'I accept the Terms of Service',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
       });
 
       if (web3Error) {
