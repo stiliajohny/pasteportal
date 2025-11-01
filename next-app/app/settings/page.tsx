@@ -438,13 +438,15 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               {/* Current/Preview Picture */}
               <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 {(previewUrl || profilePictureUrl) && (
-                  <img
-                    src={previewUrl || profilePictureUrl || ''}
-                    alt="Profile preview"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-divider"
-                  />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl || profilePictureUrl || ''}
+                      alt="Profile preview"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-divider"
+                    />
+                  </>
                 )}
                 {!previewUrl && !profilePictureUrl && (
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-neon-cyan via-neon-magenta to-neon-teal flex items-center justify-center text-white font-semibold text-2xl border-2 border-divider">
