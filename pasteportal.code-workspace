@@ -5,16 +5,16 @@
       "path": "."
     },
     {
-      "name": "infrastructure",
-      "path": "aws-deployment"
+      "name": "next-app",
+      "path": "next-app"
+    },
+    {
+      "name": "supabase",
+      "path": "supabase"
     },
     {
       "name": "vscode-extension",
       "path": "vscode-extension"
-    },
-    {
-      "name": "frontend",
-      "path": "docs"
     }
   ],
   "settings": {
@@ -24,10 +24,7 @@
       "**/.hg": true,
       "**/.svn": true,
       "**/Thumbs.db": true,
-      "**/node_modules": true,
-      "**/.aws-sam/**": true,
-      "**/.terraform/**": true,
-      "**/.terraform.lock.hcl": true,
+      "**/node_modules": true
     },
     "editor.formatOnSave": true,
     "editor.formatOnPaste": true,

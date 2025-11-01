@@ -1,4 +1,0 @@
-requests
-pymysql
-aws_lambda_powertools
-boto3

@@ -9,8 +9,6 @@
 [![DeepScan grade](https://deepscan.io/api/teams/20369/projects/23831/branches/728049/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=20369&pid=23831&bid=728049)
 [![DeepSource](https://deepsource.io/gh/stiliajohny/pasteportal.svg/?label=active+issues&show_trend=true&token=F76XWAtTJtrlBz2eJT6wo8ym)](https://deepsource.io/gh/stiliajohny/pasteportal/?ref=repository-badge)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/af53234fa6cb427cbc96a8078d8daceb)](https://www.codacy.com/gh/stiliajohny/pasteportal/dashboard?utm_source=github.com&utm_medium=referral&utm_content=stiliajohny/pasteportal&utm_campaign=Badge_Grade)
-[![sam-deploy](https://github.com/stiliajohny/pasteportal/actions/workflows/sam_deploy.yml/badge.svg)](https://github.com/stiliajohny/pasteportal/actions/workflows/sam_deploy.yml)
-[![CodeQL](https://github.com/stiliajohny/pasteportal/actions/workflows/codeql.yml/badge.svg)](https://github.com/stiliajohny/pasteportal/actions/workflows/codeql.yml)
 
 <!-- PROJECT LOGO -->
 
@@ -25,7 +23,7 @@
   <p align="center">
 A text sharing tool for developers
     <br />
-    <a href="https://pasteporta.info">Frontend</a>
+    <a href="https://pasteportal.app">Frontend</a>
     ·
     <a href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal">VSCode Extension</a>
     </br>
@@ -44,12 +42,23 @@ A text sharing tool for developers
 - [About The Project](#about-the-project)
   - [Built With](#built-with)
 - [Getting Started](#getting-started)
-  - [Architecture Diagram](#architecture-diagram)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+  - [Supabase Setup](#supabase-setup)
 - [Usage](#usage)
-- [Using the VSCode Extension](#using-the-vscode-extension)
-- [Using the Frontend](#using-the-frontend)
+  - [Using the VSCode Extension](#using-the-vscode-extension)
+  - [Using the Frontend](#using-the-frontend)
+- [API Documentation](#api-documentation)
+  - [Version 1 API](#version-1-api)
+    - [POST `/api/v1/store-paste`](#post-apiv1store-paste)
+    - [GET `/api/v1/get-paste?id=<paste-id>`](#get-apiv1get-pasteidpaste-id)
+  - [Legacy API Endpoints](#legacy-api-endpoints)
+- [Deployment](#deployment)
+  - [Netlify Deployment](#netlify-deployment)
+- [Security](#security)
+  - [Encryption](#encryption)
+  - [Best Practices](#best-practices)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
@@ -70,92 +79,212 @@ Try it out today and see the difference for yourself!
 
 ### Built With
 
-- Python
-- Terraform
-- SAM
-- Javascript
-- HTML
-- CSS
+- [Next.js](https://nextjs.org/) - React framework for production
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Supabase](https://supabase.com/) - Backend database
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [PWA](https://web.dev/progressive-web-apps/) - Progressive Web App support
 
 ---
-
-<!-- GETTING STARTED -->
 
 ## Getting Started
 
-### Architecture Diagram
-
-<!-- add a folding section -->
-<details>
-<summary>Click to expand!</summary>
-<p>
-
-![Architecture Diagram](.assets/architecture.png)
-
-</details>
-
 ### Prerequisites
 
-- SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-- Python3.8 or higher
-- AWS CLI already configured with Administrator permission
-- AWS account with Administrator permission
-- Terraform 1.0 or higher
+- Node.js 18.x or higher
+- npm or yarn
+- Supabase account (SaaS)
+- Git
 
 ### Installation
 
-- Clone the repo
+1. Clone the repository
 
 ```sh
-git clone https://github.com/stiliajohny/python-pasteporta
+git clone https://github.com/stiliajohny/pasteportal.git
+cd pasteportal
 ```
 
-> Update the Route53 zone id in `aws-deployment/terraform/route53.tf` with the domain you want to use.
-
-- Run SAM build
+2. Install dependencies
 
 ```sh
-sam build
+npm install
 ```
 
-- Run SAM deploy
+3. Set up environment variables (see [Environment Variables](#environment-variables))
+
+4. Run Supabase migrations (see [Supabase Setup](#supabase-setup))
+
+5. Start the development server
 
 ```sh
-sam deploy --guided
+npm run dev
 ```
 
-- Run Terraform
+Open [http://localhost:3000](http://localhost:3000) to view the application.
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+ENCRYPTION_KEY=your-32-byte-encryption-key-here
+```
+
+**Important Notes:**
+
+- `ENCRYPTION_KEY`: Must be a secure random 32-byte key (64 hex characters) or any string that will be used to derive a 32-byte key using scrypt
+- Keep your encryption key secure and never commit it to version control
+- For production, use a secure method to generate and store the encryption key
+
+### Supabase Setup
+
+1. **Create a Supabase project** (if you haven't already) at [supabase.com](https://supabase.com)
+
+2. **Run migrations** to set up the database schema:
 
 ```sh
-terraform init
-terraform apply
+# Using Supabase CLI (recommended)
+supabase db push
+
+# Or manually run the SQL migration file:
+# supabase/migrations/001_initial_schema.sql
 ```
 
----
+3. **Verify the table was created:**
+
+The migration creates a `pastes` table with the following structure:
+
+- `id` (TEXT, primary key, 6-character hex)
+- `paste` (TEXT, encrypted content)
+- `recipient_gh_username` (TEXT)
+- `timestamp` (TIMESTAMP)
+- `created_at` (TIMESTAMP)
+
+The table includes Row Level Security (RLS) policies for public read/write access.
 
 ## Usage
 
-## Using the VSCode Extension
+### Using the VSCode Extension
 
 The VSCode extension is available on the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal).
 
 After installing the extension, you can use the command `PastePortal: Share` to share the current selection.
 
-In order to retrive the content of a paste, you can use the command `PastePortal: Retrieve` and enter the paste id.
+In order to retrieve the content of a paste, you can use the command `PastePortal: Retrieve` and enter the paste id.
 
-## Using the Frontend
+### Using the Frontend
 
-The frontend is available [here](https://pasteportal.info).
+The frontend is available at [https://pasteportal.app](https://pasteportal.app).
 
----
+You can:
+
+- View pastes by visiting `https://pasteportal.app?id=<paste-id>`
+- Manually retrieve pastes using the sidebar "Get Paste" option
+- Install as a PWA for offline access
+
+## API Documentation
+
+### Version 1 API
+
+#### POST `/api/v1/store-paste`
+
+Store a new paste.
+
+**Request Body:**
+
+```json
+{
+  "paste": "Your text content here",
+  "recipient_gh_username": "recipient"
+}
+```
+
+**Response:**
+
+```json
+{
+  "response": {
+    "message": "The paste was successfully inserted into the database",
+    "id": "abc123",
+    "timestamp": "2024-01-01T00:00:00.000Z",
+    "paste": "Your text content here",
+    "joke": "A random programming joke"
+  }
+}
+```
+
+#### GET `/api/v1/get-paste?id=<paste-id>`
+
+Retrieve a paste by ID.
+
+**Response:**
+
+```json
+{
+  "response": {
+    "message": "The paste was successfully retrieved from the database",
+    "id": "abc123",
+    "paste": "Your text content here",
+    "recipient_gh_username": "recipient",
+    "joke": "A random programming joke"
+  }
+}
+```
+
+### Legacy API Endpoints
+
+For backward compatibility with the VSCode extension, the following legacy endpoints are available:
+
+- `/api/store-paste` → redirects to `/api/v1/store-paste`
+- `/api/get-paste` → redirects to `/api/v1/get-paste`
+
+## Deployment
+
+### Netlify Deployment
+
+The application is configured for deployment on Netlify:
+
+1. **Connect your repository** to Netlify
+
+2. **Set environment variables** in Netlify dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `ENCRYPTION_KEY`
+
+3. **Configure custom domain** `pasteportal.app` in Netlify dashboard
+
+4. **Deploy** - Netlify will automatically build and deploy using the `netlify.toml` configuration
+
+The `netlify.toml` file includes:
+
+- Build settings
+- API route redirects
+- PWA headers
+- Security headers
+
+## Security
+
+### Encryption
+
+- All paste content is encrypted using **AES-256-GCM** before storing in the database
+- Encryption key is stored in environment variables and never exposed to clients
+- Encryption/decryption happens server-side only
+
+### Best Practices
+
+- Always use a strong, randomly generated encryption key
+- Never commit `.env.local` or encryption keys to version control
+- Use environment variables for all sensitive configuration
+- Regularly rotate encryption keys in production
 
 ## Roadmap
 
 See the [open issues](https://github.com/stiliajohny/pasteportal/issues) for a list of proposed features (and known issues).
 
 ---
-
-<!-- CONTRIBUTING -->
 
 ## Contributing
 
@@ -169,25 +298,15 @@ Contributions are what make the open source community such an amazing place to b
 
 ---
 
-<!-- LICENSE -->
-
 ## License
 
 Distributed under the GPLv3 License. See `LICENSE` for more information.
 
-<!-- CONTACT -->
-
 ## Contact
 
-John Stilia - stilia.johny@gmail.com
-
-<!--
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
--->
+John Stilia - <stilia.johny@gmail.com>
 
 ---
-
-<!-- ACKNOWLEDGEMENTS -->
 
 ## Acknowledgements
 
@@ -196,7 +315,6 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 - [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
 - [Img Shields](https://shields.io)
 - [Choose an Open Source License](https://choosealicense.com)
-- [GitHub Pages](https://pages.github.com)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
@@ -212,8 +330,6 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 [license-shield]: https://img.shields.io/github/license/stiliajohny/pasteportal
 [license-url]: https://github.com/stiliajohny/pasteportal/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg
-
-[linkedin-url]: https://linkedin.com/in/]/
-[product-screenshot]: .assets/screenshot.png
+[linkedin-url]: https://linkedin.com/in/
 [ask-me-anything]: https://img.shields.io/badge/Ask%20me-anything-1abc9c.svg
 [personal-page]: https://github.com/stiliajohny

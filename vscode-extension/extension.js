@@ -303,14 +303,12 @@ function activate(context) {
                 joke,
                 id,
                 paste,
-                creator_gh_user,
                 recipient_gh_username
               }
             } = response.data
             console.log('Joke: :' + joke)
             console.log('ID: :' + id)
             console.log('Paste: :' + paste)
-            console.log('Creator: :' + creator_gh_user)
             console.log('Recipient: :' + recipient_gh_username)
 
             // insert the paste content into the active editor
@@ -380,17 +378,15 @@ function activate(context) {
         const baseURL = `${api_endpoint}/store-paste`
         const { data } = await axios.post(baseURL, {
           paste: selectedText,
-          recipient_gh_username: 'unknown', // TODO get the username from the user
-          creator_gh_user: 'unknown' // TODO get the username from the user
+          recipient_gh_username: 'unknown' // TODO get the username from the user
         })
 
         console.log('Paste stored to the API')
-        const { joke, id, paste, creator_gh_user, recipient_gh_username } =
+        const { joke, id, paste, recipient_gh_username } =
           data.response
         console.log('Joke: :' + joke)
         console.log('ID: :' + id)
         console.log('Paste: :' + paste)
-        console.log('Creator: :' + creator_gh_user)
         console.log('Recipient: :' + recipient_gh_username)
         vscode.window.showInformationMessage(
           'Instructions copied to clipboard'
@@ -445,14 +441,12 @@ function activate(context) {
               joke,
               id,
               paste,
-              creator_gh_user,
               recipient_gh_username
             }
           } = response.data
           console.log('Joke: :' + joke)
           console.log('ID: :' + id)
           console.log('Paste: :' + paste)
-          console.log('Creator: :' + creator_gh_user)
           console.log('Recipient: :' + recipient_gh_username)
 
           console.log('Paste: :' + paste)
@@ -521,17 +515,15 @@ function activate(context) {
         const baseURL = `${api_endpoint}/store-paste`
         const { data } = await axios.post(baseURL, {
           paste: encryptedPaste,
-          recipient_gh_username: 'unknown', // TODO get the username from the user
-          creator_gh_user: 'unknown' // TODO get the username from the user
+          recipient_gh_username: 'unknown' // TODO get the username from the user
         })
 
         console.log('Paste stored to the API')
-        const { joke, id, paste, creator_gh_user, recipient_gh_username } =
+        const { joke, id, paste, recipient_gh_username } =
           data.response
         console.log('Joke: :' + joke)
         console.log('ID: :' + id)
         console.log('Paste: :' + paste)
-        console.log('Creator: :' + creator_gh_user)
         console.log('Recipient: :' + recipient_gh_username)
         vscode.window.showInformationMessage(
           'Instructions copied to clipboard'
