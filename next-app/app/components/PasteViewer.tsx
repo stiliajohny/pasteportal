@@ -1183,8 +1183,8 @@ export default function PasteViewer() {
                 </button>
               )}
 
-              {/* Line Numbers Toggle - only shown in view mode when text exists */}
-              {!isLoading && !isEditMode && text && (
+              {/* Line Numbers Toggle - shown when text exists, independent of edit/view mode */}
+              {!isLoading && text && (
                 <button
                   onClick={() => setShowLineNumbers(!showLineNumbers)}
                   className={`px-2 py-1.5 rounded-lg border transition-all duration-200 active:scale-[0.98] ${
