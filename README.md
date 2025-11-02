@@ -24,8 +24,6 @@
 A text sharing tool for developers
     <br />
     <a href="https://pasteportal.app">Frontend</a>
-    ·
-    <a href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal">VSCode Extension</a>
     </br>
     <a href="https://github.com/stiliajohny/pasteportal/issues/new?labels=i%3A+bug&template=1-bug-report.md">Report Bug</a>
     ·
@@ -47,13 +45,11 @@ A text sharing tool for developers
   - [Environment Variables](#environment-variables)
   - [Supabase Setup](#supabase-setup)
 - [Usage](#usage)
-  - [Using the VSCode Extension](#using-the-vscode-extension)
   - [Using the Frontend](#using-the-frontend)
 - [API Documentation](#api-documentation)
   - [Version 1 API](#version-1-api)
     - [POST `/api/v1/store-paste`](#post-apiv1store-paste)
     - [GET `/api/v1/get-paste?id=<paste-id>`](#get-apiv1get-pasteidpaste-id)
-  - [Legacy API Endpoints](#legacy-api-endpoints)
 - [Deployment](#deployment)
   - [Netlify Deployment](#netlify-deployment)
 - [Security](#security)
@@ -71,7 +67,6 @@ A text sharing tool for developers
 
 PastePortal is a revolutionary new application that makes sharing text a breeze. Designed with developers in mind, PastePortal eliminates the need for the traditional copy-paste method, making it easy to share context without any additional complexity.
 
-The application comes with a VSCode extension, as well as, a frontend, making it accessible to a wide range of users.
 Whether you're working on a large project with multiple team members or simply need to share a small snippet of code, PastePortal is the perfect solution.
 With its user-friendly interface and powerful functionality, it's no wonder why PastePortal is quickly becoming the go-to choice for developers everywhere.
 
@@ -167,14 +162,6 @@ The table includes Row Level Security (RLS) policies for public read/write acces
 
 ## Usage
 
-### Using the VSCode Extension
-
-The VSCode extension is available on the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal).
-
-After installing the extension, you can use the command `PastePortal: Share` to share the current selection.
-
-In order to retrieve the content of a paste, you can use the command `PastePortal: Retrieve` and enter the paste id.
-
 ### Using the Frontend
 
 The frontend is available at [https://pasteportal.app](https://pasteportal.app).
@@ -234,12 +221,6 @@ Retrieve a paste by ID.
 }
 ```
 
-### Legacy API Endpoints
-
-For backward compatibility with the VSCode extension, the following legacy endpoints are available:
-
-- `/api/store-paste` → redirects to `/api/v1/store-paste`
-- `/api/get-paste` → redirects to `/api/v1/get-paste`
 
 ## Deployment
 
