@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { validateEmail, validatePassword } from '@/lib/auth-utils';
 import { createClient } from '@/lib/supabase-client';
-import { validatePassword, validateEmail } from '@/lib/auth-utils';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 type AuthMode = 'signin' | 'signup' | 'magic-link' | 'reset-password' | 'otp';
@@ -19,6 +20,8 @@ interface AuthDialogProps {
  * Supports email/password, magic link, password reset, OTP, Web3, and GitHub
  */
 export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: AuthDialogProps) {
+  const pathname = usePathname();
+  const isVSCodeAuth = pathname?.includes('/auth/vscode');
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -169,10 +172,15 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
 
     setLoading(true);
     try {
+      // Use VS Code callback URL if on VS Code auth page, otherwise normal callback
+      const redirectTo = isVSCodeAuth 
+        ? `${window.location.origin}/auth/vscode`
+        : `${window.location.origin}/auth/callback`;
+        
       const { error: magicLinkError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectTo,
         },
       });
 
@@ -305,10 +313,15 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
     
     setLoading(true);
     try {
+      // Use VS Code callback URL if on VS Code auth page, otherwise normal callback
+      const redirectTo = isVSCodeAuth 
+        ? `${window.location.origin}/auth/vscode`
+        : `${window.location.origin}/auth/callback`;
+        
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectTo,
         },
       });
 
