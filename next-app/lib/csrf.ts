@@ -18,11 +18,6 @@ export function validateOrigin(request: NextRequest): boolean {
   const referer = request.headers.get('referer');
   const host = request.headers.get('host');
   
-  // Get allowed origins from environment or use host as fallback
-  const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : host ? [`https://${host}`, `http://${host}`] : [];
-  
   // Allow requests from same origin (direct API calls, no origin header)
   // This is safe because:
   // - Browser automatically sets Origin for cross-origin requests
@@ -34,6 +29,29 @@ export function validateOrigin(request: NextRequest): boolean {
     // For direct API calls (VS Code extension), we'll validate via token if authenticated
     return true;
   }
+  
+  // In development, allow localhost origins
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  if (isDevelopment) {
+    try {
+      const originUrl = new URL(origin);
+      // Allow localhost, 127.0.0.1, and ::1 (IPv6 localhost) on any port
+      if (
+        originUrl.hostname === 'localhost' ||
+        originUrl.hostname === '127.0.0.1' ||
+        originUrl.hostname === '::1'
+      ) {
+        return true;
+      }
+    } catch {
+      // Invalid origin URL format, continue to normal validation
+    }
+  }
+  
+  // Get allowed origins from environment or use host as fallback
+  const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : host ? [`https://${host}`, `http://${host}`] : [];
   
   // Validate against allowed origins
   try {
@@ -61,6 +79,18 @@ export function validateOrigin(request: NextRequest): boolean {
   if (referer) {
     try {
       const refererUrl = new URL(referer);
+      
+      // In development, allow localhost referers
+      if (isDevelopment) {
+        if (
+          refererUrl.hostname === 'localhost' ||
+          refererUrl.hostname === '127.0.0.1' ||
+          refererUrl.hostname === '::1'
+        ) {
+          return true;
+        }
+      }
+      
       return allowedOrigins.some(allowed => {
         try {
           const allowedUrl = new URL(allowed);
@@ -80,12 +110,39 @@ export function validateOrigin(request: NextRequest): boolean {
 }
 
 /**
+ * Check if request appears to be from a browser (vs direct API call)
+ * @param request - NextRequest object
+ * @returns True if request appears to be from a browser
+ */
+function isBrowserRequest(request: NextRequest): boolean {
+  const userAgent = request.headers.get('user-agent') || '';
+  const cookies = request.headers.get('cookie') || '';
+  
+  // Check for browser user agent patterns
+  const browserPatterns = /Mozilla|Chrome|Safari|Firefox|Edge|Opera|iPhone|iPad|Android/i;
+  const hasBrowserUA = browserPatterns.test(userAgent);
+  
+  // If there are cookies (especially session cookies), likely a browser
+  const hasCookies = cookies.length > 0;
+  
+  // Consider it a browser request if it has browser UA or cookies
+  // Direct API calls typically don't have browser UA or session cookies
+  return hasBrowserUA || hasCookies;
+}
+
+/**
  * Validate CSRF token for authenticated requests
  * Uses double-submit cookie pattern
+ * For browser requests, requires both token header and cookie
+ * For direct API calls, relies on origin validation only
  * @param request - NextRequest object
- * @returns True if CSRF token is valid, false otherwise
+ * @param requireToken - Whether to require token (default: true for authenticated requests)
+ * @returns Object with isValid flag and reason
  */
-export function validateCsrfToken(request: NextRequest): boolean {
+export function validateCsrfToken(
+  request: NextRequest,
+  requireToken: boolean = true
+): { isValid: boolean; reason?: string } {
   // Get CSRF token from header (client should send X-CSRF-Token header)
   const csrfToken = request.headers.get('x-csrf-token');
   
@@ -94,16 +151,49 @@ export function validateCsrfToken(request: NextRequest): boolean {
   const cookieMatch = cookies.match(/csrf-token=([^;]+)/);
   const cookieToken = cookieMatch ? cookieMatch[1] : null;
   
-  // If no token required (public endpoints or direct API calls), allow
-  // Only validate if both token and cookie are present
-  if (!csrfToken || !cookieToken) {
-    // For direct API calls (like VS Code extension), we'll rely on Origin validation
-    // This maintains backward compatibility
-    return true;
+  // If token is not required (e.g., public endpoints), allow
+  if (!requireToken) {
+    return { isValid: true };
   }
   
-  // Validate that header token matches cookie token (double-submit pattern)
-  return csrfToken === cookieToken;
+  // For browser requests, require CSRF token
+  // For direct API calls (no browser indicators), we rely on origin validation
+  const isBrowser = isBrowserRequest(request);
+  
+  if (isBrowser) {
+    // Browser requests must provide both header and cookie tokens
+    if (!csrfToken || !cookieToken) {
+      return {
+        isValid: false,
+        reason: 'CSRF token required for browser requests'
+      };
+    }
+    
+    // Validate that header token matches cookie token (double-submit pattern)
+    if (csrfToken !== cookieToken) {
+      return {
+        isValid: false,
+        reason: 'CSRF token mismatch'
+      };
+    }
+    
+    return { isValid: true };
+  }
+  
+  // For direct API calls (VS Code extension, etc.), allow if origin is valid
+  // Origin validation will be checked separately
+  // If token is provided, validate it, but don't require it
+  if (csrfToken && cookieToken) {
+    if (csrfToken !== cookieToken) {
+      return {
+        isValid: false,
+        reason: 'CSRF token mismatch'
+      };
+    }
+  }
+  
+  // Allow direct API calls without token (origin validation will catch CSRF)
+  return { isValid: true };
 }
 
 /**
@@ -122,7 +212,7 @@ export function validateCsrf(
     return { isValid: true };
   }
   
-  // Validate Origin/Referer headers
+  // Validate Origin/Referer headers first
   const originValid = validateOrigin(request);
   if (!originValid) {
     return {
@@ -131,14 +221,13 @@ export function validateCsrf(
     };
   }
   
-  // For authenticated requests, also validate CSRF token if present
-  // If token is not present (e.g., direct API calls), rely on Origin validation
-  const tokenValid = validateCsrfToken(request);
-  if (!tokenValid && request.headers.get('x-csrf-token')) {
-    // Only fail if token was provided but is invalid
+  // For authenticated requests, validate CSRF token
+  // Browser requests require tokens, direct API calls rely on origin validation
+  const tokenValidation = validateCsrfToken(request, requireAuth);
+  if (!tokenValidation.isValid) {
     return {
       isValid: false,
-      error: 'Invalid CSRF token. Request rejected for security reasons.'
+      error: tokenValidation.reason || 'Invalid CSRF token. Request rejected for security reasons.'
     };
   }
   
