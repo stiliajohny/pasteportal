@@ -1,3 +1,6 @@
+import { getCorsHeaders } from './cors';
+import type { NextRequest } from 'next/server';
+
 /**
  * Generate a UUID v4 identifier
  * @returns UUID v4 string (e.g., "550e8400-e29b-41d4-a716-446655440000")
@@ -63,30 +66,29 @@ export function sanitizeError(error: any, defaultMessage: string = 'An error occ
 
 /**
  * Generate a standardized API response
+ * @param statusCode - HTTP status code
+ * @param message - Response message
+ * @param data - Optional additional data
+ * @param request - Optional NextRequest for CORS header generation
+ * @returns Response object
  */
 export function generateResponse(
   statusCode: number,
   message: any,
-  data?: any
+  data?: any,
+  request?: NextRequest
 ): Response {
-  const response: any = {
-    statusCode,
-    body: JSON.stringify({ response: message }),
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      Secret: 'Written by Next.js',
-    },
+  const corsHeaders = request ? getCorsHeaders(request) : {};
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...corsHeaders,
   };
 
-  if (data) {
-    response.data = data;
-  }
+  const responseBody = JSON.stringify({ response: message });
 
-  return new Response(response.body, {
+  return new Response(responseBody, {
     status: statusCode,
-    headers: response.headers,
+    headers,
   });
 }

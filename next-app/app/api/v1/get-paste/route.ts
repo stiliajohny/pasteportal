@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { decrypt } from '@/lib/encryption';
 import { generateBanterComment, generateResponse, sanitizeError } from '@/lib/utils';
+import { corsOptionsResponse } from '@/lib/cors';
 
 /**
  * @swagger
@@ -52,7 +53,9 @@ export async function GET(request: NextRequest) {
         {
           message: 'The paste was unsuccessfully retrieved from the database. Parameter is not correct',
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -66,7 +69,9 @@ export async function GET(request: NextRequest) {
         {
           message: 'The paste was unsuccessfully retrieved from the database. Parameter is not correct',
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -85,7 +90,9 @@ export async function GET(request: NextRequest) {
           message: 'The paste was unsuccessfully retrieved from the database',
           id: 'Not Found',
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -100,7 +107,9 @@ export async function GET(request: NextRequest) {
         {
           message: sanitizeError(decryptError, 'Failed to decrypt paste'),
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -114,7 +123,9 @@ export async function GET(request: NextRequest) {
         joke: generateBanterComment(),
         recipient_gh_username: data.recipient_gh_username,
         is_password_encrypted: data.is_password_encrypted || false,
-      }
+      },
+      undefined,
+      request
     );
   } catch (error: any) {
     console.error('Error in get-paste:', error);
@@ -123,19 +134,14 @@ export async function GET(request: NextRequest) {
       {
         message: sanitizeError(error, 'Internal server error'),
         joke: generateBanterComment(),
-      }
+      },
+      undefined,
+      request
     );
   }
 }
 
 // Handle OPTIONS for CORS
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return corsOptionsResponse(request, 'GET, OPTIONS');
 }

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { generateBanterComment, generatePasteId, generateResponse, sanitizeError } from '@/lib/utils';
 import { validateCsrf } from '@/lib/csrf';
+import { corsOptionsResponse } from '@/lib/cors';
 import { NextRequest } from 'next/server';
 
 /**
@@ -106,7 +107,9 @@ export async function POST(request: NextRequest) {
           {
             message: 'Missing required field: file or paste',
             joke: generateBanterComment(),
-          }
+          },
+          undefined,
+          request
         );
       }
 
@@ -131,7 +134,9 @@ export async function POST(request: NextRequest) {
         {
           message: 'Missing required fields: paste (or file), recipient_gh_username',
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -143,7 +148,9 @@ export async function POST(request: NextRequest) {
         {
           message: 'Paste size exceeds 400KB limit',
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -158,7 +165,9 @@ export async function POST(request: NextRequest) {
           {
             message: sanitizeError(csrfValidation.error, 'Request rejected for security reasons'),
             joke: generateBanterComment(),
-          }
+          },
+          undefined,
+          request
         );
       }
 
@@ -171,7 +180,9 @@ export async function POST(request: NextRequest) {
           {
             message: 'Authentication required when providing user_id or password',
             joke: generateBanterComment(),
-          }
+          },
+          undefined,
+          request
         );
       }
       
@@ -185,7 +196,9 @@ export async function POST(request: NextRequest) {
           {
             message: 'Forbidden: user_id does not match authenticated user',
             joke: generateBanterComment(),
-          }
+          },
+          undefined,
+          request
         );
       }
       
@@ -201,7 +214,9 @@ export async function POST(request: NextRequest) {
           {
             message: 'Authentication required to store passwords',
             joke: generateBanterComment(),
-          }
+          },
+          undefined,
+          request
         );
       }
     }
@@ -254,7 +269,9 @@ export async function POST(request: NextRequest) {
         {
           message: 'Failed to insert paste into database',
           joke: generateBanterComment(),
-        }
+        },
+        undefined,
+        request
       );
     }
 
@@ -268,7 +285,9 @@ export async function POST(request: NextRequest) {
         id,
         timestamp,
         joke: generateBanterComment(),
-      }
+      },
+      undefined,
+      request
     );
   } catch (error: any) {
     console.error('Error in store-paste:', error);
@@ -277,19 +296,14 @@ export async function POST(request: NextRequest) {
       {
         message: sanitizeError(error, 'Internal server error'),
         joke: generateBanterComment(),
-      }
+      },
+      undefined,
+      request
     );
   }
 }
 
 // Handle OPTIONS for CORS
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return corsOptionsResponse(request, 'POST, OPTIONS');
 }

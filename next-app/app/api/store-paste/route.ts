@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { redirect } from 'next/navigation';
+import { corsOptionsResponse } from '@/lib/cors';
 
 /**
  * @swagger
@@ -41,13 +41,6 @@ export async function POST(request: NextRequest) {
   return response;
 }
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+export async function OPTIONS(request: NextRequest) {
+  return corsOptionsResponse(request, 'POST, OPTIONS');
 }

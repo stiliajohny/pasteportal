@@ -14,8 +14,11 @@ const KEY_LENGTH = 256;
  * be directly compatible with the VS Code extension's decryption and vice versa.
  * For full compatibility, both would need to use the same key derivation method.
  * 
- * Security: New encryptions use unique random salts per encryption (format version "01").
- * Legacy encryptions using static salt are still supported for backward compatibility.
+ * Security: 
+ * - New encryptions (format "01") use unique random salts per encryption for maximum security
+ * - Legacy encryptions (pre-format "01") used a static salt and are deprecated
+ * - Legacy format is still supported for decryption to maintain backward compatibility
+ * - All new encryptions use format "01" with random salt and 600,000 PBKDF2 iterations
  */
 
 /**
@@ -75,14 +78,19 @@ async function deriveKeyFromPassword(password: string, salt?: Uint8Array): Promi
     ['deriveBits', 'deriveKey']
   );
 
-  // Use provided salt or fallback to legacy static salt for backward compatibility
+  // Use provided salt (for new format) or legacy static salt (for backward compatibility)
+  // WARNING: Static salt is only used for decrypting legacy pastes
+  // All new encryptions MUST use random salt (format "01")
   const saltBytes: Uint8Array = salt || encoder.encode('salt');
   
+  // Use 600,000 iterations as recommended by OWASP 2024 for PBKDF2-SHA256
+  // This provides strong protection against brute-force attacks
+  // Higher than the previous 100,000 to align with current security standards
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
       salt: saltBytes as BufferSource,
-      iterations: 100000,
+      iterations: 600000,
       hash: 'SHA-256',
     },
     passwordKey,
@@ -179,6 +187,9 @@ export async function decryptWithPassword(password: string, encryptedText: strin
       );
     } else {
       // Legacy format: IV (32 hex) + encrypted data (no version marker, no salt)
+      // WARNING: Legacy format uses static salt - security is reduced
+      // Users should re-encrypt their pastes using the new format (format "01")
+      console.warn('Decrypting legacy paste format. Consider re-encrypting with new format for better security.');
       ivHex = encryptedText.slice(0, 32);
       encryptedHex = encryptedText.slice(32);
       // salt remains undefined, will use legacy static salt
