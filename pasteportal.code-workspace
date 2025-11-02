@@ -11,10 +11,6 @@
     {
       "name": "supabase",
       "path": "supabase"
-    },
-    {
-      "name": "vscode-extension",
-      "path": "vscode-extension"
     }
   ],
   "settings": {
