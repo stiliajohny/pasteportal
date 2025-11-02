@@ -165,6 +165,7 @@ export default function PasteViewer() {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [pushedPasteId, setPushedPasteId] = useState<string | null>(null);
+  const [pushedPasteName, setPushedPasteName] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [instructionsCopied, setInstructionsCopied] = useState(false);
   const [showEncryptDialog, setShowEncryptDialog] = useState(false);
@@ -393,14 +394,16 @@ export default function PasteViewer() {
       const recipientGhUsername = 'unknown';
       const userId = user?.id || null;
 
+      const nameToStore = pasteName.trim() || null;
       const result = await storePaste(
         contentToStore,
         recipientGhUsername,
-        pasteName.trim() || null,
+        nameToStore,
         userId,
         isEncrypted && password ? password : null
       );
       setPushedPasteId(result.id);
+      setPushedPasteName(nameToStore);
       
       // Clear paste name after successful push
       setPasteName('');
@@ -483,10 +486,11 @@ export default function PasteViewer() {
     const shareUrl = `${window.location.origin}?id=${pushedPasteId}`;
     let instructions: string;
 
+    const titlePrefix = pushedPasteName ? `${pushedPasteName}\n\n` : '';
     if (usedPassword) {
-      instructions = `This is the link: ${shareUrl}\n\nThis is the password: ${usedPassword}`;
+      instructions = `${titlePrefix}This is the link: ${shareUrl}\n\nThis is the password: ${usedPassword}`;
     } else {
-      instructions = `This is the link: ${shareUrl}`;
+      instructions = `${titlePrefix}This is the link: ${shareUrl}`;
     }
 
     if (navigator.clipboard) {
@@ -513,10 +517,11 @@ export default function PasteViewer() {
    * Get share text for social platforms
    */
   const getShareText = (): string => {
+    const titlePrefix = pushedPasteName ? `${pushedPasteName}\n\n` : '';
     if (usedPassword) {
-      return `Check out this encrypted paste!\n\nLink: ${getShareUrl()}\nPassword: ${usedPassword}`;
+      return `${titlePrefix}Check out this encrypted paste!\n\nLink: ${getShareUrl()}\nPassword: ${usedPassword}`;
     }
-    return `Check out this paste: ${getShareUrl()}`;
+    return `${titlePrefix}Check out this paste: ${getShareUrl()}`;
   };
 
   /**
@@ -539,9 +544,10 @@ export default function PasteViewer() {
    * Share to Twitter/X
    */
   const handleShareTwitter = () => {
+    const titlePrefix = pushedPasteName ? `${pushedPasteName} - ` : '';
     const text = usedPassword 
-      ? `Check out this encrypted paste! Link: ${getShareUrl()} Password: ${usedPassword}`
-      : `Check out this paste: ${getShareUrl()}`;
+      ? `${titlePrefix}Check out this encrypted paste! Link: ${getShareUrl()} Password: ${usedPassword}`
+      : `${titlePrefix}Check out this paste: ${getShareUrl()}`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -566,7 +572,7 @@ export default function PasteViewer() {
    * Share via Email
    */
   const handleShareEmail = () => {
-    const subject = 'Check out this paste';
+    const subject = pushedPasteName ? pushedPasteName : 'Check out this paste';
     const body = getShareText();
     const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
@@ -919,6 +925,7 @@ export default function PasteViewer() {
                 <button
                   onClick={() => {
                     setPushedPasteId(null);
+                    setPushedPasteName(null);
                     setUsedPassword(null);
                     setInstructionsCopied(false);
                   }}
