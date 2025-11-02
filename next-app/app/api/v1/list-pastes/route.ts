@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { decrypt } from '@/lib/encryption';
-import { sanitizeError } from '@/lib/utils';
-import { validateCsrf } from '@/lib/csrf';
+import { sanitizeError, secureLogError } from '@/lib/utils';
+import { validateOrigin } from '@/lib/csrf';
+import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 // Mark route as dynamic since it uses request.headers
 export const dynamic = 'force-dynamic';
@@ -49,13 +50,19 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    // CSRF Protection: Validate request origin and CSRF token
-    // Note: GET requests are typically safe, but since this endpoint returns sensitive data
-    // and requires authentication, we validate CSRF to prevent data leakage
-    const csrfValidation = validateCsrf(request, true);
-    if (!csrfValidation.isValid) {
+    // Apply rate limiting (authenticated endpoint)
+    const rateLimitResponse = applyRateLimit(request, rateLimitConfigs.authenticated);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+    
+    // CSRF Protection: Validate request origin
+    // Note: For GET requests, origin validation is sufficient since they don't modify state
+    // Authentication is still required separately, which prevents unauthorized access
+    const originValid = validateOrigin(request);
+    if (!originValid) {
       return NextResponse.json(
-        { error: sanitizeError(csrfValidation.error, 'Request rejected for security reasons') },
+        { error: 'Invalid origin. Request rejected for security reasons.' },
         { status: 403 }
       );
     }
@@ -83,7 +90,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Database error:', error);
+      secureLogError('Database error in list-pastes', error);
       return NextResponse.json(
         { error: 'Failed to retrieve pastes' },
         { status: 500 }
@@ -98,7 +105,7 @@ export async function GET(request: NextRequest) {
         try {
           decryptedName = decrypt(paste.name);
         } catch (error) {
-          console.error('Failed to decrypt paste name:', error);
+          secureLogError('Failed to decrypt paste name in list-pastes', error);
           // If decryption fails, use null (fallback to timestamp)
           decryptedName = null;
         }
@@ -110,7 +117,7 @@ export async function GET(request: NextRequest) {
         try {
           decryptedPassword = decrypt(paste.password);
         } catch (error) {
-          console.error('Failed to decrypt paste password:', error);
+          secureLogError('Failed to decrypt paste password in list-pastes', error);
           // If decryption fails, password remains null
           decryptedPassword = null;
         }
@@ -136,7 +143,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('Error in list-pastes:', error);
+    secureLogError('Error in list-pastes', error);
     return NextResponse.json(
       { error: sanitizeError(error, 'Internal server error') },
       { status: 500 }

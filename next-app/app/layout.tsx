@@ -7,6 +7,17 @@ import { ThemeProvider } from './components/ThemeProvider';
 import { AuthProvider } from './contexts/AuthContext';
 import './globals.css';
 
+// Validate configuration on server-side startup
+// This ensures the app fails fast if environment variables are missing or invalid
+if (typeof window === 'undefined') {
+  try {
+    require('@/lib/config-validation').getValidatedConfig();
+  } catch (error) {
+    // Error is logged and thrown in config-validation.ts
+    throw error;
+  }
+}
+
 const sourceCodePro = Source_Code_Pro({
   subsets: ['latin'],
   variable: '--font-mono',

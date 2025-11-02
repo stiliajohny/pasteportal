@@ -2,11 +2,69 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
+ * Maximum allowed request size (in bytes)
+ * This is a safety limit to prevent DoS via large requests
+ * 1MB should be sufficient for most API requests (paste content is limited separately)
+ */
+const MAX_REQUEST_SIZE = 1024 * 1024; // 1MB
+
+/**
+ * Check if request size exceeds limits
+ * @param request - NextRequest object
+ * @returns True if request size is acceptable
+ */
+async function checkRequestSize(request: NextRequest): Promise<boolean> {
+  const contentLength = request.headers.get('content-length');
+  
+  if (contentLength) {
+    const size = parseInt(contentLength, 10);
+    if (!isNaN(size) && size > MAX_REQUEST_SIZE) {
+      return false;
+    }
+  }
+  
+  // For requests without Content-Length header, we can't pre-check
+  // The actual body parsing in API routes should handle this
+  return true;
+}
+
+/**
  * Middleware to add security headers to all responses
  * Ensures security headers are applied in all environments (dev, prod, etc.)
  * Not just in Netlify configuration
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  // HTTPS redirect enforcement in production
+  if (process.env.NODE_ENV === 'production') {
+    const url = request.nextUrl;
+    const hostname = request.headers.get('host') || url.hostname;
+    
+    // Check if request is HTTP (not HTTPS) and not localhost
+    if (
+      url.protocol === 'http:' &&
+      !hostname.includes('localhost') &&
+      !hostname.includes('127.0.0.1')
+    ) {
+      // Redirect to HTTPS
+      url.protocol = 'https:';
+      return NextResponse.redirect(url);
+    }
+  }
+  
+  // Check request size for POST/PUT/PATCH requests
+  if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    const sizeOk = await checkRequestSize(request);
+    if (!sizeOk) {
+      return NextResponse.json(
+        {
+          error: 'Request entity too large',
+          message: `Request body exceeds maximum size of ${MAX_REQUEST_SIZE} bytes`,
+        },
+        { status: 413 }
+      );
+    }
+  }
+  
   const response = NextResponse.next();
 
   // Security headers
@@ -14,6 +72,38 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Permissions-Policy: Restrict browser features to prevent abuse
+  const permissionsPolicy = [
+    'accelerometer=()',
+    'ambient-light-sensor=()',
+    'autoplay=()',
+    'battery=()',
+    'camera=()',
+    'cross-origin-isolated=()',
+    'display-capture=()',
+    'document-domain=()',
+    'encrypted-media=()',
+    'execution-while-not-rendered=()',
+    'execution-while-out-of-viewport=()',
+    'fullscreen=(self)',
+    'geolocation=()',
+    'gyroscope=()',
+    'keyboard-map=()',
+    'magnetometer=()',
+    'microphone=()',
+    'midi=()',
+    'navigation-override=()',
+    'payment=()',
+    'picture-in-picture=()',
+    'publickey-credentials-get=(self)',
+    'screen-wake-lock=()',
+    'sync-xhr=()',
+    'usb=()',
+    'web-share=()',
+    'xr-spatial-tracking=()',
+  ].join(', ');
+  response.headers.set('Permissions-Policy', permissionsPolicy);
 
   // Strict-Transport-Security (HSTS): Forces browsers to use HTTPS only
   // Only set in production to avoid issues in local development

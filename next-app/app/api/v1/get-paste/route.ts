@@ -1,8 +1,15 @@
 import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { decrypt } from '@/lib/encryption';
-import { generateBanterComment, generateResponse, sanitizeError } from '@/lib/utils';
+import {
+  generateBanterComment,
+  generateResponse,
+  sanitizeError,
+  secureLogError,
+  validateInputLength,
+} from '@/lib/utils';
 import { corsOptionsResponse } from '@/lib/cors';
+import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 /**
  * @swagger
@@ -42,12 +49,18 @@ import { corsOptionsResponse } from '@/lib/cors';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Apply rate limiting (public endpoint, use default config)
+    const rateLimitResponse = applyRateLimit(request, rateLimitConfigs.default);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+    
     // Get ID from query parameters
     const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get('id');
+    const rawId = searchParams.get('id');
 
-    // Validate ID
-    if (!id) {
+    // Validate ID exists and length
+    if (!rawId) {
       return generateResponse(
         400,
         {
@@ -59,6 +72,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Sanitize and validate ID length (UUID v4 max 36 chars, legacy hex max 6 chars)
+    const idValidation = validateInputLength(rawId, 36, 6);
+    if (!idValidation.isValid) {
+      return generateResponse(
+        400,
+        {
+          message: 'Invalid paste ID format or length',
+          joke: generateBanterComment(),
+        },
+        undefined,
+        request
+      );
+    }
+    
+    const id = idValidation.sanitized;
+    
     // Validate ID format (UUID v4 or legacy 6-character hex)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const legacyRegex = /^[a-fA-F0-9]{6}$/;
@@ -101,7 +130,7 @@ export async function GET(request: NextRequest) {
     try {
       decryptedPaste = decrypt(data.paste);
     } catch (decryptError) {
-      console.error('Decryption error:', decryptError);
+      secureLogError('Decryption error in get-paste', decryptError);
       return generateResponse(
         500,
         {
@@ -128,7 +157,7 @@ export async function GET(request: NextRequest) {
       request
     );
   } catch (error: any) {
-    console.error('Error in get-paste:', error);
+    secureLogError('Error in get-paste', error);
     return generateResponse(
       500,
       {

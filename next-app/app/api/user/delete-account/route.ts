@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-client';
-import { sanitizeError } from '@/lib/utils';
+import { sanitizeError, secureLogError } from '@/lib/utils';
 import { validateCsrf } from '@/lib/csrf';
+import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 /**
  * @swagger
@@ -47,6 +48,12 @@ import { validateCsrf } from '@/lib/csrf';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting (sensitive operation, use strict config)
+    const rateLimitResponse = applyRateLimit(request, rateLimitConfigs.strict);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+    
     // CSRF Protection: Validate request origin and CSRF token
     const csrfValidation = validateCsrf(request, true);
     if (!csrfValidation.isValid) {
@@ -92,7 +99,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (updateError) {
-      console.error('Account update error:', updateError);
+      secureLogError('Account update error in delete-account', updateError);
       return NextResponse.json(
         { error: sanitizeError(updateError, 'Failed to disable account') },
         { status: 400 }
@@ -107,7 +114,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('Error deleting account:', error);
+    secureLogError('Error deleting account', error);
     return NextResponse.json(
       { error: sanitizeError(error, 'Failed to delete account') },
       { status: 500 }

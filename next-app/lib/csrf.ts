@@ -156,6 +156,44 @@ export function validateCsrfToken(
     return { isValid: true };
   }
   
+  // In development, allow localhost requests without CSRF token
+  // Origin validation already ensures the request is from localhost
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  if (isDevelopment) {
+    const origin = request.headers.get('origin');
+    const host = request.headers.get('host');
+    
+    // Check origin header
+    if (origin) {
+      try {
+        const originUrl = new URL(origin);
+        if (
+          originUrl.hostname === 'localhost' ||
+          originUrl.hostname === '127.0.0.1' ||
+          originUrl.hostname === '::1'
+        ) {
+          // Localhost in development - skip CSRF token requirement
+          // Origin validation already provides protection
+          return { isValid: true };
+        }
+      } catch {
+        // Invalid origin URL format, continue to normal validation
+      }
+    }
+    
+    // Check host header for same-origin requests (no origin header)
+    if (!origin && host) {
+      if (
+        host.includes('localhost') ||
+        host.includes('127.0.0.1') ||
+        host.includes('[::1]')
+      ) {
+        // Same-origin localhost request in development
+        return { isValid: true };
+      }
+    }
+  }
+  
   // For browser requests, require CSRF token
   // For direct API calls (no browser indicators), we rely on origin validation
   const isBrowser = isBrowserRequest(request);

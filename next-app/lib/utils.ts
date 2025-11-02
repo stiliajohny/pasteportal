@@ -1,17 +1,31 @@
 import { getCorsHeaders } from './cors';
 import type { NextRequest } from 'next/server';
+import crypto from 'crypto';
 
 /**
- * Generate a UUID v4 identifier
+ * Generate a UUID v4 identifier using cryptographically secure random generation
  * @returns UUID v4 string (e.g., "550e8400-e29b-41d4-a716-446655440000")
  */
 export function generatePasteId(): string {
-  // Generate UUID v4
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  // Use crypto.randomUUID() for cryptographically secure UUID generation
+  // Falls back to crypto.randomBytes() if randomUUID() is not available
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  
+  // Fallback: Generate UUID v4 manually using crypto.randomBytes()
+  const bytes = crypto.randomBytes(16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant 10
+  
+  const hex = bytes.toString('hex');
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20, 32)
+  ].join('-');
 }
 
 /**
@@ -31,6 +45,89 @@ export function generateBanterComment(): string {
 }
 
 /**
+ * Sensitive data patterns to filter from logs
+ * These patterns help identify and redact sensitive information
+ */
+const SENSITIVE_PATTERNS = [
+  /password[=:]\s*['"]?([^'"\s]+)/gi,
+  /token[=:]\s*['"]?([^'"\s]+)/gi,
+  /key[=:]\s*['"]?([^'"\s]+)/gi,
+  /secret[=:]\s*['"]?([^'"\s]+)/gi,
+  /api[_-]?key[=:]\s*['"]?([^'"\s]+)/gi,
+  /authorization[=:]\s*['"]?([^'"\s]+)/gi,
+  /auth[_-]?token[=:]\s*['"]?([^'"\s]+)/gi,
+  /encryption[_-]?key[=:]\s*['"]?([^'"\s]+)/gi,
+  /bearer\s+[\w-]+/gi,
+  /[\w-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, // Email addresses
+];
+
+/**
+ * Redact sensitive information from a string
+ * @param text - Text that may contain sensitive data
+ * @returns Text with sensitive data redacted
+ */
+function redactSensitiveData(text: string): string {
+  let redacted = text;
+  
+  for (const pattern of SENSITIVE_PATTERNS) {
+    redacted = redacted.replace(pattern, (match) => {
+      // Keep first few characters for context, redact the rest
+      if (match.length > 10) {
+        return match.substring(0, 5) + '***REDACTED***';
+      }
+      return '***REDACTED***';
+    });
+  }
+  
+  return redacted;
+}
+
+/**
+ * Safely log errors without exposing sensitive data
+ * Filters sensitive information like passwords, tokens, keys, etc.
+ * @param message - Log message
+ * @param error - Error object or data to log
+ */
+export function secureLogError(message: string, error?: any): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // In production, always filter sensitive data
+  // In development, filter sensitive data but allow more detail
+  let safeMessage = redactSensitiveData(message);
+  let safeError: any = error;
+  
+  if (error) {
+    if (error instanceof Error) {
+      safeError = {
+        name: error.name,
+        message: redactSensitiveData(error.message),
+        stack: isProduction ? '[Stack trace redacted in production]' : redactSensitiveData(error.stack || ''),
+      };
+    } else if (typeof error === 'string') {
+      safeError = redactSensitiveData(error);
+    } else if (typeof error === 'object') {
+      // Deep clone and redact object
+      safeError = JSON.parse(JSON.stringify(error));
+      const stringified = JSON.stringify(safeError);
+      const redactedString = redactSensitiveData(stringified);
+      try {
+        safeError = JSON.parse(redactedString);
+      } catch {
+        safeError = redactedString;
+      }
+    }
+  }
+  
+  if (isProduction) {
+    // In production, use structured logging format
+    console.error('[ERROR]', safeMessage, safeError || '');
+  } else {
+    // In development, log with more detail
+    console.error(safeMessage, safeError || '');
+  }
+}
+
+/**
  * Sanitize error messages for client responses
  * In production, returns generic messages to prevent information disclosure
  * In development, returns detailed error messages for debugging
@@ -41,27 +138,205 @@ export function generateBanterComment(): string {
 export function sanitizeError(error: any, defaultMessage: string = 'An error occurred'): string {
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // In production, never expose detailed error information
+  // Use secure logging for server-side error tracking
   if (isProduction) {
-    // Log the full error server-side for debugging
-    console.error('Error details (not exposed to client):', error);
+    secureLogError('Error occurred (not exposed to client)', error);
+  } else {
+    secureLogError('Error details', error);
+  }
+  
+  // In production, never expose detailed error information to client
+  if (isProduction) {
     return defaultMessage;
   }
   
-  // In development, allow detailed errors for debugging
+  // In development, allow detailed errors for debugging (but still sanitized)
   if (error instanceof Error) {
-    return error.message;
+    return redactSensitiveData(error.message);
   }
   
   if (typeof error === 'string') {
-    return error;
+    return redactSensitiveData(error);
   }
   
   if (error?.message) {
-    return error.message;
+    return redactSensitiveData(String(error.message));
   }
   
   return defaultMessage;
+}
+
+/**
+ * Sanitize user input to prevent XSS and injection attacks
+ * Removes or escapes potentially dangerous characters
+ * @param input - User-provided string input
+ * @param options - Sanitization options
+ * @returns Sanitized string
+ */
+export function sanitizeInput(
+  input: string,
+  options: {
+    maxLength?: number;
+    allowNewlines?: boolean;
+    allowSpecialChars?: boolean;
+  } = {}
+): string {
+  if (typeof input !== 'string') {
+    return '';
+  }
+
+  const {
+    maxLength = 1000,
+    allowNewlines = false,
+    allowSpecialChars = true,
+  } = options;
+
+  let sanitized = input.trim();
+
+  // Enforce maximum length
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength);
+  }
+
+  // Remove null bytes and control characters (except newlines if allowed)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
+  
+  if (!allowNewlines) {
+    // Remove newlines, carriage returns, tabs
+    sanitized = sanitized.replace(/[\r\n\t]/g, ' ');
+    // Collapse multiple spaces
+    sanitized = sanitized.replace(/\s+/g, ' ');
+  }
+
+  // Remove potentially dangerous characters if not explicitly allowed
+  if (!allowSpecialChars) {
+    // Keep only alphanumeric, spaces, and basic punctuation
+    sanitized = sanitized.replace(/[^a-zA-Z0-9\s.,!?\-_@]/g, '');
+  }
+
+  return sanitized;
+}
+
+/**
+ * Sanitize GitHub username to prevent injection
+ * GitHub usernames can contain alphanumeric and hyphens, up to 39 characters
+ * @param username - GitHub username input
+ * @returns Sanitized username or empty string if invalid
+ */
+export function sanitizeGitHubUsername(username: string): string {
+  if (typeof username !== 'string') {
+    return '';
+  }
+
+  // GitHub username rules:
+  // - Only alphanumeric and hyphens
+  // - Cannot start or end with hyphen
+  // - Maximum 39 characters
+  // - Must start with alphanumeric
+  const sanitized = username.trim().toLowerCase();
+  
+  // Validate format
+  if (!/^[a-z0-9]([a-z0-9-]{0,37}[a-z0-9])?$/.test(sanitized)) {
+    return '';
+  }
+
+  return sanitized;
+}
+
+/**
+ * Sanitize paste name/title
+ * Allows alphanumeric, spaces, and common punctuation
+ * @param name - Paste name input
+ * @returns Sanitized name
+ */
+export function sanitizePasteName(name: string): string {
+  return sanitizeInput(name, {
+    maxLength: 200,
+    allowNewlines: false,
+    allowSpecialChars: true,
+  }).replace(/[<>]/g, ''); // Remove angle brackets to prevent HTML injection
+}
+
+/**
+ * Validate and sanitize input length
+ * @param input - Input string to validate
+ * @param maxLength - Maximum allowed length
+ * @param minLength - Minimum required length (default: 0)
+ * @returns Object with isValid flag and sanitized input
+ */
+export function validateInputLength(
+  input: string,
+  maxLength: number,
+  minLength: number = 0
+): { isValid: boolean; sanitized: string; error?: string } {
+  if (typeof input !== 'string') {
+    return {
+      isValid: false,
+      sanitized: '',
+      error: 'Input must be a string',
+    };
+  }
+
+  const trimmed = input.trim();
+
+  if (trimmed.length < minLength) {
+    return {
+      isValid: false,
+      sanitized: trimmed,
+      error: `Input must be at least ${minLength} characters`,
+    };
+  }
+
+  if (trimmed.length > maxLength) {
+    return {
+      isValid: false,
+      sanitized: trimmed.substring(0, maxLength),
+      error: `Input must be no more than ${maxLength} characters`,
+    };
+  }
+
+  return {
+    isValid: true,
+    sanitized: trimmed,
+  };
+}
+
+/**
+ * Maximum allowed request body size (1MB)
+ * Used for validating request sizes in API routes
+ */
+export const MAX_REQUEST_BODY_SIZE = 1024 * 1024; // 1MB
+
+/**
+ * Validate request body size
+ * @param contentLength - Content-Length header value
+ * @param actualSize - Actual body size if already read (optional)
+ * @returns Object with isValid flag and error message if invalid
+ */
+export function validateRequestSize(
+  contentLength: string | null,
+  actualSize?: number
+): { isValid: boolean; error?: string } {
+  // Check Content-Length header if available
+  if (contentLength) {
+    const size = parseInt(contentLength, 10);
+    if (!isNaN(size) && size > MAX_REQUEST_BODY_SIZE) {
+      return {
+        isValid: false,
+        error: `Request body exceeds maximum size of ${MAX_REQUEST_BODY_SIZE} bytes`,
+      };
+    }
+  }
+  
+  // Check actual size if provided
+  if (actualSize !== undefined && actualSize > MAX_REQUEST_BODY_SIZE) {
+    return {
+      isValid: false,
+      error: `Request body exceeds maximum size of ${MAX_REQUEST_BODY_SIZE} bytes`,
+    };
+  }
+  
+  return { isValid: true };
 }
 
 /**

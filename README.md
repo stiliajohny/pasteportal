@@ -221,7 +221,6 @@ Retrieve a paste by ID.
 }
 ```
 
-
 ## Deployment
 
 ### Netlify Deployment

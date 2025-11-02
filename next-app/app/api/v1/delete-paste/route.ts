@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { sanitizeError } from '@/lib/utils';
+import { sanitizeError, secureLogError, validateInputLength } from '@/lib/utils';
 import { validateCsrf } from '@/lib/csrf';
+import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 
 /**
  * @swagger
@@ -65,6 +66,12 @@ import { validateCsrf } from '@/lib/csrf';
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Apply rate limiting (authenticated endpoint)
+    const rateLimitResponse = applyRateLimit(request, rateLimitConfigs.authenticated);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+    
     // CSRF Protection: Validate request origin and CSRF token
     const csrfValidation = validateCsrf(request, true);
     if (!csrfValidation.isValid) {
@@ -91,14 +98,25 @@ export async function DELETE(request: NextRequest) {
 
     // Get paste ID from query parameters
     const searchParams = request.nextUrl.searchParams;
-    const pasteId = searchParams.get('id');
+    const rawPasteId = searchParams.get('id');
 
-    if (!pasteId) {
+    if (!rawPasteId) {
       return NextResponse.json(
         { error: 'Missing paste ID' },
         { status: 400 }
       );
     }
+
+    // Sanitize and validate ID length
+    const idValidation = validateInputLength(rawPasteId, 36, 6);
+    if (!idValidation.isValid) {
+      return NextResponse.json(
+        { error: 'Invalid paste ID format or length' },
+        { status: 400 }
+      );
+    }
+
+    const pasteId = idValidation.sanitized;
 
     // Validate ID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -141,7 +159,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', pasteId);
 
     if (deleteError) {
-      console.error('Database error:', deleteError);
+      secureLogError('Database error in delete-paste', deleteError);
       return NextResponse.json(
         { error: 'Failed to delete paste' },
         { status: 500 }
@@ -153,7 +171,7 @@ export async function DELETE(request: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
-    console.error('Error in delete-paste:', error);
+    secureLogError('Error in delete-paste', error);
     return NextResponse.json(
       { error: sanitizeError(error, 'Internal server error') },
       { status: 500 }

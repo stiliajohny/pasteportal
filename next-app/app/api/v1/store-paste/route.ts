@@ -1,9 +1,20 @@
 import { encrypt } from '@/lib/encryption';
 import { supabase } from '@/lib/supabase';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { generateBanterComment, generatePasteId, generateResponse, sanitizeError } from '@/lib/utils';
+import {
+  generateBanterComment,
+  generatePasteId,
+  generateResponse,
+  sanitizeError,
+  sanitizeGitHubUsername,
+  sanitizePasteName,
+  secureLogError,
+  validateInputLength,
+  validateRequestSize,
+} from '@/lib/utils';
 import { validateCsrf } from '@/lib/csrf';
 import { corsOptionsResponse } from '@/lib/cors';
+import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
 
 /**
@@ -82,6 +93,12 @@ import { NextRequest } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting (public endpoint, use default config)
+    const rateLimitResponse = applyRateLimit(request, rateLimitConfigs.default);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+    
     const contentType = request.headers.get('content-type') || '';
     let body: any;
     let pasteContent: string;
@@ -113,22 +130,50 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      recipientGhUsername = (formData.get('recipient_gh_username') as string) || 'unknown';
-      pasteName = (formData.get('name') as string) || null;
-      userId = (formData.get('user_id') as string) || null;
-      password = (formData.get('password') as string) || null;
+      const rawRecipientGhUsername = (formData.get('recipient_gh_username') as string) || 'unknown';
+      const rawPasteName = (formData.get('name') as string) || null;
+      const rawUserId = (formData.get('user_id') as string) || null;
+      const rawPassword = (formData.get('password') as string) || null;
+      
+      // Sanitize and validate inputs
+      recipientGhUsername = sanitizeGitHubUsername(rawRecipientGhUsername) || 'unknown';
+      pasteName = rawPasteName ? sanitizePasteName(rawPasteName) : null;
+      userId = rawUserId ? validateInputLength(rawUserId, 100).sanitized : null;
+      password = rawPassword ? validateInputLength(rawPassword, 30, 8).sanitized : null;
     } else {
       // Handle JSON request
+      // Validate request size before parsing
+      const sizeValidation = validateRequestSize(request.headers.get('content-length'));
+      if (!sizeValidation.isValid) {
+        return generateResponse(
+          413,
+          {
+            message: sizeValidation.error || 'Request entity too large',
+            joke: generateBanterComment(),
+          },
+          undefined,
+          request
+        );
+      }
+      
       body = await request.json();
       pasteContent = body.paste;
-      recipientGhUsername = body.recipient_gh_username;
-      pasteName = body.name || null;
-      userId = body.user_id || null;
-      password = body.password || null;
+      const rawRecipientGhUsername = body.recipient_gh_username;
+      const rawPasteName = body.name;
+      const rawUserId = body.user_id;
+      const rawPassword = body.password;
+      
+      // Sanitize and validate inputs
+      recipientGhUsername = rawRecipientGhUsername
+        ? sanitizeGitHubUsername(rawRecipientGhUsername) || 'unknown'
+        : 'unknown';
+      pasteName = rawPasteName ? sanitizePasteName(rawPasteName) : null;
+      userId = rawUserId ? validateInputLength(rawUserId, 100).sanitized : null;
+      password = rawPassword ? validateInputLength(rawPassword, 30, 8).sanitized : null;
     }
 
     // Validate required fields
-    if (!pasteContent || !recipientGhUsername) {
+    if (!pasteContent || !recipientGhUsername || recipientGhUsername === '') {
       return generateResponse(
         400,
         {
@@ -263,7 +308,7 @@ export async function POST(request: NextRequest) {
     const { error } = await dbClient.from('pastes').insert(insertData);
 
     if (error) {
-      console.error('Database error:', error);
+      secureLogError('Database error in store-paste', error);
       return generateResponse(
         500,
         {
@@ -290,7 +335,7 @@ export async function POST(request: NextRequest) {
       request
     );
   } catch (error: any) {
-    console.error('Error in store-paste:', error);
+    secureLogError('Error in store-paste', error);
     return generateResponse(
       500,
       {

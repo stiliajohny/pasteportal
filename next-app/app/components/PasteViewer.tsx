@@ -1,23 +1,39 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { encryptWithPassword, decryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
+import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
+import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
+import { useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { autoDetectLanguage, SUPPORTED_LANGUAGES, LanguageValue } from '@/lib/language-detection';
+import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from './ThemeProvider';
 
 const API_BASE = '/api/v1';
 
 const introParagraph = `Welcome to PastePortal!
 
-Share your code snippets with syntax highlighting preserved!
+Are you tired of copying your code from VS Code and losing all the syntax highlighting?
+Now you can directly share from your VS Code and share the link, and the receiver will see the code with the syntax highlighting!
+
+A two-step process to share your code:
+1. Select your code
+2. Press Ctrl+Alt+Cmd+P, and you get a link to share with your friends!
+
+--
+
+How to use it:
+
+Download the VS Code Extension and use the Command palette, Sidebar or Shortcut
+
+---
 
 A brief overview of how PastePortal was created (shout out for the prompt @craigmillerdev):
 
 Once upon a time, I was tasked with creating a technical challenge for a job candidate, one that would involve building a service for posting and retrieving messages using their preferred tech stack.
 I wanted to see how the candidate would approach the problem and develop a solution. This led to the development of PastePortal.
+In addition, you can enhance your experience by downloading the PastePortal VS Code extension, which allows you to access PastePortal directly from your code editor!
+
+https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal
 
 ---
 `;
@@ -150,6 +166,7 @@ export default function PasteViewer() {
   const [downloaded, setDownloaded] = useState(false);
   const [pushedPasteId, setPushedPasteId] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [instructionsCopied, setInstructionsCopied] = useState(false);
   const [showEncryptDialog, setShowEncryptDialog] = useState(false);
   const [encryptionPassword, setEncryptionPassword] = useState<string>('');
   const [useRandomPassword, setUseRandomPassword] = useState(true);
@@ -164,7 +181,6 @@ export default function PasteViewer() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isManualLanguageSelection, setIsManualLanguageSelection] = useState(false);
   const [pasteName, setPasteName] = useState<string>('');
-  const [showLineNumbers, setShowLineNumbers] = useState<boolean>(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pushButtonRef = useRef<HTMLDivElement>(null);
@@ -458,6 +474,104 @@ export default function PasteViewer() {
     }
   };
 
+  /**
+   * Copy formatted instructions to clipboard
+   */
+  const handleCopyInstructions = async () => {
+    if (!pushedPasteId || typeof window === 'undefined') return;
+
+    const shareUrl = `${window.location.origin}?id=${pushedPasteId}`;
+    let instructions: string;
+
+    if (usedPassword) {
+      instructions = `This is the link: ${shareUrl}\n\nThis is the password: ${usedPassword}`;
+    } else {
+      instructions = `This is the link: ${shareUrl}`;
+    }
+
+    if (navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(instructions);
+        setInstructionsCopied(true);
+        setTimeout(() => setInstructionsCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy instructions:', err);
+        alert('Failed to copy instructions. Please copy them manually.');
+      }
+    }
+  };
+
+  /**
+   * Get share URL
+   */
+  const getShareUrl = (): string => {
+    if (!pushedPasteId || typeof window === 'undefined') return '';
+    return `${window.location.origin}?id=${pushedPasteId}`;
+  };
+
+  /**
+   * Get share text for social platforms
+   */
+  const getShareText = (): string => {
+    if (usedPassword) {
+      return `Check out this encrypted paste!\n\nLink: ${getShareUrl()}\nPassword: ${usedPassword}`;
+    }
+    return `Check out this paste: ${getShareUrl()}`;
+  };
+
+  /**
+   * Share to WhatsApp
+   */
+  const handleShareWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(getShareText())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  /**
+   * Share to Facebook
+   */
+  const handleShareFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  /**
+   * Share to Twitter/X
+   */
+  const handleShareTwitter = () => {
+    const text = usedPassword 
+      ? `Check out this encrypted paste! Link: ${getShareUrl()} Password: ${usedPassword}`
+      : `Check out this paste: ${getShareUrl()}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  /**
+   * Share to LinkedIn
+   */
+  const handleShareLinkedIn = () => {
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getShareUrl())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  /**
+   * Share to Telegram
+   */
+  const handleShareTelegram = () => {
+    const url = `https://t.me/share/url?url=${encodeURIComponent(getShareUrl())}&text=${encodeURIComponent(getShareText())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  /**
+   * Share via Email
+   */
+  const handleShareEmail = () => {
+    const subject = 'Check out this paste';
+    const body = getShareText();
+    const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = url;
+  };
+
   const handleCopy = async () => {
     if (text && navigator.clipboard) {
       try {
@@ -689,6 +803,116 @@ export default function PasteViewer() {
                     </div>
                   </div>
                 )}
+
+                {/* Share Options */}
+                <div className="pt-4 border-t border-divider">
+                  <label className="block text-xs font-medium text-text-secondary mb-3">
+                    Share
+                  </label>
+                  
+                  {/* Copy Instructions Button */}
+                  <button
+                    onClick={handleCopyInstructions}
+                    className="w-full mb-4 px-4 py-3 rounded-lg bg-neon-cyan text-dark hover:bg-neon-cyan-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    {instructionsCopied ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Instructions Copied!
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copy Instructions
+                      </>
+                    )}
+                  </button>
+
+                  {/* Social Share Buttons */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* WhatsApp */}
+                    <button
+                      onClick={handleShareWhatsApp}
+                      className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-3 rounded-lg bg-[#25D366] hover:bg-[#20BA5A] text-white transition-colors text-xs font-medium min-h-[64px]"
+                      title="Share on WhatsApp"
+                      aria-label="Share on WhatsApp"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                      <span className="text-[10px]">WhatsApp</span>
+                    </button>
+
+                    {/* Facebook */}
+                    <button
+                      onClick={handleShareFacebook}
+                      className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-3 rounded-lg bg-[#1877F2] hover:bg-[#166FE5] text-white transition-colors text-xs font-medium min-h-[64px]"
+                      title="Share on Facebook"
+                      aria-label="Share on Facebook"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                      <span className="text-[10px]">Facebook</span>
+                    </button>
+
+                    {/* Twitter/X */}
+                    <button
+                      onClick={handleShareTwitter}
+                      className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-3 rounded-lg bg-[#000000] hover:bg-[#1a1a1a] text-white transition-colors text-xs font-medium min-h-[64px]"
+                      title="Share on Twitter/X"
+                      aria-label="Share on Twitter/X"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                      </svg>
+                      <span className="text-[10px]">Twitter</span>
+                    </button>
+
+                    {/* LinkedIn */}
+                    <button
+                      onClick={handleShareLinkedIn}
+                      className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-3 rounded-lg bg-[#0A66C2] hover:bg-[#095195] text-white transition-colors text-xs font-medium min-h-[64px]"
+                      title="Share on LinkedIn"
+                      aria-label="Share on LinkedIn"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                      <span className="text-[10px]">LinkedIn</span>
+                    </button>
+
+                    {/* Telegram */}
+                    <button
+                      onClick={handleShareTelegram}
+                      className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-3 rounded-lg bg-[#0088cc] hover:bg-[#0077b5] text-white transition-colors text-xs font-medium min-h-[64px]"
+                      title="Share on Telegram"
+                      aria-label="Share on Telegram"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                      </svg>
+                      <span className="text-[10px]">Telegram</span>
+                    </button>
+
+                    {/* Email */}
+                    <button
+                      onClick={handleShareEmail}
+                      className="flex flex-col items-center justify-center gap-1 px-2 sm:px-3 py-3 rounded-lg bg-surface-variant border border-divider hover:bg-surface text-text transition-colors text-xs font-medium min-h-[64px]"
+                      title="Share via Email"
+                      aria-label="Share via Email"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-[10px]">Email</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 flex justify-end">
@@ -696,6 +920,7 @@ export default function PasteViewer() {
                   onClick={() => {
                     setPushedPasteId(null);
                     setUsedPassword(null);
+                    setInstructionsCopied(false);
                   }}
                   className="px-6 py-2 rounded-lg bg-neon-cyan text-dark hover:bg-neon-cyan-600 transition-colors text-sm font-medium"
                 >
@@ -1182,24 +1407,6 @@ export default function PasteViewer() {
                   )}
                 </button>
               )}
-
-              {/* Line Numbers Toggle - shown when text exists, independent of edit/view mode */}
-              {!isLoading && text && (
-                <button
-                  onClick={() => setShowLineNumbers(!showLineNumbers)}
-                  className={`px-2 py-1.5 rounded-lg border transition-all duration-200 active:scale-[0.98] ${
-                    showLineNumbers
-                      ? 'bg-positive-highlight/20 border-positive-highlight/40 text-positive-highlight hover:bg-positive-highlight/30'
-                      : 'bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant'
-                  }`}
-                  aria-label={showLineNumbers ? 'Hide line numbers' : 'Show line numbers'}
-                  title={showLineNumbers ? 'Hide line numbers' : 'Show line numbers'}
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -1243,7 +1450,7 @@ export default function PasteViewer() {
                     fontFamily: 'var(--font-mono), monospace',
                   }
                 }}
-                showLineNumbers={showLineNumbers && text.split('\n').length > 1}
+                showLineNumbers={text.split('\n').length > 1}
                 lineNumberStyle={{
                   minWidth: '3em',
                   paddingRight: '1em',
