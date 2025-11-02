@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  pasteportal-rest-listener
+
+Parameters:
+  # name of the database
+  DynamoDBTable:
+    Type: String
+    Description: Name of the database table
+    Default: pasteportal
+
+Globals:
+  Function:
+    Timeout: 20
+    MemorySize: 128
+    Runtime: python3.9
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref DynamoDBTable
+
+Resources:
+  PasteportalRestListenerApiPOST:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: PasteportalRestListenerApiPOST
+      CodeUri: rest-listener/
+      Handler: post.lambda_handler
+      Events:
+        HelloWorldPost:
+          Type: Api
+          Properties:
+            Path: /store-paste
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+
+  PasteportalRestListenerApiGET:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: PasteportalRestListenerApiGET
+      CodeUri: rest-listener/
+      Handler: get.lambda_handler
+      Events:
+        HelloWorldPost:
+          Type: Api
+          Properties:
+            Path: /get-paste
+            Method: get
+            Auth:
+              ApiKeyRequired: true
+
+  PasteportalRestListenerApiDynamoDBPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PasteportalRestListenerApiDynamoDBPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*"
+      Roles:
+        - !Ref PasteportalRestListenerApiPOSTRole
+        - !Ref PasteportalRestListenerApiGETRole
+
+Outputs:
+  # output the url for both apis
+  PasteportalRestListenerApiPOSTUrl:
+    Description: "URL for API POST"
+    Value: !Sub "https://api.pasteportal.info/store-paste"
+  PasteportalRestListenerApiGETUrl:
+    Description: "URL for API GET"
+    Value: !Sub "https://api.pasteportal.info/get-paste"

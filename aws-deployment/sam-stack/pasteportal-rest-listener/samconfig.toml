@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "pasteportal-rest-listener"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1sg0xoi6hcyqb"
+s3_prefix = "pasteportal-rest-listener"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "DatabaseName=\"pasteportal\""
+image_repositories = []
