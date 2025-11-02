@@ -1,17 +1,24 @@
 import type { Metadata, Viewport } from 'next';
 import { Source_Code_Pro } from 'next/font/google';
-import './globals.css';
+import Footer from './components/Footer';
+import Header from './components/Header';
 import PWARegister from './components/PWARegister';
 import { ThemeProvider } from './components/ThemeProvider';
 import { AuthProvider } from './contexts/AuthContext';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import './globals.css';
 
 const sourceCodePro = Source_Code_Pro({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '600', '700'],
 });
+
+// Base URL for social media meta tags
+// Set NEXT_PUBLIC_SITE_URL environment variable in production (e.g., https://pasteportal.app)
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pasteportal.app';
+// Social media preview image (different from the logo)
+// Place your social sharing image at: next-app/public/og-image.png
+const ogImageUrl = `${baseUrl}/og-image.png`;
 
 export const metadata: Metadata = {
   title: 'PastePortal - Share Code with Syntax Highlighting',
@@ -23,9 +30,27 @@ export const metadata: Metadata = {
     title: 'PastePortal',
   },
   openGraph: {
-    title: 'PastePortal',
-    description: 'Share code snippets with syntax highlighting',
+    title: 'PastePortal - Share Code with Syntax Highlighting',
+    description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
     type: 'website',
+    url: baseUrl,
+    siteName: 'PastePortal',
+    images: [
+      {
+        url: ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: 'PastePortal Logo',
+      },
+    ],
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PastePortal - Share Code with Syntax Highlighting',
+    description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
+    images: [ogImageUrl],
+    creator: '@pasteportal', // Update with your Twitter handle if you have one
   },
 };
 
