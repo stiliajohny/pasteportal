@@ -1,0 +1,278 @@
+{
+  "name": "pasteportal",
+  "displayName": "PastePortal",
+  "description": "Share and retrieve text snippets with PastePortal - A secure paste service for developers",
+  "version": "1.0.0",
+  "publisher": "JohnStilia",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other",
+    "Developer Tools"
+  ],
+  "keywords": [
+    "paste",
+    "share",
+    "snippet",
+    "code",
+    "text",
+    "encryption"
+  ],
+  "activationEvents": [
+    "onCommand:pasteportal.store-paste",
+    "onCommand:pasteportal.get-paste",
+    "onCommand:pasteportal.sign-in",
+    "onView:pasteportal-my-pastes",
+    "onUri"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pasteportal.shareSelection",
+        "title": "Share Selection to PastePortal",
+        "category": "PastePortal",
+        "icon": "$(share)"
+      },
+      {
+        "command": "pasteportal.shareFile",
+        "title": "Share File to PastePortal",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.getPaste",
+        "title": "Get Paste from PastePortal",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.getEncryptedPaste",
+        "title": "Get Encrypted Paste from PastePortal",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.createPaste",
+        "title": "Create New Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.openInBrowser",
+        "title": "Open PastePortal in Browser",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.store-paste",
+        "title": "Store Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.get-paste",
+        "title": "Get Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.store-encrypted-paste",
+        "title": "Store Encrypted Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.get-encrypted-paste",
+        "title": "Get Encrypted Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.copyPasteId",
+        "title": "Copy Paste ID",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-in",
+        "title": "Sign In",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-up",
+        "title": "Sign Up",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-in-magic-link",
+        "title": "Sign In with Magic Link",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-in-otp",
+        "title": "Sign In with OTP",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-in-github",
+        "title": "Sign In with GitHub",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.reset-password",
+        "title": "Reset Password",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-out",
+        "title": "Sign Out",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.refresh-pastes",
+        "title": "Refresh My Pastes",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.view-paste",
+        "title": "View Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-in-with-token",
+        "title": "Sign In with Token",
+        "category": "PastePortal"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "pasteportal.shareSelection",
+        "key": "ctrl+shift+p",
+        "when": "editorHasSelection"
+      }
+    ],
+    "views": {
+      "pasteportal": [
+        {
+          "id": "pasteportal-my-pastes",
+          "name": "My Pastes",
+          "when": "true"
+        },
+        {
+          "id": "pasteportal-operations",
+          "name": "Operations",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pasteportal",
+          "title": "PastePortal",
+          "icon": "$(paste)"
+        }
+      ]
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "pasteportal.shareSelection",
+          "when": "editorHasSelection",
+          "group": "pasteportal"
+        },
+        {
+          "command": "pasteportal.store-encrypted-paste",
+          "when": "editorHasSelection",
+          "group": "pasteportal"
+        },
+        {
+          "command": "pasteportal.shareFile",
+          "group": "pasteportal"
+        },
+        {
+          "command": "pasteportal.getPaste",
+          "group": "pasteportal"
+        },
+        {
+          "command": "pasteportal.getEncryptedPaste",
+          "group": "pasteportal"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "pasteportal.shareFile",
+          "when": "resourceLangId != markdown",
+          "group": "pasteportal"
+        }
+      ],
+      "view/item/context": [],
+      "editor/title": [
+        {
+          "command": "pasteportal.shareFile",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "PastePortal",
+      "properties": {
+        "pasteportal.apiEndpoint": {
+          "type": "string",
+          "default": "https://pasteportal.app/api",
+          "description": "PastePortal API endpoint URL"
+        },
+        "pasteportal.domain": {
+          "type": "string",
+          "default": "https://pasteportal.app",
+          "description": "PastePortal domain URL"
+        },
+        "pasteportal.statusBar.enableConnectivityCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable API connectivity status check in status bar"
+        },
+        "pasteportal.statusBar.connectivityCheckInterval": {
+          "type": "number",
+          "default": 60,
+          "description": "API connectivity check interval in seconds (minimum 60)",
+          "minimum": 60
+        },
+        "pasteportal.serviceAgreementAccepted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Accept PastePortal Terms of Service"
+        },
+        "pasteportal.supabase.url": {
+          "type": "string",
+          "default": "",
+          "description": "Supabase project URL (required for authentication)"
+        },
+        "pasteportal.supabase.anonKey": {
+          "type": "string",
+          "default": "",
+          "description": "Supabase anonymous key (required for authentication)"
+        }
+      }
+    },
+    "codeLens": {
+      "language": "*"
+    }
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "echo \"No compilation needed for JavaScript extension\"",
+    "watch": "echo \"No watch needed for JavaScript extension\"",
+    "package": "vsce package",
+    "lint": "echo \"No linter configured\""
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stiliajohny/pasteportal.git"
+  },
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/stiliajohny/pasteportal/issues"
+  },
+  "homepage": "https://pasteportal.app"
+}
+
