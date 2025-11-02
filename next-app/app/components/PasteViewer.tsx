@@ -813,7 +813,7 @@ export default function PasteViewer() {
                   {/* Copy Instructions Button */}
                   <button
                     onClick={handleCopyInstructions}
-                    className="w-full mb-4 px-4 py-3 rounded-lg bg-neon-cyan text-dark hover:bg-neon-cyan-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    className="w-full mb-4 px-4 py-3 rounded-lg bg-neon-cyan text-black hover:bg-neon-cyan-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                   >
                     {instructionsCopied ? (
                       <>
@@ -922,7 +922,7 @@ export default function PasteViewer() {
                     setUsedPassword(null);
                     setInstructionsCopied(false);
                   }}
-                  className="px-6 py-2 rounded-lg bg-neon-cyan text-dark hover:bg-neon-cyan-600 transition-colors text-sm font-medium"
+                  className="px-6 py-2 rounded-lg bg-neon-cyan text-black hover:bg-neon-cyan-600 transition-colors text-sm font-medium"
                 >
                   Done
                 </button>
@@ -1212,7 +1212,7 @@ export default function PasteViewer() {
                   disabled:opacity-40 disabled:cursor-not-allowed
                   ${
                     isValidPasteId(pasteIdInput) && !isLoading
-                      ? 'bg-neon-cyan text-dark hover:opacity-90 active:scale-[0.98]'
+                      ? 'bg-neon-cyan text-black hover:opacity-90 active:scale-[0.98]'
                       : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
                   }
                 `}
@@ -1347,7 +1347,7 @@ export default function PasteViewer() {
                       setSelectedLanguage(e.target.value as LanguageValue);
                       setIsManualLanguageSelection(true);
                     }}
-                    className="px-2 py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-6 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-dark"
+                    className="px-2 py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-6 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black"
                     style={{
                       backgroundColor: 'var(--color-surface-variant)',
                       color: 'var(--color-text)',
