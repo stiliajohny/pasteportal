@@ -14,11 +14,12 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Check for code in query params (normal web OAuth flow)
       const supabase = createClient();
       const code = searchParams.get('code');
 
       if (code) {
-        // Exchange code for session
+        // Exchange code for session (normal web flow)
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
