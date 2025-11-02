@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server';
  * /api/get-paste:
  *   get:
  *     summary: Get paste (Legacy)
- *     description: Legacy compatibility endpoint that redirects to /api/v1/get-paste. Maintains compatibility with VSCode extension.
+ *     description: Legacy compatibility endpoint that redirects to /api/v1/get-paste.
  *     deprecated: true
  *     tags:
  *       - Legacy

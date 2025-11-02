@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
  * /api/store-paste:
  *   post:
  *     summary: Store paste (Legacy)
- *     description: Legacy compatibility endpoint that redirects to /api/v1/store-paste. Maintains compatibility with VSCode extension.
+ *     description: Legacy compatibility endpoint that redirects to /api/v1/store-paste.
  *     deprecated: true
  *     tags:
  *       - Legacy
