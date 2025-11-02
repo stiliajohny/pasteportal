@@ -52,24 +52,6 @@ export default function Footer() {
                     <span className="hidden sm:inline">GitHub</span>
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-text-secondary hover:text-neon-magenta transition-colors duration-200 flex items-center gap-1.5"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path d="M22.6 3.4c-.4-.4-.9-.4-1.3 0L12 12.7 2.7 3.4c-.4-.4-.9-.4-1.3 0s-.4.9 0 1.3l10 10.1 10-10.1c.4-.4.4-.9 0-1.3z" />
-                    </svg>
-                    <span className="hidden sm:inline">VS Code</span>
-                  </Link>
-                </li>
               </ul>
             </div>
 
@@ -108,8 +90,7 @@ export default function Footer() {
             <div className="space-y-1">
               <h4 className="text-xs font-semibold text-text uppercase tracking-wide">About</h4>
               <p className="text-xs text-text-secondary leading-snug hidden md:block">
-                PastePortal is a developer-focused tool for sharing code snippets with preserved syntax highlighting.
-                Built with Next.js and Supabase.
+                A text sharing tool for developers. Share code snippets and context effortlessly with syntax highlighting.
               </p>
             </div>
           </div>
@@ -117,37 +98,14 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-3 border-t border-divider">
-          <div className="flex flex-col gap-3">
-            {/* Mobile: Legal links prominently displayed */}
-            <div className="flex flex-col sm:hidden gap-2 pb-2 border-b border-divider">
-              <Link
-                href="/terms"
-                className="text-xs text-text-secondary hover:text-neon-cyan transition-colors duration-200 text-center py-2"
-              >
-                Terms and Conditions
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-xs text-text-secondary hover:text-neon-cyan transition-colors duration-200 text-center py-2"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/security"
-                className="text-xs text-text-secondary hover:text-neon-magenta transition-colors duration-200 text-center py-2"
-              >
-                Security
-              </Link>
-            </div>
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-              <p className="text-xs text-text-secondary text-center sm:text-left">
-                © {currentYear} PastePortal. Built with ❤️ for developers.
-              </p>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-text-secondary hidden sm:inline">
-                  Made with Next.js
-                </span>
-              </div>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p className="text-xs text-text-secondary text-center sm:text-left">
+              © {currentYear} PastePortal. Built with ❤️ for developers.
+            </p>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-text-secondary hidden sm:inline">
+                Made with Next.js
+              </span>
             </div>
           </div>
         </div>

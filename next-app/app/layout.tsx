@@ -15,7 +15,7 @@ const sourceCodePro = Source_Code_Pro({
 
 export const metadata: Metadata = {
   title: 'PastePortal - Share Code with Syntax Highlighting',
-  description: 'A modern text sharing tool for developers. Share code snippets directly from VS Code with preserved syntax highlighting.',
+  description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
