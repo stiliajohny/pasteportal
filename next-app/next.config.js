@@ -54,7 +54,10 @@ const nextConfig = {
       },
     ],
   },
+  // Enable Turbopack configuration (Next.js 16 default)
+  turbopack: {},
   // Suppress webpack warnings for GenerateSW in development
+  // Only used when explicitly running with --webpack flag
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       // Suppress the GenerateSW multiple calls warning in development
