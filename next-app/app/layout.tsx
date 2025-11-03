@@ -93,6 +93,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pasteportal.app';
+  const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
   
   // Structured data (JSON-LD) for better SEO
   const structuredData = {
@@ -123,11 +124,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="canonical" href={baseUrl} />
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2401235182695548"
-          crossOrigin="anonymous"
-        />
+        {adsenseClientId && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
+            crossOrigin="anonymous"
+          />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

@@ -126,11 +126,13 @@ Create a `.env.local` file in the root directory with the following variables:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ENCRYPTION_KEY=your-32-byte-encryption-key-here
+NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-your-adsense-client-id
 ```
 
 **Important Notes:**
 
 - `ENCRYPTION_KEY`: Must be a secure random 32-byte key (64 hex characters) or any string that will be used to derive a 32-byte key using scrypt
+- `NEXT_PUBLIC_ADSENSE_CLIENT_ID`: Optional. Your Google AdSense client ID (format: `ca-pub-xxxxxxxxxxxxxxx`). If not set, AdSense ads will not be displayed.
 - Keep your encryption key secure and never commit it to version control
 - For production, use a secure method to generate and store the encryption key
 
@@ -233,6 +235,7 @@ The application is configured for deployment on Netlify:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `ENCRYPTION_KEY`
+   - `NEXT_PUBLIC_ADSENSE_CLIENT_ID` (optional)
 
 3. **Configure custom domain** `pasteportal.app` in Netlify dashboard
 
