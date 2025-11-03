@@ -246,6 +246,25 @@ export default function PasteViewer() {
   }, [isEditMode, isClient, isLoading]);
 
   /**
+   * Update document title when paste is loaded
+   * Use paste name if available, otherwise use website name
+   */
+  useEffect(() => {
+    if (!isClient) return;
+
+    if (pushedPasteId && pushedPasteName) {
+      // Paste has a name: "{name} - PastePortal"
+      document.title = `${pushedPasteName} - PastePortal`;
+    } else if (pushedPasteId) {
+      // Paste loaded but no name: use website name
+      document.title = 'PastePortal - Share Code with Syntax Highlighting';
+    } else {
+      // No paste loaded: use default title
+      document.title = 'PastePortal - Share Code with Syntax Highlighting';
+    }
+  }, [pushedPasteId, pushedPasteName, isClient]);
+
+  /**
    * Validate UUID v4 or legacy 6-character hex format
    */
   const isValidPasteId = (id: string): boolean => {
