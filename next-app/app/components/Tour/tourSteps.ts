@@ -116,7 +116,7 @@ export const desktopTourSteps: TourStep[] = [
     popover: {
       title: 'Get More Features',
       description:
-        'Sign up to name your pastes, access them later, and unlock additional features. Also check out our VS Code extension!',
+        'Sign up to name your pastes, access them later, and unlock additional features. Also check out our upcoming IDE extensions!',
       position: 'bottom',
       align: 'end',
     },

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import AuthDialog from './AuthDialog';
 import UserMenu from './UserMenu';
+import ExtensionInterestDialog from './ExtensionInterestDialog';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -18,6 +19,7 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Header() {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authDialogMode, setAuthDialogMode] = useState<'signin' | 'signup'>('signin');
+  const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, loading, signOut } = useAuth();
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -104,10 +106,8 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-4">
               {/* Desktop Navigation Links */}
               <nav className="flex items-center gap-6">
-                <Link
-                  href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setExtensionDialogOpen(true)}
                   data-tour="extension-link"
                   className="text-sm font-medium text-text-secondary hover:text-neon-magenta transition-colors duration-200 flex items-center gap-2"
                 >
@@ -120,7 +120,7 @@ export default function Header() {
                     <path d="M22.6 3.4c-.4-.4-.9-.4-1.3 0L12 12.7 2.7 3.4c-.4-.4-.9-.4-1.3 0s-.4.9 0 1.3l10 10.1 10-10.1c.4-.4.4-.9 0-1.3z" />
                   </svg>
                   <span>Get the Extension</span>
-                </Link>
+                </button>
               </nav>
 
               {/* Auth Button */}
@@ -231,12 +231,12 @@ export default function Header() {
               <div className="container mx-auto px-4 py-6 space-y-4">
                 {/* Navigation Links */}
                 <nav className="space-y-2 border-b border-divider pb-4">
-                  <Link
-                    href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-text-secondary hover:text-neon-magenta hover:bg-surface-variant transition-colors duration-200"
+                  <button
+                    onClick={() => {
+                      setExtensionDialogOpen(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium text-text-secondary hover:text-neon-magenta hover:bg-surface-variant transition-colors duration-200"
                   >
                     <svg
                       className="w-5 h-5"
@@ -247,7 +247,7 @@ export default function Header() {
                       <path d="M22.6 3.4c-.4-.4-.9-.4-1.3 0L12 12.7 2.7 3.4c-.4-.4-.9-.4-1.3 0s-.4.9 0 1.3l10 10.1 10-10.1c.4-.4.4-.9 0-1.3z" />
                     </svg>
                     <span>Get the Extension</span>
-                  </Link>
+                  </button>
                 </nav>
 
                 {/* Additional Links */}
@@ -393,6 +393,10 @@ export default function Header() {
         isOpen={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
         initialMode={authDialogMode}
+      />
+      <ExtensionInterestDialog
+        isOpen={extensionDialogOpen}
+        onClose={() => setExtensionDialogOpen(false)}
       />
     </>
   );

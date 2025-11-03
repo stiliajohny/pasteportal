@@ -12,18 +12,25 @@ const API_BASE = '/api/v1';
 
 const introParagraph = `Welcome to PastePortal!
 
-Are you tired of copying your code from VS Code and losing all the syntax highlighting?
-Now you can directly share from your VS Code and share the link, and the receiver will see the code with the syntax highlighting!
-
-A two-step process to share your code:
-1. Select your code
-2. Press Ctrl+Alt+Cmd+P, and you get a link to share with your friends!
-
---
+Are you tired of copying your code and losing all the syntax highlighting?
+Now you can directly share your code snippets and the receiver will see them with beautiful syntax highlighting!
 
 How to use it:
 
-Download the VS Code Extension and use the Command palette, Sidebar or Shortcut
+1. Paste your code in the text area below
+2. Click "Share" to get a link
+3. Share the link with your friends!
+
+---
+
+Coming soon: IDE Extensions!
+
+We're working on extensions for VS Code, JetBrains IDEs, and Vim that will allow you to:
+- Share code directly from your editor with a simple keyboard shortcut
+- Access your pastes from the sidebar
+- Retrieve pastes without leaving your IDE
+
+Click "Get the Extension" in the header to register your interest and get notified when they're ready!
 
 ---
 
@@ -31,9 +38,6 @@ A brief overview of how PastePortal was created (shout out for the prompt @craig
 
 Once upon a time, I was tasked with creating a technical challenge for a job candidate, one that would involve building a service for posting and retrieving messages using their preferred tech stack.
 I wanted to see how the candidate would approach the problem and develop a solution. This led to the development of PastePortal.
-In addition, you can enhance your experience by downloading the PastePortal VS Code extension, which allows you to access PastePortal directly from your code editor!
-
-https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal
 
 ---
 `;
