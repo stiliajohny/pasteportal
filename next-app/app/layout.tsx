@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Source_Code_Pro } from 'next/font/google';
+import { Suspense } from 'react';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
@@ -172,7 +173,9 @@ export default function RootLayout({
       <body className={`${sourceCodePro.variable} font-mono antialiased overflow-x-hidden`}>
         <ThemeProvider>
           <AuthProvider>
-            <GoogleAnalytics />
+            <Suspense fallback={null}>
+              <GoogleAnalytics />
+            </Suspense>
             <PWARegister />
             <Tour />
             <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
