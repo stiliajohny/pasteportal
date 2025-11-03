@@ -62,13 +62,23 @@ CREATE POLICY "Users can delete their own pastes"
     user_id = auth.uid()
   );
 
--- Note: While the SELECT policy allows public read, the application layer should:
--- 1. Not expose password field in public API endpoints (get-paste should not return password)
--- 2. Only return password in authenticated endpoints where user_id matches (list-pastes)
--- 3. The get-paste endpoint should use application-level filtering to exclude password field
+-- Security Note: Password column protection
+-- IMPORTANT: PostgreSQL RLS policies enforce row-level access but NOT column-level access.
+-- This means that if a user has SELECT permission on a row, they can access ALL columns in that row,
+-- including the password column, even if the application layer filters it out.
+--
+-- Defense-in-depth measures:
+-- 1. Application layer: The get-paste endpoint explicitly excludes password field from SELECT queries
+-- 2. Application layer: The list-pastes endpoint only returns password for authenticated users viewing their own pastes
+-- 3. Database constraint: The pastes_password_storage_check constraint (migration 013) enforces password storage rules
+--
+-- Note: The public_pastes_view was originally planned for migration 015 but was removed
+-- as it was not used and created an unnecessary security risk (unrestricted public API access).
 
 -- Create a function to check if current user owns the paste
 -- This can be used for additional validation if needed
+-- NOTE: This function is removed in migration 014_remove_unused_function.sql as it is not used in the codebase.
+-- If paste ownership validation is needed, it should be done at the application layer or through RLS policies directly.
 CREATE OR REPLACE FUNCTION public.user_owns_paste(paste_id TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
