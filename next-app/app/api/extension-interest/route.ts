@@ -49,32 +49,7 @@ export async function POST(request: NextRequest) {
     // Get current user (if logged in)
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Check if interest already registered
-    const { data: existing, error: checkError } = await supabase
-      .from('extension_interest')
-      .select('id')
-      .eq('email', email)
-      .eq('ide_preference', ide_preference)
-      .maybeSingle();
-
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking existing interest:', checkError);
-      return NextResponse.json(
-        { error: 'Failed to check existing interest' },
-        { status: 500 }
-      );
-    }
-
-    // If already exists, return success (idempotent)
-    if (existing) {
-      return NextResponse.json({
-        success: true,
-        message: 'Interest already registered',
-        already_registered: true,
-      });
-    }
-
-    // Insert interest record
+    // Insert interest record (UNIQUE constraint will prevent duplicates)
     const { data, error } = await supabase
       .from('extension_interest')
       .insert({
@@ -84,6 +59,15 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+
+    // If duplicate (unique constraint violation), return success (idempotent)
+    if (error && error.code === '23505') {
+      return NextResponse.json({
+        success: true,
+        message: 'Interest already registered',
+        already_registered: true,
+      });
+    }
 
     if (error) {
       console.error('Error inserting interest:', error);

@@ -28,9 +28,7 @@ CREATE POLICY "Users can view their own interest"
   ON public.extension_interest 
   FOR SELECT 
   USING (
-    auth.uid() = user_id 
-    OR 
-    email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    auth.uid() = user_id
   );
 
 -- Create index for faster lookups
