@@ -13,12 +13,49 @@
 CREATE TABLE IF NOT EXISTS public.extension_interest (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT NOT NULL,
-  ide_preference TEXT NOT NULL CHECK (ide_preference IN ('vscode', 'jetbrains', 'vim', 'other')),
+  ide_preference TEXT NOT NULL CHECK (ide_preference IN ('vscode', 'cursor', 'jetbrains', 'vim', 'other')),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   -- Ensure a user can only register interest once per IDE
   UNIQUE(email, ide_preference)
 );
+
+-- Update CHECK constraint to include 'cursor' if table exists and constraint needs updating
+DO $$
+DECLARE
+  constraint_name TEXT;
+  constraint_exists BOOLEAN;
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'extension_interest') THEN
+    -- Check if the constraint with the correct definition already exists
+    SELECT EXISTS (
+      SELECT 1 FROM pg_constraint
+      WHERE conrelid = 'public.extension_interest'::regclass
+        AND contype = 'c'
+        AND conname = 'extension_interest_ide_preference_check'
+    ) INTO constraint_exists;
+    
+    -- Only update if constraint doesn't exist or has different definition
+    IF NOT constraint_exists THEN
+      -- Find and drop any existing CHECK constraint on ide_preference column
+      SELECT conname INTO constraint_name
+      FROM pg_constraint
+      WHERE conrelid = 'public.extension_interest'::regclass
+        AND contype = 'c'
+        AND conkey = (SELECT array_agg(attnum) FROM pg_attribute WHERE attrelid = 'public.extension_interest'::regclass AND attname = 'ide_preference');
+      
+      -- Drop the old constraint if found
+      IF constraint_name IS NOT NULL THEN
+        EXECUTE format('ALTER TABLE public.extension_interest DROP CONSTRAINT IF EXISTS %I', constraint_name);
+      END IF;
+      
+      -- Add the updated constraint with 'cursor' included
+      ALTER TABLE public.extension_interest 
+        ADD CONSTRAINT extension_interest_ide_preference_check 
+        CHECK (ide_preference IN ('vscode', 'cursor', 'jetbrains', 'vim', 'other'));
+    END IF;
+  END IF;
+END $$;
 
 -- Enable RLS (idempotent - ALTER TABLE ENABLE RLS is safe to run multiple times)
 ALTER TABLE IF EXISTS public.extension_interest ENABLE ROW LEVEL SECURITY;

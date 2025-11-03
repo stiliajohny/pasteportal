@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
  */
 const IDE_OPTIONS = [
   { id: 'vscode', name: 'VS Code', icon: '💻' },
+  { id: 'cursor', name: 'Cursor', icon: '🖱️' },
   { id: 'jetbrains', name: 'JetBrains (IntelliJ, WebStorm, etc.)', icon: '🔷' },
   { id: 'vim', name: 'Vim/Neovim', icon: '✏️' },
   { id: 'other', name: 'Other', icon: '📝' },

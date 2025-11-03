@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate IDE preference
-    const validIDEs = ['vscode', 'jetbrains', 'vim', 'other'];
+    const validIDEs = ['vscode', 'cursor', 'jetbrains', 'vim', 'other'];
     if (!validIDEs.includes(ide_preference)) {
       return NextResponse.json(
         { error: 'Invalid IDE preference' },
