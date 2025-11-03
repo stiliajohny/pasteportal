@@ -45,5 +45,5 @@ CREATE INDEX IF NOT EXISTS idx_extension_interest_user_id ON public.extension_in
 CREATE INDEX IF NOT EXISTS idx_extension_interest_created_at ON public.extension_interest(created_at DESC);
 
 -- Add comment to table (idempotent - overwrites if exists)
-COMMENT ON TABLE IF EXISTS public.extension_interest IS 'Tracks user interest in IDE extensions for future development';
+COMMENT ON TABLE public.extension_interest IS 'Tracks user interest in IDE extensions for future development';
 
