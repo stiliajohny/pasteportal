@@ -7,7 +7,7 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   # Exclude NEXT_PUBLIC_* variables from secret scanning
   # These are intentionally bundled into client code and are meant to be public
   SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_URL"
