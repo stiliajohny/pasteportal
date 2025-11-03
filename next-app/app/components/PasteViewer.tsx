@@ -171,6 +171,7 @@ export default function PasteViewer() {
   const [downloaded, setDownloaded] = useState(false);
   const [pushedPasteId, setPushedPasteId] = useState<string | null>(null);
   const [pushedPasteName, setPushedPasteName] = useState<string | null>(null);
+  const [isPasteCreated, setIsPasteCreated] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [instructionsCopied, setInstructionsCopied] = useState(false);
   const [showEncryptDialog, setShowEncryptDialog] = useState(false);
@@ -318,6 +319,7 @@ export default function PasteViewer() {
 
     setIsLoading(true);
     setPushedPasteId(null); // Clear previous push success
+    setIsPasteCreated(false); // Clear paste created flag when loading
     setText(getRandomLoadingJoke());
 
     try {
@@ -325,9 +327,10 @@ export default function PasteViewer() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       const result = await fetchPaste(id);
       
-      // Store paste ID and name for sharing
+      // Store paste ID and name for document title (but don't mark as created)
       setPushedPasteId(id);
       setPushedPasteName(result.name || null);
+      setIsPasteCreated(false); // This is a loaded paste, not a created one
       
       // Check if paste is password-encrypted
       if (result.isPasswordEncrypted) {
@@ -432,6 +435,7 @@ export default function PasteViewer() {
       );
       setPushedPasteId(result.id);
       setPushedPasteName(nameToStore);
+      setIsPasteCreated(true); // Mark as created so share menu appears
       
       // Clear paste name after successful push
       setPasteName('');
@@ -705,11 +709,12 @@ export default function PasteViewer() {
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
-      {/* Success Popup Modal for Push */}
-      {pushedPasteId && (
+      {/* Success Popup Modal for Push - Only show when paste was created */}
+      {pushedPasteId && isPasteCreated && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => {
           setPushedPasteId(null);
           setUsedPassword(null);
+          setIsPasteCreated(false);
         }}>
           <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
@@ -729,6 +734,7 @@ export default function PasteViewer() {
                   onClick={() => {
                     setPushedPasteId(null);
                     setUsedPassword(null);
+                    setIsPasteCreated(false);
                   }}
                   className="text-text-secondary hover:text-text transition-colors"
                   aria-label="Close dialog"
@@ -955,6 +961,7 @@ export default function PasteViewer() {
                     setPushedPasteId(null);
                     setPushedPasteName(null);
                     setUsedPassword(null);
+                    setIsPasteCreated(false);
                     setInstructionsCopied(false);
                   }}
                   className="px-6 py-2 rounded-lg bg-neon-cyan text-black hover:bg-neon-cyan-600 transition-colors text-sm font-medium"
