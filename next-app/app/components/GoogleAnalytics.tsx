@@ -14,7 +14,7 @@ export default function GoogleAnalytics() {
 
   useEffect(() => {
     // Only track if gtag is available (client-side only)
-    if (typeof window === 'undefined' || typeof window.gtag !== 'function') {
+    if (typeof window === 'undefined' || !window.gtag) {
       return;
     }
 

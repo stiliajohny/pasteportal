@@ -27,8 +27,14 @@ declare module '*.less' {
  */
 declare global {
   interface Window {
-    dataLayer: any[];
-    gtag: (...args: any[]) => void;
+    dataLayer?: any[];
+    gtag?: (
+      command: 'config' | 'event' | 'js' | 'set',
+      targetId: string | Date,
+      config?: Record<string, any>
+    ) => void;
   }
 }
+
+export {};
 

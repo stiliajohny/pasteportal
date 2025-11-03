@@ -121,6 +121,22 @@ export default function Header() {
                   </svg>
                   <span>Get the Extension</span>
                 </button>
+                {/* Ko-fi Button */}
+                <a
+                  href="https://ko-fi.com/L3L51Y8NM"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center transition-opacity duration-200 hover:opacity-80"
+                  aria-label="Buy Me a Coffee at ko-fi.com"
+                >
+                  <img
+                    height={38}
+                    style={{ border: 0, height: '38px' }}
+                    src="https://storage.ko-fi.com/cdn/kofi6.png?v=6"
+                    alt="Buy Me a Coffee at ko-fi.com"
+                    className="h-[38px] w-auto"
+                  />
+                </a>
               </nav>
 
               {/* Auth Button */}
@@ -248,6 +264,23 @@ export default function Header() {
                     </svg>
                     <span>Get the Extension</span>
                   </button>
+                  {/* Ko-fi Button */}
+                  <a
+                    href="https://ko-fi.com/L3L51Y8NM"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-variant transition-colors duration-200"
+                    aria-label="Buy Me a Coffee at ko-fi.com"
+                  >
+                    <img
+                      height={38}
+                      style={{ border: 0, height: '38px' }}
+                      src="https://storage.ko-fi.com/cdn/kofi6.png?v=6"
+                      alt="Buy Me a Coffee at ko-fi.com"
+                      className="h-[38px] w-auto"
+                    />
+                  </a>
                 </nav>
 
                 {/* Additional Links */}
