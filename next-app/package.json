@@ -23,14 +23,13 @@
     "react-dom": "^18.3.1",
     "react-syntax-highlighter": "^16.1.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-react": "^3.29.0"
+    "swagger-ui-react": "^5.18.2"
   },
   "devDependencies": {
     "@types/node": "^20.19.24",
     "@types/react": "^18.3.26",
     "@types/react-dom": "^18.3.7",
     "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-react": "^5.18.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.33",

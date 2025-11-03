@@ -16,9 +16,6 @@ const SwaggerUI = dynamic(() => import('swagger-ui-react'), {
   ),
 });
 
-// Import Swagger UI CSS
-import 'swagger-ui-react/swagger-ui.css';
-
 /**
  * Portal Docs - Interactive API Documentation
  * Fancy name for Swagger UI documentation
@@ -31,10 +28,23 @@ export default function PortalDocsPage() {
 
   useEffect(() => {
     /**
+     * Dynamically load Swagger UI CSS to avoid Turbopack parsing issues
+     */
+    const loadSwaggerCSS = () => {
+      if (!document.querySelector('link[href*="swagger-ui"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui.css';
+        document.head.appendChild(link);
+      }
+    };
+
+    /**
      * Fetch OpenAPI specification from API route
      */
     const fetchSpec = async () => {
       try {
+        loadSwaggerCSS();
         const response = await fetch('/api/openapi-spec');
         if (!response.ok) {
           throw new Error('Failed to fetch API specification');
