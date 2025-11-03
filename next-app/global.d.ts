@@ -22,3 +22,13 @@ declare module '*.less' {
   export default content;
 }
 
+/**
+ * Google Analytics gtag function
+ */
+declare global {
+  interface Window {
+    dataLayer: any[];
+    gtag: (...args: any[]) => void;
+  }
+}
+

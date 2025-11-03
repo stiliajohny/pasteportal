@@ -3,6 +3,7 @@ import { Source_Code_Pro } from 'next/font/google';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
+import GoogleAnalytics from './components/GoogleAnalytics';
 import { ThemeProvider } from './components/ThemeProvider';
 import Tour from './components/Tour/Tour';
 import { AuthProvider } from './contexts/AuthContext';
@@ -102,6 +103,10 @@ export default function RootLayout({
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pasteportal.app';
   const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
   
+  // Google Analytics Measurement ID (set via environment variable or use default)
+  // Format: NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-4EQ3Y83TP7';
+  
   // Validate AdSense client ID - must be in format ca-pub-xxxxxxxxxxxxxxx (16 digits)
   // Reject placeholder values like "ca-pub-your-adsense-client-id"
   const isValidAdSenseId = adsenseClientId && 
@@ -131,6 +136,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Google tag (gtag.js) */}
+        <script
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${gaMeasurementId}');
+            `,
+          }}
+        />
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -152,6 +172,7 @@ export default function RootLayout({
       <body className={`${sourceCodePro.variable} font-mono antialiased overflow-x-hidden`}>
         <ThemeProvider>
           <AuthProvider>
+            <GoogleAnalytics />
             <PWARegister />
             <Tour />
             <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
