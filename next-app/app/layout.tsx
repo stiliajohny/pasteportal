@@ -3,8 +3,8 @@ import { Source_Code_Pro } from 'next/font/google';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
-import Tour from './components/Tour/Tour';
 import { ThemeProvider } from './components/ThemeProvider';
+import Tour from './components/Tour/Tour';
 import { AuthProvider } from './contexts/AuthContext';
 import './globals.css';
 
@@ -72,6 +72,13 @@ export const metadata: Metadata = {
   ...(process.env.GOOGLE_VERIFICATION_TOKEN && {
     verification: {
       google: process.env.GOOGLE_VERIFICATION_TOKEN,
+    },
+  }),
+  // Google AdSense account (set via environment variable)
+  // Format: NEXT_PUBLIC_ADSENSE_ACCOUNT=ca-pub-xxxxxxxxxxxxxxx
+  ...(process.env.NEXT_PUBLIC_ADSENSE_ACCOUNT && {
+    other: {
+      'google-adsense-account': process.env.NEXT_PUBLIC_ADSENSE_ACCOUNT,
     },
   }),
 };
