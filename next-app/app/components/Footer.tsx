@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import TourTrigger from './Tour/TourTrigger';
 
 /**
  * Footer component with links and branding
@@ -103,6 +104,7 @@ export default function Footer() {
               © {currentYear} PastePortal. Built with ❤️ for developers.
             </p>
             <div className="flex items-center gap-4">
+              <TourTrigger />
               <span className="text-xs text-text-secondary hidden sm:inline">
                 Made with Next.js
               </span>

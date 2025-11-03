@@ -3,6 +3,7 @@ import { Source_Code_Pro } from 'next/font/google';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
+import Tour from './components/Tour/Tour';
 import { ThemeProvider } from './components/ThemeProvider';
 import { AuthProvider } from './contexts/AuthContext';
 import './globals.css';
@@ -131,6 +132,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <PWARegister />
+            <Tour />
             <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
               <Header />
               <main className="flex-1 w-full overflow-x-hidden">

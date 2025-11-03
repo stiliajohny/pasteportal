@@ -1173,6 +1173,7 @@ export default function PasteViewer() {
               <div className="relative w-full">
                 <input
                   id="paste-id-input"
+                  data-tour="paste-id-input"
                   type="text"
                   value={pasteIdInput}
                   onChange={(e) => setPasteIdInput(e.target.value)}
@@ -1204,6 +1205,7 @@ export default function PasteViewer() {
                 <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
                 <input
                   id="paste-name-input"
+                  data-tour="paste-name-input"
                   type="text"
                   value={pasteName}
                   onChange={(e) => setPasteName(e.target.value)}
@@ -1217,6 +1219,7 @@ export default function PasteViewer() {
             <div className="flex gap-1.5 w-full sm:w-auto">
               {/* Pull Button */}
               <button
+                data-tour="pull-button"
                 onClick={handlePasteIdSubmit}
                 disabled={!isValidPasteId(pasteIdInput) || isLoading}
                 className={`
@@ -1243,7 +1246,7 @@ export default function PasteViewer() {
               </button>
 
               {/* Push Button with Dropdown */}
-              <div ref={pushButtonRef} className="relative flex">
+              <div ref={pushButtonRef} data-tour="push-button" className="relative flex">
                 <button
                   onClick={handlePushButtonClick}
                   disabled={!text || text.trim().length === 0 || isPushing}
@@ -1271,6 +1274,7 @@ export default function PasteViewer() {
                 </button>
                 {text && text.trim().length > 0 && !isPushing && (
                   <button
+                    data-tour="push-encrypt"
                     onClick={() => setShowEncryptDialog(true)}
                     className="px-1.5 py-1.5 rounded-r-lg border-l border-white/20 transition-all duration-200 push-dropdown-arrow bg-neon-magenta text-white hover:opacity-90"
                     aria-label="Encryption options"
@@ -1297,6 +1301,7 @@ export default function PasteViewer() {
               <div className="flex gap-1">
                 {/* Upload Button */}
                 <button
+                  data-tour="upload-button"
                   onClick={handleFileUpload}
                   className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
                   aria-label="Upload file"
@@ -1310,6 +1315,7 @@ export default function PasteViewer() {
                 {/* Download Button - only shown when text exists */}
                 {text && (
                   <button
+                    data-tour="download-button"
                     onClick={handleDownload}
                     className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
                     aria-label={downloaded ? 'Downloaded!' : 'Download paste'}
@@ -1330,6 +1336,7 @@ export default function PasteViewer() {
                 {/* Copy Button - only shown when text exists */}
                 {text && (
                   <button
+                    data-tour="copy-button"
                     onClick={handleCopy}
                     className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
                     aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
@@ -1354,6 +1361,7 @@ export default function PasteViewer() {
                   <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
                   <select
                     id="language-select"
+                    data-tour="language-selector"
                     value={selectedLanguage}
                     onChange={(e) => {
                       setSelectedLanguage(e.target.value as LanguageValue);
@@ -1394,6 +1402,7 @@ export default function PasteViewer() {
               {/* Edit/View Mode Toggle - always visible when not loading */}
               {!isLoading && (
                 <button
+                  data-tour="edit-view-toggle"
                   onClick={() => {
                     setIsEditMode(!isEditMode);
                     // Auto-focus textarea when switching to edit mode
@@ -1425,7 +1434,7 @@ export default function PasteViewer() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative w-full">
+      <div className="flex-1 overflow-hidden relative w-full" data-tour="main-editor">
         {isEditMode ? (
           // Edit mode: plain textarea
           <textarea

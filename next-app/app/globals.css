@@ -85,6 +85,27 @@ body {
   border-radius: 4px;
 }
 
+/* Tour trigger animations */
+@keyframes gentle-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(0, 217, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.8), 0 0 30px rgba(255, 0, 255, 0.5);
+  }
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-positive-highlight);
 }

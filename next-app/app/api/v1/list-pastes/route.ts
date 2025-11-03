@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { decrypt } from '@/lib/encryption';
-import { sanitizeError, secureLogError } from '@/lib/utils';
 import { validateOrigin } from '@/lib/csrf';
+import { decrypt } from '@/lib/encryption';
 import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { sanitizeError, secureLogError } from '@/lib/utils';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Mark route as dynamic since it uses request.headers
 export const dynamic = 'force-dynamic';

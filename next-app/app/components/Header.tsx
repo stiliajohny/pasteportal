@@ -108,6 +108,7 @@ export default function Header() {
                   href="https://marketplace.visualstudio.com/items?itemName=JohnStilia.pasteportal"
                   target="_blank"
                   rel="noopener noreferrer"
+                  data-tour="extension-link"
                   className="text-sm font-medium text-text-secondary hover:text-neon-magenta transition-colors duration-200 flex items-center gap-2"
                 >
                   <svg
@@ -123,13 +124,14 @@ export default function Header() {
               </nav>
 
               {/* Auth Button */}
-              {!loading && (
+                  {!loading && (
                 <div className="flex items-center gap-2 overflow-visible">
                   {user ? (
                     <UserMenu />
                   ) : (
                     <div className="flex items-center gap-2">
                       <button
+                        data-tour="sign-in-button"
                         onClick={() => handleAuthClick('signin')}
                         className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text transition-colors duration-200"
                       >
@@ -147,7 +149,9 @@ export default function Header() {
               )}
 
               {/* Theme Toggle */}
-              <ThemeToggle />
+              <div data-tour="theme-toggle">
+                <ThemeToggle />
+              </div>
             </div>
 
             {/* Mobile Menu Button and Actions */}
@@ -158,6 +162,7 @@ export default function Header() {
               {/* Hamburger Menu Button */}
               <button
                 type="button"
+                data-tour="mobile-menu-button"
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -218,7 +223,8 @@ export default function Header() {
           {/* Mobile Menu Panel */}
           <div
             ref={mobileMenuRef}
-            className="fixed top-14 left-0 right-0 bottom-0 z-[101] bg-surface border-t border-divider overflow-y-auto md:hidden shadow-xl"
+            data-tour="mobile-menu-panel"
+            className={`fixed top-14 left-0 right-0 bottom-0 z-[101] bg-surface border-t border-divider overflow-y-auto md:hidden shadow-xl ${mobileMenuOpen ? 'mobile-menu-open' : ''}`}
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           >
