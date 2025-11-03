@@ -95,6 +95,12 @@ export default function RootLayout({
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pasteportal.app';
   const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
   
+  // Validate AdSense client ID - must be in format ca-pub-xxxxxxxxxxxxxxx (16 digits)
+  // Reject placeholder values like "ca-pub-your-adsense-client-id"
+  const isValidAdSenseId = adsenseClientId && 
+    /^ca-pub-[0-9]{16}$/.test(adsenseClientId) &&
+    adsenseClientId !== 'ca-pub-your-adsense-client-id';
+  
   // Structured data (JSON-LD) for better SEO
   const structuredData = {
     '@context': 'https://schema.org',
@@ -124,7 +130,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="canonical" href={baseUrl} />
-        {adsenseClientId && (
+        {isValidAdSenseId && (
           <script
             async
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
