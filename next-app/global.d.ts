@@ -7,6 +7,12 @@ declare module '*.css' {
   export default content;
 }
 
+// Allow side-effect CSS imports from node_modules
+declare module 'driver.js/dist/driver.css' {
+  const content: void;
+  export default content;
+}
+
 declare module '*.scss' {
   const content: { [className: string]: string };
   export default content;

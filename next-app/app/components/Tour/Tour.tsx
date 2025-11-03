@@ -5,6 +5,7 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { desktopTourSteps, mobileTourSteps, filterTourSteps, convertToDriverSteps } from './tourSteps';
 import { getTourConfig, injectTourStyles } from './tourStyles';
+import 'driver.js/dist/driver.css';
 
 /**
  * LocalStorage keys for tour state
@@ -121,9 +122,8 @@ export default function Tour() {
     if (typeof window === 'undefined' || driverRef.current) return;
 
     try {
-      // Dynamically import Driver.js and CSS
+      // Dynamically import Driver.js
       const { driver } = await import('driver.js');
-      await import('driver.js/dist/driver.css');
 
       // Close mobile menu before starting
       closeMobileMenu();
