@@ -76,6 +76,7 @@ export default function PrivacyPage() {
             <li>To comply with legal obligations</li>
             <li>To protect our rights and prevent fraud</li>
             <li>With service providers who assist in operating our service (under strict confidentiality agreements)</li>
+            <li>With advertising partners such as Google AdSense to display relevant advertisements</li>
           </ul>
         </section>
 
@@ -101,12 +102,63 @@ export default function PrivacyPage() {
             and analyze service usage. You can control cookie settings through your browser, though this
             may affect service functionality.
           </p>
+          <p className="mt-2">
+            Additionally, we use Google AdSense to display advertisements on our service. Google AdSense uses cookies
+            and similar technologies to personalize ads based on your browsing behavior and interests. These cookies
+            allow Google and its partners to serve ads based on your visits to our site and other sites on the internet.
+            You can opt out of personalized advertising by visiting{' '}
+            <a
+              href="https://www.google.com/settings/ads"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Google&apos;s Ad Settings
+            </a>
+            {' '}or by visiting{' '}
+            <a
+              href="https://www.aboutads.info/choices/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              aboutads.info
+            </a>
+            .
+          </p>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold text-text mb-3">7. Third-Party Services</h2>
           <p>
-            Our service integrates with third-party services (such as Supabase for authentication and storage).
+            Our service integrates with third-party services to provide functionality and improve user experience:
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-4 mt-2">
+            <li><strong>Supabase:</strong> Used for authentication and data storage</li>
+            <li>
+              <strong>Google AdSense:</strong> Used to display advertisements on our service. Google AdSense may collect
+              information about your browsing behavior and device to serve personalized ads. Please review{' '}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Google&apos;s Privacy Policy
+              </a>
+              {' '}and{' '}
+              <a
+                href="https://policies.google.com/technologies/ads"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                How Google uses data
+              </a>
+              {' '}for more information.
+            </li>
+          </ul>
+          <p className="mt-2">
             These services have their own privacy policies, and we encourage you to review them.
           </p>
         </section>
