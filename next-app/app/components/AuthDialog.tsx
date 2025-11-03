@@ -501,9 +501,18 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
       // Now sign in with Web3 using the connected wallet
       setMessage(`Authenticating with ${walletName}...`);
       
-      // Supabase automatically uses window.location.origin for the URI in the signature
-      // Make sure your Supabase project is configured to accept your domain(s) in:
-      // Dashboard > Authentication > Providers > Web3
+      // Supabase uses window.location.origin in the EIP-4361 message signature
+      // The origin MUST match what's configured in Supabase Dashboard:
+      // Dashboard > Authentication > URL Configuration > Redirect URLs
+      // 
+      // If you're getting "URI not allowed" errors, ensure your current origin
+      // (shown below) is added to Supabase Redirect URLs
+      const currentOrigin = window.location.origin;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Web3 Auth - Current origin:', currentOrigin);
+        console.log('Web3 Auth - Ensure this origin is in Supabase Redirect URLs');
+      }
+      
       const { data, error: web3Error } = await (chain === 'ethereum'
         ? supabase.auth.signInWithWeb3({
             chain: 'ethereum',
@@ -518,7 +527,18 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
 
       if (web3Error) {
         console.error('Web3 auth error:', web3Error);
-        setError(web3Error.message || 'Web3 authentication failed. Please try again.');
+        const errorMsg = web3Error.message || 'Web3 authentication failed. Please try again.';
+        
+        // Provide specific guidance for URI mismatch errors
+        if (errorMsg.includes('URI') && errorMsg.includes('not allowed')) {
+          setError(
+            `Domain mismatch: The current origin (${currentOrigin}) is not configured in Supabase. ` +
+            `Please add this origin to Supabase Dashboard > Authentication > URL Configuration > Redirect URLs. ` +
+            `You can use a wildcard pattern like ${currentOrigin}/** to allow all paths.`
+          );
+        } else {
+          setError(errorMsg);
+        }
         setLoading(false);
         return;
       }
