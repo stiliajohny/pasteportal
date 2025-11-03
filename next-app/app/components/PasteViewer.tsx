@@ -76,7 +76,7 @@ async function fetchRandomJoke(): Promise<string> {
  * Fetch paste content from API (Pull)
  * Returns paste data with encryption metadata
  */
-async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncrypted: boolean }> {
+async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncrypted: boolean; name?: string | null }> {
   const response = await fetch(`${API_BASE}/get-paste?id=${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch paste');
@@ -87,6 +87,7 @@ async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncryp
     return {
       paste: pasteData.paste,
       isPasswordEncrypted: pasteData.is_password_encrypted || false,
+      name: pasteData.name || null,
     };
   }
   throw new Error('Paste not found');
@@ -300,6 +301,10 @@ export default function PasteViewer() {
       // Small delay for better UX
       await new Promise((resolve) => setTimeout(resolve, 500));
       const result = await fetchPaste(id);
+      
+      // Store paste ID and name for sharing
+      setPushedPasteId(id);
+      setPushedPasteName(result.name || null);
       
       // Check if paste is password-encrypted
       if (result.isPasswordEncrypted) {
@@ -799,7 +804,7 @@ export default function PasteViewer() {
                             console.error('Failed to copy password:', err);
                           }
                         }}
-                        className="px-3 py-2 rounded-lg bg-neon-magenta text-white hover:bg-neon-magenta-600 transition-colors text-sm"
+                        className="px-3 py-2 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm"
                         title="Copy password"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1031,7 +1036,7 @@ export default function PasteViewer() {
                 <button
                   onClick={handleDecryptPaste}
                   disabled={!decryptPassword}
-                  className="flex-1 px-4 py-2 rounded-lg bg-neon-magenta text-white hover:bg-neon-magenta-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Decrypt & View
                 </button>
