@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   title: 'PastePortal - Share Code with Syntax Highlighting',
   description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
   manifest: '/manifest.json',
+  alternates: {
+    canonical: baseUrl,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -63,6 +66,13 @@ export const metadata: Metadata = {
     images: [ogImageUrl],
     creator: '@pasteportal', // Update with your Twitter handle if you have one
   },
+  // Google Search Console verification (set via environment variable)
+  // Format: GOOGLE_VERIFICATION_TOKEN=your_verification_token
+  ...(process.env.GOOGLE_VERIFICATION_TOKEN && {
+    verification: {
+      google: process.env.GOOGLE_VERIFICATION_TOKEN,
+    },
+  }),
 };
 
 export const viewport: Viewport = {
@@ -81,6 +91,28 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pasteportal.app';
+  
+  // Structured data (JSON-LD) for better SEO
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'PastePortal',
+    description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
+    url: baseUrl,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    creator: {
+      '@type': 'Organization',
+      name: 'PastePortal',
+    },
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -89,6 +121,11 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="canonical" href={baseUrl} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
       </head>
       <body className={`${sourceCodePro.variable} font-mono antialiased overflow-x-hidden`}>
         <ThemeProvider>

@@ -10,7 +10,7 @@
     "lint:fix": "next lint --fix",
     "build": "next build",
     "start": "next start",
-    "netlify:build": "npm run clean && npm run install && npm run build"
+    "netlify:build": "npm run clean && npm install && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

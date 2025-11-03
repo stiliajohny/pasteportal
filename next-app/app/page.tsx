@@ -15,6 +15,9 @@ export async function generateMetadata(props: {
   const defaultMetadata: Metadata = {
     title: 'PastePortal - Share Code with Syntax Highlighting',
     description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
+    alternates: {
+      canonical: baseUrl,
+    },
     openGraph: {
       title: 'PastePortal - Share Code with Syntax Highlighting',
       description: 'A modern text sharing tool for developers. Share code snippets with preserved syntax highlighting.',
@@ -62,6 +65,9 @@ export async function generateMetadata(props: {
   return {
     title: `${pasteTitle} - PastePortal`,
     description,
+    alternates: {
+      canonical: pasteUrl,
+    },
     openGraph: {
       title: pasteTitle,
       description,

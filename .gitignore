@@ -46,4 +46,5 @@ next-env.d.ts
 
 .next/**
 node_modules/**
-!next-app/public/
+!**/public
+!**/lib
