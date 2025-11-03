@@ -501,30 +501,19 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
       // Now sign in with Web3 using the connected wallet
       setMessage(`Authenticating with ${walletName}...`);
       
-      // Get URI for signature - use configured site URL or fall back to current origin
-      // This ensures the signature URI matches what Supabase expects
-      const signatureUri = typeof window !== 'undefined' 
-        ? (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin)
-        : '';
-      
-      if (!signatureUri) {
-        setError('Unable to determine application URI for Web3 authentication.');
-        setLoading(false);
-        return;
-      }
-      
+      // Supabase automatically uses window.location.origin for the URI in the signature
+      // Make sure your Supabase project is configured to accept your domain(s) in:
+      // Dashboard > Authentication > Providers > Web3
       const { data, error: web3Error } = await (chain === 'ethereum'
         ? supabase.auth.signInWithWeb3({
             chain: 'ethereum',
             wallet,
             statement: 'I accept the Terms of Service',
-            uri: signatureUri,
           })
         : supabase.auth.signInWithWeb3({
             chain: 'solana',
             wallet,
             statement: 'I accept the Terms of Service',
-            uri: signatureUri,
           }));
 
       if (web3Error) {
