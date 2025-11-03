@@ -491,11 +491,11 @@ export default function PasteViewer() {
     const shareUrl = `${window.location.origin}?id=${pushedPasteId}`;
     let instructions: string;
 
-    const titlePrefix = pushedPasteName ? `${pushedPasteName}\n\n` : '';
+    const titleText = pushedPasteName ? ` "${pushedPasteName}"` : '';
     if (usedPassword) {
-      instructions = `${titlePrefix}This is the link: ${shareUrl}\n\nThis is the password: ${usedPassword}`;
+      instructions = `Check out this encrypted paste${titleText}!\n\nLink: ${shareUrl}\n\nPassword: ${usedPassword}`;
     } else {
-      instructions = `${titlePrefix}This is the link: ${shareUrl}`;
+      instructions = `Check out this paste${titleText}:\n\nLink: ${shareUrl}`;
     }
 
     if (navigator.clipboard) {
@@ -522,11 +522,11 @@ export default function PasteViewer() {
    * Get share text for social platforms
    */
   const getShareText = (): string => {
-    const titlePrefix = pushedPasteName ? `${pushedPasteName}\n\n` : '';
+    const titleText = pushedPasteName ? ` "${pushedPasteName}"` : '';
     if (usedPassword) {
-      return `${titlePrefix}Check out this encrypted paste!\n\nLink: ${getShareUrl()}\nPassword: ${usedPassword}`;
+      return `Check out this encrypted paste${titleText}!\n\nLink: ${getShareUrl()}\nPassword: ${usedPassword}`;
     }
-    return `${titlePrefix}Check out this paste: ${getShareUrl()}`;
+    return `Check out this paste${titleText}: ${getShareUrl()}`;
   };
 
   /**
@@ -549,10 +549,10 @@ export default function PasteViewer() {
    * Share to Twitter/X
    */
   const handleShareTwitter = () => {
-    const titlePrefix = pushedPasteName ? `${pushedPasteName} - ` : '';
+    const titleText = pushedPasteName ? ` "${pushedPasteName}"` : '';
     const text = usedPassword 
-      ? `${titlePrefix}Check out this encrypted paste! Link: ${getShareUrl()} Password: ${usedPassword}`
-      : `${titlePrefix}Check out this paste: ${getShareUrl()}`;
+      ? `Check out this encrypted paste${titleText}! Link: ${getShareUrl()} Password: ${usedPassword}`
+      : `Check out this paste${titleText}: ${getShareUrl()}`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
