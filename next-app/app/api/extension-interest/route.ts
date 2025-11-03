@@ -71,8 +71,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error inserting interest:', error);
+      // Return more specific error for debugging (in production, sanitize this)
       return NextResponse.json(
-        { error: 'Failed to register interest' },
+        { 
+          error: 'Failed to register interest',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
         { status: 500 }
       );
     }

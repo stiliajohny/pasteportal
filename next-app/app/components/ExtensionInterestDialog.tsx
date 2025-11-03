@@ -83,6 +83,7 @@ export default function ExtensionInterestDialog({
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Include cookies for authentication
           body: JSON.stringify({
             email: emailToUse,
             ide_preference: ide,
