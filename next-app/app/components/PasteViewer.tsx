@@ -303,11 +303,9 @@ export default function PasteViewer() {
         await import('prismjs/components/prism-cpp');
         await import('prismjs/components/prism-csharp');
 
-        // Store Prism functions for highlightCode
-        (window as any).__prism = {
-          highlight: Prism.highlight.bind(Prism),
-          languages: Prism.languages
-        };
+        // Store Prism reference for highlightCode
+        // Don't bind highlight - it needs access to Prism's internal context
+        (window as any).__prism = Prism;
         setPrismLoaded(true);
       } catch (error) {
         console.error('Failed to load Prism.js:', error);
@@ -326,14 +324,25 @@ export default function PasteViewer() {
     }
 
     try {
-      const { highlight, languages } = (window as any).__prism;
-      if (!highlight || !languages) {
+      const Prism = (window as any).__prism;
+      if (!Prism || !Prism.highlight || !Prism.languages) {
         return code;
       }
 
       const prismLang = getPrismLanguage(language);
-      const lang = languages[prismLang] || languages.plaintext;
-      return highlight(code, lang, prismLang);
+      const lang = Prism.languages[prismLang];
+      
+      // If language doesn't exist, use plaintext or return code as-is
+      if (!lang) {
+        // Try plaintext, or if that doesn't exist either, return unhighlighted code
+        const plaintextLang = Prism.languages.plaintext;
+        if (plaintextLang) {
+          return Prism.highlight(code, plaintextLang, 'plaintext');
+        }
+        return code;
+      }
+
+      return Prism.highlight(code, lang, prismLang);
     } catch (error) {
       console.error('Error highlighting code:', error);
       return code;
