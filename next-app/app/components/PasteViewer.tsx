@@ -106,6 +106,16 @@ function getRandomLoadingJoke(): string {
 }
 
 /**
+ * Generate line numbers array from content
+ * Returns array of line numbers (1, 2, 3, ...) based on content line count
+ */
+function getLineNumbers(content: string): number[] {
+  if (!content) return [1];
+  const lines = content.split('\n');
+  return Array.from({ length: lines.length }, (_, i) => i + 1);
+}
+
+/**
  * Fetch a random joke from the API
  */
 async function fetchRandomJoke(): Promise<string> {
@@ -1676,44 +1686,65 @@ export default function PasteViewer() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative w-full" data-tour="main-editor">
         {isEditMode ? (
-          // Edit mode: syntax-highlighted code editor
-          <div ref={editorContainerRef} className="w-full h-full min-h-[60vh] overflow-auto">
-            {isClient ? (
-              <Editor
-                value={text}
-                onValueChange={(code) => setText(code)}
-                highlight={(code) => highlightCode(code, selectedLanguage)}
-                padding={16}
-                className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base"
+          // Edit mode: syntax-highlighted code editor with line numbers
+          <div className="w-full h-full min-h-[60vh] overflow-auto">
+            <div className="flex">
+              {/* Line numbers gutter */}
+              <div 
+                className="flex-shrink-0 bg-surface-variant/30 border-r border-divider/40 px-3 py-4 sm:py-6 lg:py-8 select-none text-text-secondary/60 text-right font-mono text-sm sm:text-base leading-[1.75rem]"
                 style={{
                   fontFamily: 'var(--font-mono), monospace',
-                  fontSize: 'inherit',
-                  lineHeight: '1.75rem',
-                  outline: 'none',
-                  background: 'var(--color-background)',
-                  color: 'var(--color-text)',
-                  minHeight: '60vh',
+                  minWidth: '3rem',
+                  userSelect: 'none',
                 }}
-                textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current"
-                preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent"
-                placeholder="Start typing or paste your content here..."
-                disabled={isLoading}
-                tabSize={2}
-                insertSpaces={true}
-              />
-            ) : (
-              // Fallback textarea while Editor loads (SSR/hydration)
-              <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                readOnly={isLoading}
-                className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text"
-                style={{ minHeight: '60vh' }}
-                spellCheck={false}
-                placeholder="Start typing or paste your content here..."
-              />
-            )}
+              >
+                {getLineNumbers(text).map((lineNum) => (
+                  <div key={lineNum} className="h-[1.75rem]">
+                    {lineNum}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Editor container */}
+              <div ref={editorContainerRef} className="flex-1">
+                {isClient ? (
+                  <Editor
+                    value={text}
+                    onValueChange={(code) => setText(code)}
+                    highlight={(code) => highlightCode(code, selectedLanguage)}
+                    padding={16}
+                    className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base"
+                    style={{
+                      fontFamily: 'var(--font-mono), monospace',
+                      fontSize: 'inherit',
+                      lineHeight: '1.75rem',
+                      outline: 'none',
+                      background: 'var(--color-background)',
+                      color: 'var(--color-text)',
+                      minHeight: '60vh',
+                    }}
+                    textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current"
+                    preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent"
+                    placeholder="Start typing or paste your content here..."
+                    disabled={isLoading}
+                    tabSize={2}
+                    insertSpaces={true}
+                  />
+                ) : (
+                  // Fallback textarea while Editor loads (SSR/hydration)
+                  <textarea
+                    ref={textareaRef}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    readOnly={isLoading}
+                    className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text"
+                    style={{ minHeight: '60vh' }}
+                    spellCheck={false}
+                    placeholder="Start typing or paste your content here..."
+                  />
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           // View mode: syntax highlighting
