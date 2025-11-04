@@ -254,19 +254,34 @@ export default function PasteViewer() {
         
         // Make Prism available globally for components to register
         // Components need Prism to be on window.Prism to register themselves
+        // Set both window.Prism and global Prism reference
         (window as any).Prism = Prism;
         
-        // Load Prism components - they need Prism to be available globally
-        // These will register themselves with the global Prism object
+        // Ensure global self/window reference is available for components
+        if (typeof globalThis !== 'undefined') {
+          (globalThis as any).Prism = Prism;
+        }
+        
+        // Load Prism components in dependency order
+        // Base languages first (no dependencies) - must use static string literals
+        await import('prismjs/components/prism-markup');
+        await import('prismjs/components/prism-css');
         await import('prismjs/components/prism-javascript');
-        await import('prismjs/components/prism-typescript');
+        
+        // Languages that depend on markup
+        await import('prismjs/components/prism-xml-doc');
+        
+        // Languages that depend on javascript
         await import('prismjs/components/prism-jsx');
+        await import('prismjs/components/prism-typescript');
         await import('prismjs/components/prism-tsx');
+        
+        // Languages that depend on css
+        await import('prismjs/components/prism-scss');
+        
+        // Independent languages
         await import('prismjs/components/prism-python');
         await import('prismjs/components/prism-java');
-        await import('prismjs/components/prism-cpp');
-        await import('prismjs/components/prism-c');
-        await import('prismjs/components/prism-csharp');
         await import('prismjs/components/prism-go');
         await import('prismjs/components/prism-rust');
         await import('prismjs/components/prism-php');
@@ -274,18 +289,19 @@ export default function PasteViewer() {
         await import('prismjs/components/prism-swift');
         await import('prismjs/components/prism-kotlin');
         await import('prismjs/components/prism-scala');
-        await import('prismjs/components/prism-markup');
-        await import('prismjs/components/prism-css');
-        await import('prismjs/components/prism-scss');
         await import('prismjs/components/prism-json');
         await import('prismjs/components/prism-yaml');
-        await import('prismjs/components/prism-xml-doc');
         await import('prismjs/components/prism-markdown');
         await import('prismjs/components/prism-sql');
         await import('prismjs/components/prism-bash');
         await import('prismjs/components/prism-powershell');
         await import('prismjs/components/prism-docker');
         await import('prismjs/components/prism-ini');
+        
+        // Languages with dependencies - load c before cpp (cpp depends on c)
+        await import('prismjs/components/prism-c');
+        await import('prismjs/components/prism-cpp');
+        await import('prismjs/components/prism-csharp');
 
         // Store Prism functions for highlightCode
         (window as any).__prism = {
