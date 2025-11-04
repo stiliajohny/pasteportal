@@ -248,10 +248,16 @@ export default function PasteViewer() {
 
     const loadPrism = async () => {
       try {
-        // Import Prism core
-        const { highlight, languages } = await import('prismjs');
+        // Import Prism core as namespace to ensure it's fully initialized
+        const PrismModule = await import('prismjs');
+        const Prism = PrismModule.default || PrismModule;
         
-        // Load Prism components
+        // Make Prism available globally for components to register
+        // Components need Prism to be on window.Prism to register themselves
+        (window as any).Prism = Prism;
+        
+        // Load Prism components - they need Prism to be available globally
+        // These will register themselves with the global Prism object
         await import('prismjs/components/prism-javascript');
         await import('prismjs/components/prism-typescript');
         await import('prismjs/components/prism-jsx');
@@ -281,8 +287,11 @@ export default function PasteViewer() {
         await import('prismjs/components/prism-docker');
         await import('prismjs/components/prism-ini');
 
-        // Store Prism functions globally for highlightCode
-        (window as any).__prism = { highlight, languages };
+        // Store Prism functions for highlightCode
+        (window as any).__prism = {
+          highlight: Prism.highlight.bind(Prism),
+          languages: Prism.languages
+        };
         setPrismLoaded(true);
       } catch (error) {
         console.error('Failed to load Prism.js:', error);
