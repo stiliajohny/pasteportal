@@ -7,35 +7,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Editor from 'react-simple-code-editor';
-import { highlight, languages } from 'prismjs';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-csharp';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-php';
-import 'prismjs/components/prism-ruby';
-import 'prismjs/components/prism-swift';
-import 'prismjs/components/prism-kotlin';
-import 'prismjs/components/prism-scala';
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-scss';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-yaml';
-import 'prismjs/components/prism-xml-doc';
-import 'prismjs/components/prism-markdown';
-import 'prismjs/components/prism-sql';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-powershell';
-import 'prismjs/components/prism-docker';
-import 'prismjs/components/prism-ini';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from './ThemeProvider';
 
@@ -77,15 +48,6 @@ const getPrismLanguage = (lang: LanguageValue): string => {
     'ini': 'ini',
   };
   return langMap[lang] || 'plaintext';
-};
-
-/**
- * Highlight code using Prism
- */
-const highlightCode = (code: string, language: LanguageValue): string => {
-  const prismLang = getPrismLanguage(language);
-  const lang = languages[prismLang] || languages.plaintext;
-  return highlight(code, lang, prismLang);
 };
 
 const introParagraph = `Welcome to PastePortal!
@@ -266,10 +228,86 @@ export default function PasteViewer() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isManualLanguageSelection, setIsManualLanguageSelection] = useState(false);
   const [pasteName, setPasteName] = useState<string>('');
+  const [prismLoaded, setPrismLoaded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pushButtonRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Load Prism.js and its components dynamically on client side
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const loadPrism = async () => {
+      try {
+        // Import Prism core
+        const { highlight, languages } = await import('prismjs');
+        
+        // Load Prism components
+        await import('prismjs/components/prism-javascript');
+        await import('prismjs/components/prism-typescript');
+        await import('prismjs/components/prism-jsx');
+        await import('prismjs/components/prism-tsx');
+        await import('prismjs/components/prism-python');
+        await import('prismjs/components/prism-java');
+        await import('prismjs/components/prism-cpp');
+        await import('prismjs/components/prism-c');
+        await import('prismjs/components/prism-csharp');
+        await import('prismjs/components/prism-go');
+        await import('prismjs/components/prism-rust');
+        await import('prismjs/components/prism-php');
+        await import('prismjs/components/prism-ruby');
+        await import('prismjs/components/prism-swift');
+        await import('prismjs/components/prism-kotlin');
+        await import('prismjs/components/prism-scala');
+        await import('prismjs/components/prism-markup');
+        await import('prismjs/components/prism-css');
+        await import('prismjs/components/prism-scss');
+        await import('prismjs/components/prism-json');
+        await import('prismjs/components/prism-yaml');
+        await import('prismjs/components/prism-xml-doc');
+        await import('prismjs/components/prism-markdown');
+        await import('prismjs/components/prism-sql');
+        await import('prismjs/components/prism-bash');
+        await import('prismjs/components/prism-powershell');
+        await import('prismjs/components/prism-docker');
+        await import('prismjs/components/prism-ini');
+
+        // Store Prism functions globally for highlightCode
+        (window as any).__prism = { highlight, languages };
+        setPrismLoaded(true);
+      } catch (error) {
+        console.error('Failed to load Prism.js:', error);
+      }
+    };
+
+    loadPrism();
+  }, []);
+
+  /**
+   * Highlight code using Prism (only works after Prism is loaded)
+   */
+  const highlightCode = (code: string, language: LanguageValue): string => {
+    if (!prismLoaded || typeof window === 'undefined') {
+      return code; // Return plain text if Prism not loaded
+    }
+
+    try {
+      const { highlight, languages } = (window as any).__prism;
+      if (!highlight || !languages) {
+        return code;
+      }
+
+      const prismLang = getPrismLanguage(language);
+      const lang = languages[prismLang] || languages.plaintext;
+      return highlight(code, lang, prismLang);
+    } catch (error) {
+      console.error('Error highlighting code:', error);
+      return code;
+    }
+  };
 
   useEffect(() => {
     setIsClient(true);
