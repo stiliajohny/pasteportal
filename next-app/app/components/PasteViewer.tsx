@@ -4,11 +4,17 @@ import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/la
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
 import { fetchWithCsrf } from '@/lib/csrf-client';
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import Editor from 'react-simple-code-editor';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from './ThemeProvider';
+
+// Dynamically import Editor component with SSR disabled to avoid Prism.js issues during build
+const Editor = dynamic(
+  () => import('react-simple-code-editor'),
+  { ssr: false }
+);
 
 const API_BASE = '/api/v1';
 
@@ -1598,28 +1604,42 @@ export default function PasteViewer() {
         {isEditMode ? (
           // Edit mode: syntax-highlighted code editor
           <div ref={editorContainerRef} className="w-full h-full min-h-[60vh] overflow-auto">
-            <Editor
-              value={text}
-              onValueChange={(code) => setText(code)}
-              highlight={(code) => highlightCode(code, selectedLanguage)}
-              padding={16}
-              className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base"
-              style={{
-                fontFamily: 'var(--font-mono), monospace',
-                fontSize: 'inherit',
-                lineHeight: '1.75rem',
-                outline: 'none',
-                background: 'var(--color-background)',
-                color: 'var(--color-text)',
-                minHeight: '60vh',
-              }}
-              textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current"
-              preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent"
-              placeholder="Start typing or paste your content here..."
-              disabled={isLoading}
-              tabSize={2}
-              insertSpaces={true}
-            />
+            {prismLoaded && isClient ? (
+              <Editor
+                value={text}
+                onValueChange={(code) => setText(code)}
+                highlight={(code) => highlightCode(code, selectedLanguage)}
+                padding={16}
+                className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base"
+                style={{
+                  fontFamily: 'var(--font-mono), monospace',
+                  fontSize: 'inherit',
+                  lineHeight: '1.75rem',
+                  outline: 'none',
+                  background: 'var(--color-background)',
+                  color: 'var(--color-text)',
+                  minHeight: '60vh',
+                }}
+                textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current"
+                preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent"
+                placeholder="Start typing or paste your content here..."
+                disabled={isLoading}
+                tabSize={2}
+                insertSpaces={true}
+              />
+            ) : (
+              // Fallback textarea while Editor/Prism loads
+              <textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                readOnly={isLoading}
+                className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text"
+                style={{ minHeight: '60vh' }}
+                spellCheck={false}
+                placeholder="Start typing or paste your content here..."
+              />
+            )}
           </div>
         ) : (
           // View mode: syntax highlighting
