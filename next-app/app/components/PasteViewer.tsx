@@ -1604,7 +1604,7 @@ export default function PasteViewer() {
         {isEditMode ? (
           // Edit mode: syntax-highlighted code editor
           <div ref={editorContainerRef} className="w-full h-full min-h-[60vh] overflow-auto">
-            {prismLoaded && isClient ? (
+            {isClient ? (
               <Editor
                 value={text}
                 onValueChange={(code) => setText(code)}
@@ -1628,7 +1628,7 @@ export default function PasteViewer() {
                 insertSpaces={true}
               />
             ) : (
-              // Fallback textarea while Editor/Prism loads
+              // Fallback textarea while Editor loads (SSR/hydration)
               <textarea
                 ref={textareaRef}
                 value={text}
