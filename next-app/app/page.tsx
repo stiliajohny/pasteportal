@@ -1,6 +1,8 @@
 import PasteViewer from './components/PasteViewer';
 import { Metadata } from 'next';
 import { getPasteMetadata } from '@/lib/paste-metadata';
+import { Suspense } from 'react';
+import PortalAnimation from './components/PortalAnimation';
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pasteportal.app';
 const ogImageUrl = `${baseUrl}/og-image.png`;
@@ -103,8 +105,13 @@ export async function generateMetadata(props: {
 export default function Home() {
   // PasteViewer handles URL params client-side
   return (
+    <>
+      <Suspense fallback={null}>
+        <PortalAnimation />
+      </Suspense>
     <div className="flex-1 flex flex-col min-h-0">
       <PasteViewer />
     </div>
+    </>
   );
 }

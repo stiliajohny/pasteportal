@@ -436,6 +436,9 @@ export default function PasteViewer() {
       setPushedPasteName(nameToStore);
       setIsPasteCreated(true); // Mark as created so share menu appears
       
+      // Mark this paste as just pushed for portal animation
+      sessionStorage.setItem('just-pushed-paste-id', result.id);
+      
       // Clear paste name after successful push
       setPasteName('');
 
@@ -443,6 +446,9 @@ export default function PasteViewer() {
       const url = new URL(window.location.href);
       url.searchParams.set('id', result.id);
       window.history.pushState({}, '', url);
+      
+      // Dispatch custom event to notify PortalAnimation of push
+      window.dispatchEvent(new CustomEvent('paste-pushed', { detail: { id: result.id } }));
 
       // Success popup will be shown automatically via pushedPasteId state
     } catch (error: any) {
