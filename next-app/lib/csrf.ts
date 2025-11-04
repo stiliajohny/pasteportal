@@ -56,7 +56,7 @@ export function validateOrigin(request: NextRequest): boolean {
   
   // In development, allow localhost origins
   const isDevelopment = process.env.NODE_ENV === 'development';
-  if (isDevelopment) {
+  if (isDevelopment && origin) {
     try {
       const originUrl = new URL(origin);
       // Allow localhost, 127.0.0.1, and ::1 (IPv6 localhost) on any port
@@ -78,6 +78,10 @@ export function validateOrigin(request: NextRequest): boolean {
     : host ? [`https://${host}`, `http://${host}`] : [];
   
   // Validate against allowed origins
+  if (!origin) {
+    return false;
+  }
+  
   try {
     const originUrl = new URL(origin);
     
