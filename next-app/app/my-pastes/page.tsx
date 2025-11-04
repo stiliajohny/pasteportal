@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchWithCsrf } from '@/lib/csrf-client';
 
 interface Paste {
   id: string;
@@ -113,7 +114,7 @@ export default function MyPastesPage() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/delete-paste?id=${pasteId}`, {
+      const response = await fetchWithCsrf(`/api/v1/delete-paste?id=${pasteId}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for authentication
       });

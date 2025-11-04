@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useAuth } from '../contexts/AuthContext';
 import { createClient } from '@/lib/supabase-client';
 import { validateEmail, validatePassword } from '@/lib/auth-utils';
+import { fetchWithCsrf } from '@/lib/csrf-client';
 
 /**
  * User settings page
@@ -383,7 +384,7 @@ export default function SettingsPage() {
     try {
       // Delete user from auth
       // Note: This requires admin privileges, so we'll use the admin API via a route
-      const response = await fetch('/api/user/delete-account', {
+      const response = await fetchWithCsrf('/api/user/delete-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

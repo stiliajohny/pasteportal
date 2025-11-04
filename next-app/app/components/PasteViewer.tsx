@@ -2,6 +2,7 @@
 
 import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
+import { fetchWithCsrf } from '@/lib/csrf-client';
 import { useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -124,7 +125,7 @@ async function storePaste(
     body.password = password;
   }
 
-  const response = await fetch(`${API_BASE}/store-paste`, {
+  const response = await fetchWithCsrf(`${API_BASE}/store-paste`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -323,8 +324,6 @@ export default function PasteViewer() {
     setText(getRandomLoadingJoke());
 
     try {
-      // Small delay for better UX
-      await new Promise((resolve) => setTimeout(resolve, 500));
       const result = await fetchPaste(id);
       
       // Store paste ID and name for document title (but don't mark as created)
