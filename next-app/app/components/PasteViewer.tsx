@@ -6,10 +6,87 @@ import { fetchWithCsrf } from '@/lib/csrf-client';
 import { useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from 'react-simple-code-editor';
+import { highlight, languages } from 'prismjs';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-ruby';
+import 'prismjs/components/prism-swift';
+import 'prismjs/components/prism-kotlin';
+import 'prismjs/components/prism-scala';
+import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-scss';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-yaml';
+import 'prismjs/components/prism-xml-doc';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-powershell';
+import 'prismjs/components/prism-docker';
+import 'prismjs/components/prism-ini';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from './ThemeProvider';
 
 const API_BASE = '/api/v1';
+
+/**
+ * Map language values to Prism language identifiers
+ */
+const getPrismLanguage = (lang: LanguageValue): string => {
+  const langMap: Record<LanguageValue, string> = {
+    'text': 'plaintext',
+    'javascript': 'javascript',
+    'typescript': 'typescript',
+    'jsx': 'jsx',
+    'tsx': 'tsx',
+    'python': 'python',
+    'java': 'java',
+    'cpp': 'cpp',
+    'c': 'c',
+    'csharp': 'csharp',
+    'go': 'go',
+    'rust': 'rust',
+    'php': 'php',
+    'ruby': 'ruby',
+    'swift': 'swift',
+    'kotlin': 'kotlin',
+    'scala': 'scala',
+    'html': 'markup',
+    'css': 'css',
+    'scss': 'scss',
+    'json': 'json',
+    'yaml': 'yaml',
+    'xml': 'xml',
+    'markdown': 'markdown',
+    'sql': 'sql',
+    'bash': 'bash',
+    'powershell': 'powershell',
+    'dockerfile': 'docker',
+    'ini': 'ini',
+  };
+  return langMap[lang] || 'plaintext';
+};
+
+/**
+ * Highlight code using Prism
+ */
+const highlightCode = (code: string, language: LanguageValue): string => {
+  const prismLang = getPrismLanguage(language);
+  const lang = languages[prismLang] || languages.plaintext;
+  return highlight(code, lang, prismLang);
+};
 
 const introParagraph = `Welcome to PastePortal!
 
@@ -190,6 +267,7 @@ export default function PasteViewer() {
   const [isManualLanguageSelection, setIsManualLanguageSelection] = useState(false);
   const [pasteName, setPasteName] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pushButtonRef = useRef<HTMLDivElement>(null);
 
@@ -230,18 +308,23 @@ export default function PasteViewer() {
   }, [text, uploadedFileName, isManualLanguageSelection]);
 
   /**
-   * Auto-focus textarea when entering edit mode
+   * Auto-focus editor when entering edit mode
    */
   useEffect(() => {
-    if (isEditMode && textareaRef.current && isClient && !isLoading) {
+    if (isEditMode && isClient && !isLoading) {
       // Small delay to ensure DOM is ready
       setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.readOnly = isLoading;
-          textareaRef.current.focus();
-          // Move cursor to end of text
-          const length = textareaRef.current.value.length;
-          textareaRef.current.setSelectionRange(length, length);
+        // Find the textarea within the Editor component
+        const editorContainer = editorContainerRef.current;
+        if (editorContainer) {
+          const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+          if (textarea) {
+            textarea.readOnly = isLoading;
+            textarea.focus();
+            // Move cursor to end of text
+            const length = textarea.value.length;
+            textarea.setSelectionRange(length, length);
+          }
         }
       }, 100);
     }
@@ -1440,10 +1523,14 @@ export default function PasteViewer() {
                   data-tour="edit-view-toggle"
                   onClick={() => {
                     setIsEditMode(!isEditMode);
-                    // Auto-focus textarea when switching to edit mode
-                    if (!isEditMode && textareaRef.current) {
+                    // Auto-focus editor when switching to edit mode
+                    if (!isEditMode) {
                       setTimeout(() => {
-                        textareaRef.current?.focus();
+                        const editorContainer = editorContainerRef.current;
+                        if (editorContainer) {
+                          const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+                          textarea?.focus();
+                        }
                       }, 100);
                     }
                   }}
@@ -1471,18 +1558,31 @@ export default function PasteViewer() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative w-full" data-tour="main-editor">
         {isEditMode ? (
-          // Edit mode: plain textarea
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            readOnly={isLoading}
-            className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text"
-            style={{ minHeight: '60vh' }}
-            spellCheck={false}
-            placeholder="Start typing or paste your content here..."
-            autoFocus
-          />
+          // Edit mode: syntax-highlighted code editor
+          <div ref={editorContainerRef} className="w-full h-full min-h-[60vh] overflow-auto">
+            <Editor
+              value={text}
+              onValueChange={(code) => setText(code)}
+              highlight={(code) => highlightCode(code, selectedLanguage)}
+              padding={16}
+              className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base"
+              style={{
+                fontFamily: 'var(--font-mono), monospace',
+                fontSize: 'inherit',
+                lineHeight: '1.75rem',
+                outline: 'none',
+                background: 'var(--color-background)',
+                color: 'var(--color-text)',
+                minHeight: '60vh',
+              }}
+              textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current"
+              preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent"
+              placeholder="Start typing or paste your content here..."
+              disabled={isLoading}
+              tabSize={2}
+              insertSpaces={true}
+            />
+          </div>
         ) : (
           // View mode: syntax highlighting
           <div className="w-full h-full min-h-[60vh] overflow-auto">

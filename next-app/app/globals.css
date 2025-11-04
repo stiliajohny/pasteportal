@@ -282,3 +282,135 @@ select option:focus {
     color: var(--color-background);
   }
 }
+
+/* Prism syntax highlighting - custom theme colors */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: var(--color-text);
+  background: transparent;
+  text-shadow: none;
+  font-family: var(--font-mono), monospace;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Prism token colors - Dark theme */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+}
+
+.token.punctuation {
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #ff6b9d;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #51cf66;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #ffd43b;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #74c0fc;
+}
+
+.token.function,
+.token.class-name {
+  color: #ffd43b;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #ff8787;
+}
+
+/* Light theme adjustments */
+.light .token.property,
+.light .token.tag,
+.light .token.boolean,
+.light .token.number,
+.light .token.constant,
+.light .token.symbol,
+.light .token.deleted {
+  color: #c92a2a;
+}
+
+.light .token.selector,
+.light .token.attr-name,
+.light .token.string,
+.light .token.char,
+.light .token.builtin,
+.light .token.inserted {
+  color: #2b8a3e;
+}
+
+.light .token.operator,
+.light .token.entity,
+.light .token.url,
+.light .language-css .token.string,
+.light .style .token.string {
+  color: #f59f00;
+}
+
+.light .token.atrule,
+.light .token.attr-value,
+.light .token.keyword {
+  color: #1971c2;
+}
+
+.light .token.function,
+.light .token.class-name {
+  color: #f59f00;
+}
+
+.light .token.regex,
+.light .token.important,
+.light .token.variable {
+  color: #e03131;
+}
+
+/* Editor container styles */
+.react-simple-code-editor {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.react-simple-code-editor textarea {
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--color-text);
+}
+
+.react-simple-code-editor pre {
+  background: transparent;
+  color: var(--color-text);
+}
