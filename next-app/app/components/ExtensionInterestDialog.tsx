@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchWithCsrf } from '@/lib/csrf-client';
 
 /**
  * IDE options for extension interest
@@ -78,7 +79,7 @@ export default function ExtensionInterestDialog({
 
       // Submit interest for each selected IDE
       const promises = Array.from(selectedIDEs).map(async (ide) => {
-        const response = await fetch('/api/extension-interest', {
+        const response = await fetchWithCsrf('/api/extension-interest', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

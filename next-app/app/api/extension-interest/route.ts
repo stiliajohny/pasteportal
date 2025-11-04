@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { validateCsrf } from '@/lib/csrf';
 
 /**
  * POST /api/extension-interest
@@ -48,6 +49,18 @@ export async function POST(request: NextRequest) {
 
     // Get current user (if logged in)
     const { data: { user } } = await supabase.auth.getUser();
+
+    // CSRF Protection: Validate request when user is authenticated
+    // Allow public submissions without CSRF token for unauthenticated users
+    if (user) {
+      const csrfValidation = validateCsrf(request, true);
+      if (!csrfValidation.isValid) {
+        return NextResponse.json(
+          { error: csrfValidation.error || 'Request rejected for security reasons' },
+          { status: 403 }
+        );
+      }
+    }
 
     // Insert interest record (UNIQUE constraint will prevent duplicates)
     const { data, error } = await supabase
