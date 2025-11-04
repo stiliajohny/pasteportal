@@ -56,8 +56,8 @@ export async function generateMetadata(props: {
   }
 
   // Generate dynamic metadata with paste name
-  // Use paste name if available, otherwise use website name
-  const pasteTitle = pasteMetadata.name || 'PastePortal';
+  // Use paste name if available, otherwise use "Pasteportal paste"
+  const pasteTitle = pasteMetadata.name || 'Pasteportal paste';
   const pasteUrl = `${baseUrl}?id=${pasteId}`;
   const description = pasteMetadata.name
     ? `View this paste on PastePortal: ${pasteMetadata.name}`
