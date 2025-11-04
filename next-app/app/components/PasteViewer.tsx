@@ -252,6 +252,9 @@ export default function PasteViewer() {
         const PrismModule = await import('prismjs');
         const Prism = PrismModule.default || PrismModule;
         
+        // Prism core should already have languages, util, and plugins initialized
+        // We just need to ensure it's available globally for components
+        
         // Make Prism available globally for components to register
         // Components need Prism to be on window.Prism to register themselves
         // Set both window.Prism and global Prism reference
@@ -304,7 +307,8 @@ export default function PasteViewer() {
         await import('prismjs/components/prism-csharp');
 
         // Store Prism reference for highlightCode
-        // Don't bind highlight - it needs access to Prism's internal context
+        // Also ensure it's on window.Prism (components register there)
+        (window as any).Prism = Prism;
         (window as any).__prism = Prism;
         setPrismLoaded(true);
       } catch (error) {
@@ -324,27 +328,63 @@ export default function PasteViewer() {
     }
 
     try {
-      const Prism = (window as any).__prism;
-      if (!Prism || !Prism.highlight || !Prism.languages) {
+      // Use window.Prism directly - this is where components register themselves
+      const Prism = (window as any).Prism || (window as any).__prism;
+      if (!Prism || typeof Prism.highlight !== 'function' || !Prism.languages) {
         return code;
       }
 
       const prismLang = getPrismLanguage(language);
-      const lang = Prism.languages[prismLang];
       
-      // If language doesn't exist, use plaintext or return code as-is
-      if (!lang) {
-        // Try plaintext, or if that doesn't exist either, return unhighlighted code
+      // Validate that the language grammar exists and is a valid object
+      const lang = Prism.languages[prismLang];
+      if (!lang || typeof lang !== 'object') {
+        // Try plaintext as fallback
         const plaintextLang = Prism.languages.plaintext;
-        if (plaintextLang) {
+        if (plaintextLang && typeof plaintextLang === 'object') {
+          return Prism.highlight(code, plaintextLang, 'plaintext');
+        }
+        // If even plaintext doesn't work, return unhighlighted code
+        return code;
+      }
+
+      // Double-check that Prism is fully initialized before highlighting
+      if (!Prism.util || typeof Prism.highlight !== 'function') {
+        return code;
+      }
+
+      // Validate that the language grammar is properly structured
+      // Some languages might not be fully loaded or have invalid structures
+      if (!lang || typeof lang !== 'object' || Array.isArray(lang)) {
+        // Language grammar is invalid, try plaintext
+        const plaintextLang = Prism.languages.plaintext;
+        if (plaintextLang && typeof plaintextLang === 'object' && !Array.isArray(plaintextLang)) {
           return Prism.highlight(code, plaintextLang, 'plaintext');
         }
         return code;
       }
 
-      return Prism.highlight(code, lang, prismLang);
+      // Use a wrapper to catch any internal Prism errors
+      try {
+        return Prism.highlight(code, lang, prismLang);
+      } catch (highlightError: any) {
+        // If highlighting fails, log and return unhighlighted code
+        console.warn(`Prism highlighting failed for language ${prismLang}:`, highlightError);
+        // Try to fallback to plaintext if available
+        const plaintextLang = Prism.languages.plaintext;
+        if (plaintextLang && typeof plaintextLang === 'object' && !Array.isArray(plaintextLang)) {
+          try {
+            return Prism.highlight(code, plaintextLang, 'plaintext');
+          } catch {
+            // If even plaintext fails, return unhighlighted
+            return code;
+          }
+        }
+        return code;
+      }
     } catch (error) {
       console.error('Error highlighting code:', error);
+      // Return unhighlighted code on any error
       return code;
     }
   };
