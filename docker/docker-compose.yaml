@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  db:
+    image: supabase/postgres:17.6.1.037
+    container_name: supabase-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  auth:
+    image: supabase/gotrue:v2.181.0-rc.19
+    depends_on:
+      - db
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_JWT_SECRET: super-secret-jwt-token-with-at-least-32-chars
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_LOG_LEVEL: DEBUG
+    ports:
+      - "9999:9999"
+
+  rest:
+    image: postgrest/postgrest:latest
+    depends_on:
+      - db
+    environment:
+      PGRST_DB_URI: postgres://postgres:postgres@db:5432/postgres
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-chars
+    ports:
+      - "3001:3000"
+
+  realtime:
+    image: supabase/realtime:latest
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: super-secret-jwt-token-with-at-least-32-chars
+    ports:
+      - "4000:4000"
+
+  storage:
+    image: supabase/storage-api:latest
+    depends_on:
+      - db
+    environment:
+      ANON_KEY: super-secret-jwt-token-with-at-least-32-chars
+      SERVICE_KEY: super-secret-jwt-token-with-at-least-32-chars
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-chars
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+    ports:
+      - "5000:5000"
+
+  studio:
+    image: supabase/studio:latest
+    depends_on:
+      - db
+      - auth
+      - rest
+      - storage
+      - realtime
+    environment:
+      SUPABASE_URL: http://localhost:3000
+      SUPABASE_ANON_KEY: super-secret-jwt-token-with-at-least-32-chars
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:
