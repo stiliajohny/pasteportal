@@ -9,6 +9,17 @@ import type { NextRequest } from 'next/server';
 const MAX_REQUEST_SIZE = 1024 * 1024; // 1MB
 
 /**
+ * Generate a random hex string using Web Crypto API (Edge Runtime compatible)
+ * @param length - Number of bytes to generate (default: 32)
+ * @returns Hex string representation (2x length characters)
+ */
+function generateRandomHex(length: number = 32): string {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Check if request size exceeds limits
  * @param request - NextRequest object
  * @returns True if request size is acceptable
@@ -127,6 +138,37 @@ export async function middleware(request: NextRequest) {
   ].join('; ');
 
   response.headers.set('Content-Security-Policy', csp);
+
+  // Generate CSRF token for browser requests to HTML pages
+  // Only set for HTML pages (not API routes or static assets)
+  const pathname = request.nextUrl.pathname;
+  const isApiRoute = pathname.startsWith('/api');
+  const isStaticAsset = /\.(jpg|jpeg|png|gif|svg|ico|css|js|woff|woff2|ttf|eot|map|json)$/i.test(pathname);
+  const isNextInternal = pathname.startsWith('/_next');
+  
+  // Only generate tokens for HTML pages (browser requests)
+  if (!isApiRoute && !isStaticAsset && !isNextInternal) {
+    const cookies = request.cookies;
+    const hasCsrfToken = cookies.has('csrf-token');
+    
+    // Generate new token if one doesn't exist
+    if (!hasCsrfToken) {
+      // Generate 64-character hex token (32 bytes)
+      const token = generateRandomHex(32);
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      // Set CSRF token cookie
+      // Note: Not HttpOnly so JavaScript can read it for X-CSRF-Token header
+      // Security: SameSite=Strict and Secure flags prevent CSRF attacks
+      response.cookies.set('csrf-token', token, {
+        httpOnly: false, // Allow JavaScript access for double-submit pattern
+        secure: isProduction, // HTTPS only in production
+        sameSite: 'strict', // CSRF protection
+        maxAge: 60 * 60 * 24, // 24 hours
+        path: '/',
+      });
+    }
+  }
 
   return response;
 }

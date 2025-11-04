@@ -17,17 +17,41 @@ export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
   const host = request.headers.get('host');
+  const method = request.method;
   
-  // Allow requests from same origin (direct API calls, no origin header)
-  // This is safe because:
-  // - Browser automatically sets Origin for cross-origin requests
-  // - Same-origin requests (from the same domain) don't need CSRF protection
-  // - Direct API calls (like from VS Code extension) won't have Origin header
-  if (!origin) {
-    // No origin header means same-origin request or direct API call
-    // For same-origin, we trust it (browsers handle this)
-    // For direct API calls (VS Code extension), we'll validate via token if authenticated
+  // For state-changing methods (POST, PUT, DELETE, PATCH), require origin validation
+  const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
+  
+  // Allow GET/OPTIONS/HEAD without origin (safe methods)
+  if (!isStateChanging && !origin) {
     return true;
+  }
+  
+  // For state-changing methods, require origin header in production
+  if (isStateChanging && !origin) {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    // In development, allow same-origin requests without origin header
+    if (isDevelopment && host) {
+      // Check if it's a localhost request
+      if (
+        host.includes('localhost') ||
+        host.includes('127.0.0.1') ||
+        host.includes('[::1]')
+      ) {
+        return true;
+      }
+    }
+    
+    // In production, require origin header for state-changing methods
+    // Direct API calls (VS Code extension) will be detected as non-browser
+    // and handled separately in validateCsrfToken
+    if (!isDevelopment) {
+      return false;
+    }
+    
+    // Development: allow if host exists (same-origin request)
+    return !!host;
   }
   
   // In development, allow localhost origins
@@ -50,21 +74,49 @@ export function validateOrigin(request: NextRequest): boolean {
   
   // Get allowed origins from environment or use host as fallback
   const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
     : host ? [`https://${host}`, `http://${host}`] : [];
   
   // Validate against allowed origins
   try {
     const originUrl = new URL(origin);
+    
+    // Validate origin URL format
+    if (!originUrl.protocol || !originUrl.hostname) {
+      return false;
+    }
+    
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(originUrl.protocol)) {
+      return false;
+    }
+    
     const isValidOrigin = allowedOrigins.some(allowed => {
       try {
         const allowedUrl = new URL(allowed);
-        return originUrl.protocol === allowedUrl.protocol && 
-               originUrl.hostname === allowedUrl.hostname &&
-               (originUrl.port === allowedUrl.port || (!originUrl.port && !allowedUrl.port));
+        
+        // Compare protocol
+        if (originUrl.protocol !== allowedUrl.protocol) {
+          return false;
+        }
+        
+        // Compare hostname (case-insensitive)
+        if (originUrl.hostname.toLowerCase() !== allowedUrl.hostname.toLowerCase()) {
+          // Check for subdomain matching (e.g., app.example.com matches example.com if allowed)
+          // This is a security consideration - adjust based on your needs
+          // For now, exact match only
+          return false;
+        }
+        
+        // Compare ports (default ports: 80 for http, 443 for https)
+        const originPort = originUrl.port || (originUrl.protocol === 'https:' ? '443' : '80');
+        const allowedPort = allowedUrl.port || (allowedUrl.protocol === 'https:' ? '443' : '80');
+        
+        return originPort === allowedPort;
       } catch {
         // If allowed origin is not a full URL, compare hostnames
-        return originUrl.hostname === allowed || originUrl.host === allowed;
+        return originUrl.hostname.toLowerCase() === allowed.toLowerCase() || 
+               originUrl.host.toLowerCase() === allowed.toLowerCase();
       }
     });
     
@@ -73,12 +125,26 @@ export function validateOrigin(request: NextRequest): boolean {
     }
   } catch {
     // Invalid origin URL format
+    return false;
   }
   
   // Fallback: validate referer if origin validation failed
+  // Note: Referer can be spoofed, so this is less reliable than Origin
   if (referer) {
     try {
       const refererUrl = new URL(referer);
+      
+      // Validate referer URL format
+      if (!refererUrl.protocol || !refererUrl.hostname) {
+        return false;
+      }
+      
+      // Only allow http/https protocols
+      if (!['http:', 'https:'].includes(refererUrl.protocol)) {
+        return false;
+      }
+      
+      const isDevelopment = process.env.NODE_ENV === 'development';
       
       // In development, allow localhost referers
       if (isDevelopment) {
@@ -94,15 +160,30 @@ export function validateOrigin(request: NextRequest): boolean {
       return allowedOrigins.some(allowed => {
         try {
           const allowedUrl = new URL(allowed);
-          return refererUrl.protocol === allowedUrl.protocol && 
-                 refererUrl.hostname === allowedUrl.hostname &&
-                 (refererUrl.port === allowedUrl.port || (!refererUrl.port && !allowedUrl.port));
+          
+          // Compare protocol
+          if (refererUrl.protocol !== allowedUrl.protocol) {
+            return false;
+          }
+          
+          // Compare hostname (case-insensitive)
+          if (refererUrl.hostname.toLowerCase() !== allowedUrl.hostname.toLowerCase()) {
+            return false;
+          }
+          
+          // Compare ports
+          const refererPort = refererUrl.port || (refererUrl.protocol === 'https:' ? '443' : '80');
+          const allowedPort = allowedUrl.port || (allowedUrl.protocol === 'https:' ? '443' : '80');
+          
+          return refererPort === allowedPort;
         } catch {
-          return refererUrl.hostname === allowed || refererUrl.host === allowed;
+          return refererUrl.hostname.toLowerCase() === allowed.toLowerCase() || 
+                 refererUrl.host.toLowerCase() === allowed.toLowerCase();
         }
       });
     } catch {
       // Invalid referer URL format
+      return false;
     }
   }
   
@@ -149,11 +230,27 @@ export function validateCsrfToken(
   // Get CSRF token from cookie (set on page load)
   const cookies = request.headers.get('cookie') || '';
   const cookieMatch = cookies.match(/csrf-token=([^;]+)/);
-  const cookieToken = cookieMatch ? cookieMatch[1] : null;
+  const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
   
   // If token is not required (e.g., public endpoints), allow
   if (!requireToken) {
     return { isValid: true };
+  }
+  
+  // Validate token format if provided (64 hex characters)
+  const tokenFormatRegex = /^[a-f0-9]{64}$/i;
+  if (csrfToken && !tokenFormatRegex.test(csrfToken)) {
+    return {
+      isValid: false,
+      reason: 'Invalid CSRF token format'
+    };
+  }
+  
+  if (cookieToken && !tokenFormatRegex.test(cookieToken)) {
+    return {
+      isValid: false,
+      reason: 'Invalid CSRF token format in cookie'
+    };
   }
   
   // In development, allow localhost requests without CSRF token
@@ -197,24 +294,32 @@ export function validateCsrfToken(
   // For browser requests, require CSRF token
   // For direct API calls (no browser indicators), we rely on origin validation
   const isBrowser = isBrowserRequest(request);
+  const method = request.method;
+  const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
   
   if (isBrowser) {
-    // Browser requests must provide both header and cookie tokens
-    if (!csrfToken || !cookieToken) {
-      return {
-        isValid: false,
-        reason: 'CSRF token required for browser requests'
-      };
+    // For browser requests with state-changing methods, require CSRF token
+    if (isStateChanging) {
+      // Browser requests must provide both header and cookie tokens
+      if (!csrfToken || !cookieToken) {
+        return {
+          isValid: false,
+          reason: 'CSRF token required for browser requests'
+        };
+      }
+      
+      // Validate that header token matches cookie token (double-submit pattern)
+      if (csrfToken !== cookieToken) {
+        return {
+          isValid: false,
+          reason: 'CSRF token mismatch'
+        };
+      }
+      
+      return { isValid: true };
     }
     
-    // Validate that header token matches cookie token (double-submit pattern)
-    if (csrfToken !== cookieToken) {
-      return {
-        isValid: false,
-        reason: 'CSRF token mismatch'
-      };
-    }
-    
+    // For safe methods (GET, OPTIONS, HEAD), allow without token
     return { isValid: true };
   }
   
@@ -231,6 +336,7 @@ export function validateCsrfToken(
   }
   
   // Allow direct API calls without token (origin validation will catch CSRF)
+  // This maintains backward compatibility with VS Code extension
   return { isValid: true };
 }
 
