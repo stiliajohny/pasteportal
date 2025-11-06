@@ -40,8 +40,8 @@ class LoadingTreeItem extends vscode.TreeItem {
 }
 
 /**
- * Authentication Tree Data Provider
- * Shows authentication UI when not logged in, and user's paste list when authenticated
+ * Pastes Tree Data Provider
+ * Shows user's paste list when authenticated
  */
 class AuthTreeProvider {
   /**
@@ -57,6 +57,7 @@ class AuthTreeProvider {
     this.pastes = []
     this.loading = false
     this.error = null
+    this.sortAscending = true // true = ascending (oldest first), false = descending (newest first)
   }
 
   /**
@@ -85,95 +86,19 @@ class AuthTreeProvider {
       return []
     }
 
-    // Check if Supabase is configured
-    if (!this.auth.isConfigured()) {
-      return [
-        new AuthTreeItem(
-          'Supabase not configured',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'workbench.action.openSettings',
-            title: 'Open Settings',
-            arguments: ['@id:pasteportal.supabase']
-          },
-          'alert'
-        ),
-        new AuthTreeItem(
-          'Configure Supabase URL and Anon Key in settings',
-          vscode.TreeItemCollapsibleState.None
-        )
-      ]
-    }
-
     // Check authentication status
     const isAuthenticated = await this.auth.isAuthenticated()
 
     if (!isAuthenticated) {
-      // Show authentication options
-      return [
-        new AuthTreeItem(
-          'Sign In',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-in',
-            title: 'Sign In'
-          },
-          'sign-in'
-        ),
-        new AuthTreeItem(
-          'Sign Up',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-up',
-            title: 'Sign Up'
-          },
-          'add'
-        ),
-        new AuthTreeItem(
-          'Magic Link',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-in-magic-link',
-            title: 'Sign In with Magic Link'
-          },
-          'mail'
-        ),
-        new AuthTreeItem(
-          'Sign In with OTP',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-in-otp',
-            title: 'Sign In with OTP'
-          },
-          'key'
-        ),
-        new AuthTreeItem(
-          'Sign in to view your pastes',
-          vscode.TreeItemCollapsibleState.None
-        )
-      ]
+      // Return empty array when not authenticated
+      return []
     }
 
-    // User is authenticated - show user info and pastes
-    const user = await this.auth.getCurrentUser()
-    const userEmail = user?.email || 'Unknown'
-
+    // User is authenticated - show refresh button, sort toggle, and pastes
+    const sortIcon = this.sortAscending ? 'arrow-up' : 'arrow-down'
+    const sortLabel = this.sortAscending ? 'Sort: Oldest First' : 'Sort: Newest First'
+    
     const items = [
-      new AuthTreeItem(
-        userEmail,
-        vscode.TreeItemCollapsibleState.None,
-        null,
-        'account'
-      ),
-      new AuthTreeItem(
-        'Sign Out',
-        vscode.TreeItemCollapsibleState.None,
-        {
-          command: 'pasteportal.sign-out',
-          title: 'Sign Out'
-        },
-        'sign-out'
-      ),
       new AuthTreeItem(
         'Refresh',
         vscode.TreeItemCollapsibleState.None,
@@ -182,6 +107,15 @@ class AuthTreeProvider {
           title: 'Refresh Pastes'
         },
         'refresh'
+      ),
+      new AuthTreeItem(
+        sortLabel,
+        vscode.TreeItemCollapsibleState.None,
+        {
+          command: 'pasteportal.toggle-pastes-sort',
+          title: 'Toggle Sort Order'
+        },
+        sortIcon
       )
     ]
 
@@ -212,8 +146,15 @@ class AuthTreeProvider {
       return items
     }
 
+    // Sort pastes by created_at date
+    const sortedPastes = [...this.pastes].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime()
+      const dateB = new Date(b.created_at).getTime()
+      return this.sortAscending ? dateA - dateB : dateB - dateA
+    })
+
     // Add paste items
-    this.pastes.forEach(paste => {
+    sortedPastes.forEach(paste => {
       const pasteItem = new PasteTreeItem(paste, {
         command: 'pasteportal.view-paste',
         title: 'View Paste',
@@ -286,6 +227,14 @@ class AuthTreeProvider {
    */
   getPaste(pasteId) {
     return this.pastes.find(p => p.id === pasteId) || null
+  }
+
+  /**
+   * Toggle sort order
+   */
+  toggleSort() {
+    this.sortAscending = !this.sortAscending
+    this.refresh()
   }
 }
 
