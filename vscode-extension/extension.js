@@ -76,20 +76,53 @@ function validatePassword(password) {
 
 /**
  * Get API endpoint from VS Code configuration
+ * Uses serverUrl if apiEndpoint is not explicitly set
  * @returns {string}
  */
 function getApiEndpoint() {
   const config = vscode.workspace.getConfiguration('pasteportal')
-  return config.get('apiEndpoint', 'https://pasteportal.app/api')
+  
+  // Check if apiEndpoint is explicitly configured (not using default)
+  const apiEndpointInspect = config.inspect('apiEndpoint')
+  const isApiEndpointExplicit = apiEndpointInspect && (
+    apiEndpointInspect.globalValue !== undefined ||
+    apiEndpointInspect.workspaceValue !== undefined ||
+    apiEndpointInspect.workspaceFolderValue !== undefined
+  )
+  
+  if (isApiEndpointExplicit) {
+    return config.get('apiEndpoint', 'https://pasteportal.app/api')
+  }
+  
+  // Otherwise, derive from serverUrl
+  const serverUrl = config.get('serverUrl', 'http://localhost:3000')
+  // Ensure serverUrl doesn't end with /api
+  const baseUrl = serverUrl.replace(/\/api$/, '')
+  return `${baseUrl}/api`
 }
 
 /**
  * Get domain URL from VS Code configuration
+ * Uses serverUrl if domain is not explicitly set
  * @returns {string}
  */
 function getDomain() {
   const config = vscode.workspace.getConfiguration('pasteportal')
-  return config.get('domain', 'https://pasteportal.app')
+  
+  // Check if domain is explicitly configured (not using default)
+  const domainInspect = config.inspect('domain')
+  const isDomainExplicit = domainInspect && (
+    domainInspect.globalValue !== undefined ||
+    domainInspect.workspaceValue !== undefined ||
+    domainInspect.workspaceFolderValue !== undefined
+  )
+  
+  if (isDomainExplicit) {
+    return config.get('domain', 'https://pasteportal.app')
+  }
+  
+  // Otherwise, use serverUrl
+  return config.get('serverUrl', 'http://localhost:3000')
 }
 
 /**
@@ -251,7 +284,7 @@ function initializeStatusBar(context) {
 
   // Also check when configuration changes
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration('pasteportal.apiEndpoint')) {
+      if (e.affectsConfiguration('pasteportal.apiEndpoint') || e.affectsConfiguration('pasteportal.serverUrl')) {
       checkAndUpdateStatus()
     } else if (e.affectsConfiguration('pasteportal.statusBar.enableConnectivityCheck')) {
       // If setting changed, reinitialize the status bar
@@ -919,9 +952,19 @@ async function completeTokenSignIn(accessToken, refreshToken, expiresAt = null, 
 
       if (data.session) {
         await auth.saveSession(data.session)
+        
+        // Verify session is saved before proceeding
+        const sessionSaved = await auth.isAuthenticated()
+        if (!sessionSaved) {
+          throw new Error('Failed to save session')
+        }
+        
         vscode.window.showInformationMessage('Signed in successfully!')
         
+        // Refresh auth tree view to show authenticated state
         if (authTreeProvider) {
+          authTreeProvider.refresh()
+          // Load pastes after session is confirmed saved
           await authTreeProvider.loadPastes()
         }
         return
@@ -958,10 +1001,19 @@ async function completeTokenSignIn(accessToken, refreshToken, expiresAt = null, 
       // Save the session
       await auth.saveSession(sessionData)
       
+      // Verify session is saved before proceeding
+      const sessionSaved = await auth.isAuthenticated()
+      if (!sessionSaved) {
+        throw new Error('Failed to save session')
+      }
+      
       vscode.window.showWarningMessage('Signed in with access token only. Session will expire in 1 hour. For persistent sessions, include the refresh_token.')
       
+      // Refresh auth tree view to show authenticated state
       if (authTreeProvider) {
         authTreeProvider.refresh()
+        // Load pastes after session is confirmed saved
+        await authTreeProvider.loadPastes()
       }
     }
   } catch (error) {
@@ -1136,10 +1188,18 @@ function activate(context) {
                     // Save session using auth helper
                     await auth.saveSession(data.session)
                     
+                    // Verify session is saved before proceeding
+                    const sessionSaved = await auth.isAuthenticated()
+                    if (!sessionSaved) {
+                      throw new Error('Failed to save session')
+                    }
+                    
                     vscode.window.showInformationMessage('Authentication successful!')
                     
-                    // Refresh auth tree view
+                    // Refresh auth tree view to show authenticated state
                     if (authTreeProvider) {
+                      authTreeProvider.refresh()
+                      // Load pastes after session is confirmed saved
                       await authTreeProvider.loadPastes()
                     }
                   }
@@ -1164,9 +1224,19 @@ function activate(context) {
 
                 if (data.session) {
                   await auth.saveSession(data.session)
+                  
+                  // Verify session is saved before proceeding
+                  const sessionSaved = await auth.isAuthenticated()
+                  if (!sessionSaved) {
+                    throw new Error('Failed to save session')
+                  }
+                  
                   vscode.window.showInformationMessage('Authentication successful!')
                   
+                  // Refresh auth tree view to show authenticated state
                   if (authTreeProvider) {
+                    authTreeProvider.refresh()
+                    // Load pastes after session is confirmed saved
                     await authTreeProvider.loadPastes()
                   }
                 }
@@ -1220,7 +1290,7 @@ function activate(context) {
 
   // Listen for API endpoint configuration changes
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration('pasteportal.apiEndpoint')) {
+      if (e.affectsConfiguration('pasteportal.apiEndpoint') || e.affectsConfiguration('pasteportal.serverUrl')) {
       // Refresh status bar on endpoint change
       checkAndUpdateStatus()
     }

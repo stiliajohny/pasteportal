@@ -19,12 +19,31 @@ class ApiClient {
 
   /**
    * Initialize configuration from VS Code settings
+   * Uses serverUrl if apiEndpoint is not explicitly set
    * @private
    */
   _initializeConfig() {
     const config = vscode.workspace.getConfiguration('pasteportal')
-    this.apiEndpoint = config.get('apiEndpoint', 'https://pasteportal.app/api')
-    this.baseUrl = this.apiEndpoint.replace(/\/api$/, '') || 'https://pasteportal.app'
+    
+    // Check if apiEndpoint is explicitly configured (not using default)
+    const apiEndpointInspect = config.inspect('apiEndpoint')
+    const isApiEndpointExplicit = apiEndpointInspect && (
+      apiEndpointInspect.globalValue !== undefined ||
+      apiEndpointInspect.workspaceValue !== undefined ||
+      apiEndpointInspect.workspaceFolderValue !== undefined
+    )
+    
+    if (isApiEndpointExplicit) {
+      this.apiEndpoint = config.get('apiEndpoint', 'https://pasteportal.app/api')
+    } else {
+      // Otherwise, derive from serverUrl
+      const serverUrl = config.get('serverUrl', 'http://localhost:3000')
+      // Ensure serverUrl doesn't end with /api
+      const baseUrl = serverUrl.replace(/\/api$/, '')
+      this.apiEndpoint = `${baseUrl}/api`
+    }
+    
+    this.baseUrl = this.apiEndpoint.replace(/\/api$/, '') || config.get('serverUrl', 'http://localhost:3000')
   }
 
   /**

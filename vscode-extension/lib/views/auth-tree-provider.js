@@ -6,17 +6,22 @@ const ApiClient = require('../api-client')
  * Tree item types
  */
 class AuthTreeItem extends vscode.TreeItem {
-  constructor(label, collapsibleState, command) {
+  constructor(label, collapsibleState, command, iconId = null) {
     super(label, collapsibleState)
     this.command = command
+    if (iconId) {
+      this.iconPath = new vscode.ThemeIcon(iconId)
+    }
   }
 }
 
 class PasteTreeItem extends vscode.TreeItem {
   constructor(paste, command) {
     const label = paste.display_name || paste.name || new Date(paste.created_at).toLocaleString()
-    const icon = paste.is_password_encrypted ? '$(lock)' : '$(file-text)'
-    super(`${icon} ${label}`, vscode.TreeItemCollapsibleState.None)
+    super(label, vscode.TreeItemCollapsibleState.None)
+    
+    // Set icon using ThemeIcon
+    this.iconPath = new vscode.ThemeIcon(paste.is_password_encrypted ? 'lock' : 'file-text')
     
     this.pasteId = paste.id
     this.id = paste.id // For context menu identification
@@ -84,13 +89,14 @@ class AuthTreeProvider {
     if (!this.auth.isConfigured()) {
       return [
         new AuthTreeItem(
-          '$(alert) Supabase not configured',
+          'Supabase not configured',
           vscode.TreeItemCollapsibleState.None,
           {
             command: 'workbench.action.openSettings',
             title: 'Open Settings',
             arguments: ['@id:pasteportal.supabase']
-          }
+          },
+          'alert'
         ),
         new AuthTreeItem(
           'Configure Supabase URL and Anon Key in settings',
@@ -106,36 +112,40 @@ class AuthTreeProvider {
       // Show authentication options
       return [
         new AuthTreeItem(
-          '$(sign-in) Sign In',
+          'Sign In',
           vscode.TreeItemCollapsibleState.None,
           {
             command: 'pasteportal.sign-in',
             title: 'Sign In'
-          }
+          },
+          'sign-in'
         ),
         new AuthTreeItem(
-          '$(add) Sign Up',
+          'Sign Up',
           vscode.TreeItemCollapsibleState.None,
           {
             command: 'pasteportal.sign-up',
             title: 'Sign Up'
-          }
+          },
+          'add'
         ),
         new AuthTreeItem(
-          '$(mail) Magic Link',
+          'Magic Link',
           vscode.TreeItemCollapsibleState.None,
           {
             command: 'pasteportal.sign-in-magic-link',
             title: 'Sign In with Magic Link'
-          }
+          },
+          'mail'
         ),
         new AuthTreeItem(
-          '$(key) Sign In with OTP',
+          'Sign In with OTP',
           vscode.TreeItemCollapsibleState.None,
           {
             command: 'pasteportal.sign-in-otp',
             title: 'Sign In with OTP'
-          }
+          },
+          'key'
         ),
         new AuthTreeItem(
           'Sign in to view your pastes',
@@ -150,24 +160,28 @@ class AuthTreeProvider {
 
     const items = [
       new AuthTreeItem(
-        `$(account) ${userEmail}`,
-        vscode.TreeItemCollapsibleState.None
+        userEmail,
+        vscode.TreeItemCollapsibleState.None,
+        null,
+        'account'
       ),
       new AuthTreeItem(
-        '$(sign-out) Sign Out',
+        'Sign Out',
         vscode.TreeItemCollapsibleState.None,
         {
           command: 'pasteportal.sign-out',
           title: 'Sign Out'
-        }
+        },
+        'sign-out'
       ),
       new AuthTreeItem(
-        '$(refresh) Refresh',
+        'Refresh',
         vscode.TreeItemCollapsibleState.None,
         {
           command: 'pasteportal.refresh-pastes',
           title: 'Refresh Pastes'
-        }
+        },
+        'refresh'
       )
     ]
 
@@ -182,8 +196,10 @@ class AuthTreeProvider {
 
     if (this.error) {
       items.push(new AuthTreeItem(
-        `$(error) Error: ${this.error}`,
-        vscode.TreeItemCollapsibleState.None
+        `Error: ${this.error}`,
+        vscode.TreeItemCollapsibleState.None,
+        null,
+        'error'
       ))
       return items
     }
@@ -214,6 +230,17 @@ class AuthTreeProvider {
    * Load user's pastes
    */
   async loadPastes() {
+    // First verify authentication before loading
+    const isAuthenticated = await this.auth.isAuthenticated()
+    if (!isAuthenticated) {
+      // Don't set error - just clear pastes and refresh to show sign-in options
+      this.error = null
+      this.loading = false
+      this.pastes = []
+      this.refresh()
+      return
+    }
+
     this.loading = true
     this.error = null
     this.refresh()
@@ -222,12 +249,23 @@ class AuthTreeProvider {
       const result = await this.apiClient.listUserPastes()
       this.pastes = result.pastes || []
       this.loading = false
+      this.error = null
       this.refresh()
     } catch (error) {
-      this.error = error.message
-      this.loading = false
-      this.pastes = []
-      this.refresh()
+      // Check if it's an authentication error
+      if (error.message && (error.message.includes('Authentication required') || error.message.includes('401'))) {
+        // Clear error state and refresh to re-check authentication
+        // This will show sign-in options if user is not authenticated
+        this.error = null
+        this.pastes = []
+        this.loading = false
+        this.refresh()
+      } else {
+        // Show other errors (network, server errors, etc.)
+        this.error = error.message
+        this.loading = false
+        this.refresh()
+      }
     }
   }
 

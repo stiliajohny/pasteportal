@@ -209,10 +209,15 @@
     "configuration": {
       "title": "PastePortal",
       "properties": {
+        "pasteportal.serverUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "PastePortal server URL (base URL). API endpoint will be derived as ${serverUrl}/api"
+        },
         "pasteportal.apiEndpoint": {
           "type": "string",
           "default": "https://pasteportal.app/api",
-          "description": "PastePortal API endpoint URL"
+          "description": "PastePortal API endpoint URL (overrides serverUrl if set)"
         },
         "pasteportal.domain": {
           "type": "string",
