@@ -18,6 +18,7 @@ export function validateOrigin(request: NextRequest): boolean {
   const referer = request.headers.get('referer');
   const host = request.headers.get('host');
   const method = request.method;
+  const authorization = request.headers.get('authorization');
   
   // For state-changing methods (POST, PUT, DELETE, PATCH), require origin validation
   const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
@@ -29,6 +30,12 @@ export function validateOrigin(request: NextRequest): boolean {
   
   // For state-changing methods, require origin header in production
   if (isStateChanging && !origin) {
+    // Allow Bearer token authenticated requests (VS Code extension, etc.)
+    // Bearer tokens provide their own authentication, so CSRF is less of a concern
+    if (authorization && authorization.startsWith('Bearer ')) {
+      return true;
+    }
+    
     const isDevelopment = process.env.NODE_ENV === 'development';
     
     // In development, allow same-origin requests without origin header
