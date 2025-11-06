@@ -64,7 +64,7 @@ Now you can directly share your code snippets and the receiver will see them wit
 How to use it:
 
 1. Paste your code in the text area below
-2. Click "Share" to get a link
+2. Click "Push" to get a link
 3. Share the link with your friends!
 
 ---
@@ -80,10 +80,10 @@ Click "Get the Extension" in the header to register your interest and get notifi
 
 ---
 
-A brief overview of how PastePortal was created (shout out for the prompt @craigmillerdev):
+Why PastePortal was created:
 
-Once upon a time, I was tasked with creating a technical challenge for a job candidate, one that would involve building a service for posting and retrieving messages using their preferred tech stack.
-I wanted to see how the candidate would approach the problem and develop a solution. This led to the development of PastePortal.
+As a DevOps engineer, I was constantly frustrated by sharing large code blocks in Slack. Those massive walls of text would break formatting, lose syntax highlighting, and make conversations hard to follow. I needed a better way to share code snippets that preserved readability and kept Slack conversations clean.
+That's how PastePortal was born - a simple, fast way to share code with beautiful syntax highlighting, so you can keep your team communications focused and your code looking great.
 
 ---
 `;
@@ -927,21 +927,21 @@ export default function PasteViewer() {
     <main className="flex-1 flex flex-col min-h-0">
       {/* Success Popup Modal for Push - Only show when paste was created */}
       {pushedPasteId && isPasteCreated && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => {
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => {
           setPushedPasteId(null);
           setUsedPassword(null);
           setIsPasteCreated(false);
         }}>
-          <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-text flex items-center gap-2">
-                  <svg className="w-5 h-5 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-start justify-between mb-4 gap-3">
+                <h3 className="text-base sm:text-lg font-semibold text-text flex items-center gap-2 flex-wrap">
+                  <svg className="w-5 h-5 text-positive-highlight flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Paste Created Successfully!
+                  <span className="flex-1 min-w-0">Paste Created Successfully!</span>
                   {usedPassword && (
-                    <span className="ml-2 text-xs bg-neon-magenta/20 text-neon-magenta px-2 py-0.5 rounded">
+                    <span className="text-xs bg-neon-magenta/20 text-neon-magenta px-2 py-0.5 rounded whitespace-nowrap">
                       🔒 Encrypted
                     </span>
                   )}
@@ -952,7 +952,7 @@ export default function PasteViewer() {
                     setUsedPassword(null);
                     setIsPasteCreated(false);
                   }}
-                  className="text-text-secondary hover:text-text transition-colors"
+                  className="text-text-secondary hover:text-text transition-colors p-1 flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Close dialog"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -967,8 +967,8 @@ export default function PasteViewer() {
                   <label className="block text-xs font-medium text-text-secondary mb-2">
                     Paste ID
                   </label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-background border border-divider px-3 py-2 rounded font-mono text-sm text-text break-all">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <code className="flex-1 bg-background border border-divider px-3 py-2 rounded font-mono text-xs sm:text-sm text-text break-all min-w-0">
                       {pushedPasteId}
                     </code>
                     <button
@@ -980,12 +980,13 @@ export default function PasteViewer() {
                           console.error('Failed to copy paste ID:', err);
                         }
                       }}
-                      className="px-3 py-2 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm"
+                      className="px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2"
                       title="Copy paste ID"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
+                      <span className="sm:hidden">Copy ID</span>
                     </button>
                   </div>
                 </div>
@@ -995,13 +996,13 @@ export default function PasteViewer() {
                   <label className="block text-xs font-medium text-text-secondary mb-2">
                     Share URL
                   </label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-background border border-divider px-3 py-2 rounded font-mono text-xs text-text break-all">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <code className="flex-1 bg-background border border-divider px-3 py-2 rounded font-mono text-xs text-text break-all min-w-0">
                       {typeof window !== 'undefined' ? `${window.location.origin}?id=${pushedPasteId}` : ''}
                     </code>
                     <button
                       onClick={handleCopyLink}
-                      className="px-4 py-2 rounded-lg bg-positive-highlight text-black hover:opacity-90 transition-opacity text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                      className="px-4 py-2.5 rounded-lg bg-positive-highlight text-black hover:opacity-90 transition-opacity text-sm font-medium flex items-center justify-center gap-2 whitespace-nowrap min-h-[44px]"
                     >
                       {linkCopied ? (
                         <>
@@ -1036,8 +1037,8 @@ export default function PasteViewer() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 bg-background border border-divider px-3 py-2 rounded font-mono text-sm text-text break-all">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <code className="flex-1 bg-background border border-divider px-3 py-2 rounded font-mono text-xs sm:text-sm text-text break-all min-w-0">
                         {usedPassword}
                       </code>
                       <button
@@ -1049,12 +1050,13 @@ export default function PasteViewer() {
                             console.error('Failed to copy password:', err);
                           }
                         }}
-                        className="px-3 py-2 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm"
+                        className="px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2"
                         title="Copy password"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
+                        <span className="sm:hidden">Copy</span>
                       </button>
                     </div>
                   </div>
@@ -1089,7 +1091,7 @@ export default function PasteViewer() {
                   </button>
 
                   {/* Social Share Buttons */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {/* WhatsApp */}
                     <button
                       onClick={handleShareWhatsApp}
@@ -1180,7 +1182,7 @@ export default function PasteViewer() {
                     setIsPasteCreated(false);
                     setInstructionsCopied(false);
                   }}
-                  className="px-6 py-2 rounded-lg bg-neon-cyan text-black hover:bg-neon-cyan-600 transition-colors text-sm font-medium"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-neon-cyan text-black hover:bg-neon-cyan-600 transition-colors text-sm font-medium min-h-[44px] sm:min-h-0"
                 >
                   Done
                 </button>
@@ -1192,19 +1194,19 @@ export default function PasteViewer() {
 
       {/* Password Prompt Dialog for Encrypted Pastes */}
       {showPasswordPrompt && pendingPasteData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => {
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => {
           setShowPasswordPrompt(false);
           setPendingPasteData(null);
           setDecryptPassword('');
         }}>
-          <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-text flex items-center gap-2">
-                  <svg className="w-5 h-5 text-neon-magenta" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-start justify-between mb-4 gap-3">
+                <h3 className="text-base sm:text-lg font-semibold text-text flex items-center gap-2">
+                  <svg className="w-5 h-5 text-neon-magenta flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  Password Required
+                  <span>Password Required</span>
                 </h3>
                 <button
                   onClick={() => {
@@ -1212,7 +1214,7 @@ export default function PasteViewer() {
                     setPendingPasteData(null);
                     setDecryptPassword('');
                   }}
-                  className="text-text-secondary hover:text-text transition-colors"
+                  className="text-text-secondary hover:text-text transition-colors p-1 flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Close dialog"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1237,7 +1239,7 @@ export default function PasteViewer() {
                       value={decryptPassword}
                       onChange={(e) => setDecryptPassword(e.target.value)}
                       placeholder="Enter password"
-                      className="w-full px-3 py-2 bg-background border border-divider rounded-lg text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-neon-magenta focus:border-transparent text-sm"
+                      className="w-full px-3 py-2.5 sm:py-2 bg-background border border-divider rounded-lg text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-neon-magenta focus:border-transparent text-sm min-h-[44px] sm:min-h-0"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && decryptPassword) {
                           handleDecryptPaste();
@@ -1249,7 +1251,7 @@ export default function PasteViewer() {
                       <button
                         type="button"
                         onClick={() => setShowDecryptPassword(!showDecryptPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text transition-colors p-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
                         aria-label={showDecryptPassword ? 'Hide password' : 'Show password'}
                       >
                         {showDecryptPassword ? (
@@ -1268,21 +1270,21 @@ export default function PasteViewer() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 <button
                   onClick={() => {
                     setShowPasswordPrompt(false);
                     setPendingPasteData(null);
                     setDecryptPassword('');
                   }}
-                  className="flex-1 px-4 py-2 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm font-medium min-h-[44px] sm:min-h-0"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDecryptPaste}
                   disabled={!decryptPassword}
-                  className="flex-1 px-4 py-2 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-0"
                 >
                   Decrypt & View
                 </button>
@@ -1294,19 +1296,19 @@ export default function PasteViewer() {
 
       {/* Encryption Dialog Modal */}
       {showEncryptDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowEncryptDialog(false)}>
-          <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-text flex items-center gap-2">
-                  <svg className="w-5 h-5 text-neon-magenta" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowEncryptDialog(false)}>
+          <div className="bg-surface border border-divider rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-start justify-between mb-4 gap-3">
+                <h3 className="text-base sm:text-lg font-semibold text-text flex items-center gap-2">
+                  <svg className="w-5 h-5 text-neon-magenta flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  Encrypt Paste
+                  <span>Encrypt Paste</span>
                 </h3>
                 <button
                   onClick={() => setShowEncryptDialog(false)}
-                  className="text-text-secondary hover:text-text transition-colors"
+                  className="text-text-secondary hover:text-text transition-colors p-1 flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Close dialog"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1351,7 +1353,7 @@ export default function PasteViewer() {
                         value={encryptionPassword}
                         onChange={(e) => setEncryptionPassword(e.target.value)}
                         placeholder="Enter password (8-30 characters, no spaces)"
-                        className="w-full px-3 py-2 bg-background border border-divider rounded-lg text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-neon-magenta focus:border-transparent text-sm"
+                        className="w-full px-3 py-2.5 sm:py-2 bg-background border border-divider rounded-lg text-text placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-neon-magenta focus:border-transparent text-sm min-h-[44px] sm:min-h-0"
                         disabled={useRandomPassword}
                       />
                       {!useRandomPassword && encryptionPassword && (
@@ -1381,10 +1383,10 @@ export default function PasteViewer() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 <button
                   onClick={() => setShowEncryptDialog(false)}
-                  className="flex-1 px-4 py-2 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm font-medium min-h-[44px] sm:min-h-0"
                 >
                   Cancel
                 </button>
@@ -1393,13 +1395,13 @@ export default function PasteViewer() {
                     setShowEncryptDialog(false);
                     handlePushPaste(false, null);
                   }}
-                  className="flex-1 px-4 py-2 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm font-medium min-h-[44px] sm:min-h-0"
                 >
                   Push Without Encryption
                 </button>
                 <button
                   onClick={handleEncryptConfirm}
-                  className="flex-1 px-4 py-2 rounded-lg bg-neon-magenta text-white hover:bg-neon-magenta-600 transition-colors text-sm font-medium"
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-neon-magenta text-white hover:bg-neon-magenta-600 transition-colors text-sm font-medium min-h-[44px] sm:min-h-0"
                 >
                   Push Encrypted
                 </button>
@@ -1411,128 +1413,134 @@ export default function PasteViewer() {
 
       {/* Pull/Push Section - Apple-inspired design */}
       <div className="border-b border-divider/50 w-full overflow-x-hidden">
-        <div className="mx-auto px-4 sm:px-6 py-1.5 max-w-4xl">
-          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center flex-wrap">
-            {/* Paste ID Input */}
-            <div className="flex-1 w-full sm:w-auto min-w-0 sm:min-w-[200px]">
-              <label htmlFor="paste-id-input" className="sr-only">Enter paste ID</label>
-              <div className="relative w-full">
-                <input
-                  id="paste-id-input"
-                  data-tour="paste-id-input"
-                  type="text"
-                  value={pasteIdInput}
-                  onChange={(e) => setPasteIdInput(e.target.value)}
-                  placeholder="Enter paste ID"
-                  className="w-full px-2.5 py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-200 font-mono text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && isValidPasteId(pasteIdInput)) {
-                      handlePasteIdSubmit();
-                    }
-                  }}
-                />
-                {pasteIdInput.length > 0 && (
-                  <button
-                    onClick={() => setPasteIdInput('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary/60 hover:text-text transition-colors p-0.5"
-                    aria-label="Clear input"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
+        <div className="mx-auto px-4 sm:px-6 py-2 sm:py-1.5 max-w-4xl">
+          <div className="flex flex-col gap-3 sm:gap-2">
+            {/* Top Row: Inputs and Primary Actions */}
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+              {/* Paste ID Input */}
+              <div className="flex-1 w-full sm:w-auto min-w-0 sm:min-w-[200px]">
+                <label htmlFor="paste-id-input" className="sr-only">Enter paste ID</label>
+                <div className="relative w-full">
+                  <input
+                    id="paste-id-input"
+                    data-tour="paste-id-input"
+                    type="text"
+                    value={pasteIdInput}
+                    onChange={(e) => setPasteIdInput(e.target.value)}
+                    placeholder="Enter paste ID"
+                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-200 font-mono text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && isValidPasteId(pasteIdInput)) {
+                        handlePasteIdSubmit();
+                      }
+                    }}
+                  />
+                  {pasteIdInput.length > 0 && (
+                    <button
+                      onClick={() => setPasteIdInput('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary/60 hover:text-text transition-colors p-1"
+                      aria-label="Clear input"
+                    >
+                      <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Paste Name Input (optional, only for authenticated users) */}
-            {user && (
-              <div className="w-full sm:w-40 min-w-0">
-                <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
-                <input
-                  id="paste-name-input"
-                  data-tour="paste-name-input"
-                  type="text"
-                  value={pasteName}
-                  onChange={(e) => setPasteName(e.target.value)}
-                  placeholder="Name your paste"
-                  className="w-full px-2.5 py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
-                />
-              </div>
-            )}
+              {/* Paste Name Input (optional, only for authenticated users) */}
+              {user && (
+                <div className="w-full sm:w-40 min-w-0">
+                  <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
+                  <input
+                    id="paste-name-input"
+                    data-tour="paste-name-input"
+                    type="text"
+                    value={pasteName}
+                    onChange={(e) => setPasteName(e.target.value)}
+                    placeholder="Name your paste"
+                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+                  />
+                </div>
+              )}
 
-            {/* Primary Action Buttons */}
-            <div className="flex gap-1.5 w-full sm:w-auto">
-              {/* Pull Button */}
-              <button
-                data-tour="pull-button"
-                onClick={handlePasteIdSubmit}
-                disabled={!isValidPasteId(pasteIdInput) || isLoading}
-                className={`
-                  px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap
-                  disabled:opacity-40 disabled:cursor-not-allowed
-                  ${
-                    isValidPasteId(pasteIdInput) && !isLoading
-                      ? 'bg-neon-cyan text-black hover:opacity-90 active:scale-[0.98]'
-                      : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
-                  }
-                `}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-1.5">
-                    <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Pulling
-                  </span>
-                ) : (
-                  'Pull'
-                )}
-              </button>
-
-              {/* Push Button with Dropdown */}
-              <div ref={pushButtonRef} data-tour="push-button" className="relative flex">
+              {/* Primary Action Buttons */}
+              <div className="flex gap-2 sm:gap-1.5 w-full sm:w-auto">
+                {/* Pull Button */}
                 <button
-                  onClick={handlePushButtonClick}
-                  disabled={!text || text.trim().length === 0 || isPushing}
+                  data-tour="pull-button"
+                  onClick={handlePasteIdSubmit}
+                  disabled={!isValidPasteId(pasteIdInput) || isLoading}
                   className={`
-                    px-3 py-1.5 rounded-l-lg font-medium text-sm transition-all duration-200 whitespace-nowrap
+                    flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0
                     disabled:opacity-40 disabled:cursor-not-allowed
                     ${
-                      text && text.trim().length > 0 && !isPushing
-                        ? 'bg-neon-magenta text-white hover:opacity-90 active:scale-[0.98]'
+                      isValidPasteId(pasteIdInput) && !isLoading
+                        ? 'bg-neon-cyan text-black hover:opacity-90 active:scale-[0.98]'
                         : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
                     }
                   `}
                 >
-                  {isPushing ? (
-                    <span className="flex items-center gap-1.5">
-                      <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-1.5">
+                      <svg className="animate-spin h-4 w-4 sm:h-3 sm:w-3" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Pushing
+                      Pulling
                     </span>
                   ) : (
-                    'Push'
+                    'Pull'
                   )}
                 </button>
-                {text && text.trim().length > 0 && !isPushing && (
-                  <button
-                    data-tour="push-encrypt"
-                    onClick={() => setShowEncryptDialog(true)}
-                    className="px-1.5 py-1.5 rounded-r-lg border-l border-white/20 transition-all duration-200 push-dropdown-arrow bg-neon-magenta text-white hover:opacity-90"
-                    aria-label="Encryption options"
-                    title="Encryption options"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                )}
-              </div>
 
+                {/* Push Button with Dropdown */}
+                <div ref={pushButtonRef} data-tour="push-button" className="relative flex flex-1 sm:flex-none">
+                  <button
+                    onClick={handlePushButtonClick}
+                    disabled={!text || text.trim().length === 0 || isPushing}
+                    className={`
+                      flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-l-lg sm:rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                      ${
+                        text && text.trim().length > 0 && !isPushing
+                          ? 'bg-neon-magenta text-white hover:opacity-90 active:scale-[0.98]'
+                          : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
+                      }
+                    `}
+                  >
+                    {isPushing ? (
+                      <span className="flex items-center justify-center gap-1.5">
+                        <svg className="animate-spin h-4 w-4 sm:h-3 sm:w-3" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Pushing
+                      </span>
+                    ) : (
+                      'Push'
+                    )}
+                  </button>
+                  {text && text.trim().length > 0 && !isPushing && (
+                    <button
+                      data-tour="push-encrypt"
+                      onClick={() => setShowEncryptDialog(true)}
+                      className="px-2.5 py-2.5 sm:px-1.5 sm:py-1.5 rounded-r-lg border-l border-white/20 transition-all duration-200 push-dropdown-arrow bg-neon-magenta text-white hover:opacity-90 min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                      aria-label="Encryption options"
+                      title="Encryption options"
+                    >
+                      <svg className="w-4 h-4 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Row: Utility Buttons - Stack on mobile, row on desktop */}
+            <div className="flex flex-wrap gap-2 sm:gap-1.5 items-center w-full">
               {/* Hidden file input */}
               <input
                 ref={fileInputRef}
@@ -1543,17 +1551,17 @@ export default function PasteViewer() {
                 aria-label="File upload input"
               />
 
-              {/* Utility Buttons - compact icon buttons */}
-              <div className="flex gap-1">
+              {/* Utility Buttons - larger touch targets on mobile */}
+              <div className="flex gap-2 sm:gap-1">
                 {/* Upload Button */}
                 <button
                   data-tour="upload-button"
                   onClick={handleFileUpload}
-                  className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
+                  className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                   aria-label="Upload file"
                   title="Upload file"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                 </button>
@@ -1563,16 +1571,16 @@ export default function PasteViewer() {
                   <button
                     data-tour="download-button"
                     onClick={handleDownload}
-                    className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
+                    className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                     aria-label={downloaded ? 'Downloaded!' : 'Download paste'}
                     title="Download"
                   >
                     {downloaded ? (
-                      <svg className="w-3.5 h-3.5 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                     )}
@@ -1584,16 +1592,16 @@ export default function PasteViewer() {
                   <button
                     data-tour="copy-button"
                     onClick={handleCopy}
-                    className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
+                    className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                     aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
                     title="Copy"
                   >
                     {copied ? (
-                      <svg className="w-3.5 h-3.5 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                     )}
@@ -1603,7 +1611,7 @@ export default function PasteViewer() {
 
               {/* Language Selector - only shown when text exists and not loading */}
               {!isLoading && text && (
-                <div className="relative">
+                <div className="relative flex-1 sm:flex-none min-w-[120px] sm:min-w-0">
                   <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
                   <select
                     id="language-select"
@@ -1613,7 +1621,7 @@ export default function PasteViewer() {
                       setSelectedLanguage(e.target.value as LanguageValue);
                       setIsManualLanguageSelection(true);
                     }}
-                    className="px-2 py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-6 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black"
+                    className="w-full px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 sm:pr-6 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black min-h-[44px] sm:min-h-0"
                     style={{
                       backgroundColor: 'var(--color-surface-variant)',
                       color: 'var(--color-text)',
@@ -1635,7 +1643,7 @@ export default function PasteViewer() {
                     ))}
                   </select>
                   <svg 
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-text-secondary/60 pointer-events-none" 
+                    className="absolute right-2 sm:right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3 sm:h-3 text-text-secondary/60 pointer-events-none" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -1662,17 +1670,17 @@ export default function PasteViewer() {
                       }, 100);
                     }
                   }}
-                  className="px-2 py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98]"
+                  className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                   aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
                   title={isEditMode ? 'View mode' : 'Edit mode'}
                 >
                   {isEditMode ? (
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   ) : (
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   )}
@@ -1684,17 +1692,18 @@ export default function PasteViewer() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative w-full" data-tour="main-editor">
+      <div className="flex-1 overflow-hidden relative w-full overflow-x-hidden" data-tour="main-editor">
         {isEditMode ? (
           // Edit mode: syntax-highlighted code editor with line numbers
-          <div className="w-full h-full min-h-[60vh] overflow-auto">
-            <div className="flex">
+          <div className="w-full h-full min-h-[60vh] overflow-auto overflow-x-hidden">
+            <div className="flex min-w-0">
               {/* Line numbers gutter */}
               <div 
-                className="flex-shrink-0 bg-surface-variant/30 border-r border-divider/40 px-3 py-4 sm:py-6 lg:py-8 select-none text-text-secondary/60 text-right font-mono text-sm sm:text-base leading-[1.75rem]"
+                className="flex-shrink-0 bg-surface-variant/30 border-r border-divider/40 px-2 sm:px-3 py-4 sm:py-6 lg:py-8 select-none text-text-secondary/60 text-right font-mono text-xs sm:text-sm md:text-base leading-[1.75rem]"
                 style={{
                   fontFamily: 'var(--font-mono), monospace',
-                  minWidth: '3rem',
+                  minWidth: '2.5rem',
+                  maxWidth: '2.5rem',
                   userSelect: 'none',
                 }}
               >
@@ -1706,14 +1715,14 @@ export default function PasteViewer() {
               </div>
               
               {/* Editor container */}
-              <div ref={editorContainerRef} className="flex-1">
+              <div ref={editorContainerRef} className="flex-1 min-w-0 overflow-x-hidden">
                 {isClient ? (
                   <Editor
                     value={text}
                     onValueChange={(code) => setText(code)}
                     highlight={(code) => highlightCode(code, selectedLanguage)}
                     padding={16}
-                    className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base"
+                    className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base overflow-x-hidden"
                     style={{
                       fontFamily: 'var(--font-mono), monospace',
                       fontSize: 'inherit',
@@ -1722,9 +1731,11 @@ export default function PasteViewer() {
                       background: 'var(--color-background)',
                       color: 'var(--color-text)',
                       minHeight: '60vh',
+                      maxWidth: '100%',
+                      overflowX: 'hidden',
                     }}
-                    textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current"
-                    preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent"
+                    textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current overflow-x-hidden"
+                    preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent overflow-x-hidden"
                     placeholder="Start typing or paste your content here..."
                     disabled={isLoading}
                     tabSize={2}
@@ -1737,8 +1748,8 @@ export default function PasteViewer() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     readOnly={isLoading}
-                    className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text"
-                    style={{ minHeight: '60vh' }}
+                    className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text overflow-x-hidden"
+                    style={{ minHeight: '60vh', maxWidth: '100%' }}
                     spellCheck={false}
                     placeholder="Start typing or paste your content here..."
                   />
@@ -1748,14 +1759,14 @@ export default function PasteViewer() {
           </div>
         ) : (
           // View mode: syntax highlighting
-          <div className="w-full h-full min-h-[60vh] overflow-auto">
+          <div className="w-full h-full min-h-[60vh] overflow-auto overflow-x-hidden">
             {text ? (
               <SyntaxHighlighter
                 language={selectedLanguage === 'text' ? 'plaintext' : selectedLanguage}
                 style={resolvedTheme === 'dark' ? vscDarkPlus : vs}
                 customStyle={{
                   margin: 0,
-                  padding: '1.5rem 1.5rem 1.5rem 1.5rem',
+                  padding: '1rem',
                   background: 'var(--color-background)',
                   fontSize: '0.875rem',
                   lineHeight: '1.75rem',
@@ -1763,15 +1774,20 @@ export default function PasteViewer() {
                   borderRadius: 0,
                   maxWidth: '100%',
                   overflow: 'auto',
+                  overflowX: 'hidden',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
                 }}
                 codeTagProps={{
                   style: {
                     fontFamily: 'var(--font-mono), monospace',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'pre-wrap',
                   }
                 }}
                 showLineNumbers={text.split('\n').length > 1}
                 lineNumberStyle={{
-                  minWidth: '3em',
+                  minWidth: '2.5em',
                   paddingRight: '1em',
                   color: 'var(--color-text-secondary)',
                   userSelect: 'none',
