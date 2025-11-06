@@ -4,7 +4,7 @@ import { validateEmail, validatePassword } from '@/lib/auth-utils';
 import { createClient } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 type AuthMode = 'signin' | 'signup' | 'magic-link' | 'reset-password' | 'otp';
@@ -13,13 +13,14 @@ interface AuthDialogProps {
   isOpen: boolean;
   onClose: () => void;
   initialMode?: AuthMode;
+  onUserInteraction?: () => void;
 }
 
 /**
  * Authentication dialog component
  * Supports email/password, magic link, password reset, OTP, Web3, and GitHub
  */
-export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: AuthDialogProps) {
+export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', onUserInteraction }: AuthDialogProps) {
   const pathname = usePathname();
   const isVSCodeAuth = pathname?.includes('/auth/vscode');
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -35,10 +36,6 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const { signOut } = useAuth();
 
-  if (!isOpen) return null;
-
-  const supabase = createClient();
-
   const resetForm = () => {
     setEmail('');
     setPassword('');
@@ -50,6 +47,18 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
     setAcceptedTerms(false);
     setAcceptedPrivacy(false);
   };
+
+  // Sync mode with initialMode prop when it changes
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      resetForm();
+    }
+  }, [initialMode, isOpen]);
+
+  if (!isOpen) return null;
+
+  const supabase = createClient();
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,34 +98,64 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
     }
 
     setLoading(true);
+    
+    // Notify parent that user has interacted (for VS Code auth flow)
+    if (onUserInteraction) {
+      onUserInteraction();
+    }
+    
     try {
       // Extract username from email (part before @)
       const defaultUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
       const defaultDisplayName = email.split('@')[0];
       
+      // Configure email redirect URL for VS Code auth flow
+      const signUpOptions: any = {
+        data: {
+          display_name: defaultDisplayName,
+          username: defaultUsername,
+          terms_accepted: true,
+          privacy_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
+        },
+      };
+
+      // If signing up from VS Code auth page, set email redirect to VS Code callback
+      if (isVSCodeAuth) {
+        // Set emailRedirectTo to VS Code callback URL
+        // This will make the email verification link redirect back to VS Code
+        signUpOptions.emailRedirectTo = `${window.location.origin}/auth/callback?vscode=true`;
+      }
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            display_name: defaultDisplayName,
-            username: defaultUsername,
-            terms_accepted: true,
-            privacy_accepted: true,
-            terms_accepted_at: new Date().toISOString(),
-            privacy_accepted_at: new Date().toISOString(),
-          },
-        },
+        options: signUpOptions,
       });
 
       if (signUpError) {
         setError(signUpError.message);
       } else {
-        setMessage('Check your email to confirm your account');
-        setTimeout(() => {
-          setMode('signin');
-          resetForm();
-        }, 3000);
+        // Check if session was created (email confirmation might not be required)
+        if (data.session) {
+          // Session created immediately - user is authenticated
+          // The auth state change listener will handle redirect
+          setMessage('Account created successfully! Redirecting...');
+        } else {
+          // Email confirmation required
+          if (isVSCodeAuth) {
+            // For VS Code: Don't redirect immediately, just show message
+            // The email verification link will redirect back to VS Code
+            setMessage('Account created! Please check your email and click the confirmation link. After confirming, you will be redirected back to VS Code automatically.');
+          } else {
+            setMessage('Check your email to confirm your account');
+            setTimeout(() => {
+              setMode('signin');
+              resetForm();
+            }, 3000);
+          }
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -141,6 +180,12 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
     }
 
     setLoading(true);
+    
+    // Notify parent that user has interacted (for VS Code auth flow)
+    if (onUserInteraction) {
+      onUserInteraction();
+    }
+    
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -923,51 +968,6 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin' }: 
           {/* OAuth Providers */}
           {mode !== 'otp' && mode !== 'reset-password' && (
             <div className="space-y-3">
-              {/* Terms and Privacy Acceptance for OAuth Signup */}
-              {mode === 'signup' && (
-                <div className="space-y-3 pb-2 border-b border-divider">
-                  <label className="flex items-start gap-2 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={acceptedTerms}
-                      onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-divider bg-surface-variant text-positive-highlight focus:ring-2 focus:ring-positive-highlight focus:ring-offset-0 cursor-pointer"
-                    />
-                    <span className="text-sm text-text-secondary group-hover:text-text transition-colors">
-                      I accept the{' '}
-                      <Link
-                        href="/terms"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-positive-highlight hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Terms and Conditions
-                      </Link>
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-2 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={acceptedPrivacy}
-                      onChange={(e) => setAcceptedPrivacy(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-divider bg-surface-variant text-positive-highlight focus:ring-2 focus:ring-positive-highlight focus:ring-offset-0 cursor-pointer"
-                    />
-                    <span className="text-sm text-text-secondary group-hover:text-text transition-colors">
-                      I accept the{' '}
-                      <Link
-                        href="/privacy"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-positive-highlight hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Privacy Policy
-                      </Link>
-                    </span>
-                  </label>
-                </div>
-              )}
               <button
                 onClick={handleGitHubSignIn}
                 disabled={loading || (mode === 'signup' && (!acceptedTerms || !acceptedPrivacy))}
