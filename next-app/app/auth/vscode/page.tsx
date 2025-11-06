@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import AuthDialog from '@/app/components/AuthDialog';
@@ -16,30 +16,20 @@ function VSCodeAuthPageContent() {
   const [authDialogOpen, setAuthDialogOpen] = useState(true);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    // Check if user is already authenticated
-    if (user && session) {
-      // User is authenticated, redirect back to VS Code with tokens
-      redirectToVSCode(session);
-    } else {
-      setChecking(false);
-    }
-  }, [user, session]);
-
-  useEffect(() => {
-    // Check for mode parameter
-    const mode = searchParams.get('mode');
-    if (mode === 'signup') {
-      setAuthMode('signup');
-    }
-  }, [searchParams]);
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const [hasSeenInitialAuthEvent, setHasSeenInitialAuthEvent] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
 
   /**
    * Redirect to VS Code with authentication tokens
    */
-  const redirectToVSCode = (session: any) => {
-    if (!session) return;
+  const redirectToVSCode = useCallback((session: any) => {
+    if (!session || hasRedirected) return;
+    
+    setHasRedirected(true);
+    
+    // Clear the VS Code auth pending flag since we're redirecting
+    localStorage.removeItem('vscode_auth_pending');
 
     const params = new URLSearchParams({
       access_token: session.access_token,
@@ -51,7 +41,46 @@ function VSCodeAuthPageContent() {
 
     // Redirect to VS Code
     window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
-  };
+  }, [hasRedirected]);
+
+  useEffect(() => {
+    // Mark that this is a VS Code auth session
+    // This will be checked after email verification
+    localStorage.setItem('vscode_auth_pending', 'true');
+    
+    // Only check for existing session if there's a code or hash in URL (OAuth callback)
+    // Otherwise, let the user sign up/sign in fresh - DO NOT redirect on initial load
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const hash = window.location.hash.substring(1);
+    
+    // If there's no OAuth callback, just show the auth dialog
+    // DO NOT redirect even if user has existing session - let them sign up/sign in fresh
+    if (!code && !hash) {
+      setChecking(false);
+      return;
+    }
+    
+    // If there's a callback (OAuth or magic link), handle it in the other useEffect
+    // But still check if we already have a valid session from the callback
+    if (user && session && (code || hash)) {
+      // Only redirect if we have a callback AND a session
+      // This means user came from OAuth and already has session
+      if (!hasRedirected) {
+        redirectToVSCode(session);
+      }
+    } else {
+      setChecking(false);
+    }
+  }, [user, session, hasRedirected, redirectToVSCode]);
+
+  useEffect(() => {
+    // Check for mode parameter
+    const mode = searchParams.get('mode');
+    if (mode === 'signup') {
+      setAuthMode('signup');
+    }
+  }, [searchParams]);
 
   // Listen for auth state changes (for OAuth callbacks, magic links, etc.)
   useEffect(() => {
@@ -103,7 +132,9 @@ function VSCodeAuthPageContent() {
               }
             }
             
-            redirectToVSCode(data.session);
+            if (!hasRedirected) {
+              redirectToVSCode(data.session);
+            }
           }
         } catch (error: any) {
           window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(error.message || 'Authentication failed')}`;
@@ -118,7 +149,7 @@ function VSCodeAuthPageContent() {
         // Wait a bit for Supabase to process, then check session
         setTimeout(async () => {
           const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
+          if (session && !hasRedirected) {
             redirectToVSCode(session);
           }
         }, 1000);
@@ -127,17 +158,59 @@ function VSCodeAuthPageContent() {
     
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session && session.user && !checking) {
-        // User just authenticated (via email/password, etc.), redirect to VS Code
-        setTimeout(() => {
-          redirectToVSCode(session);
-        }, 500);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only handle auth state changes after initial check is done
+      if (checking) return;
+      
+      // CRITICAL: Ignore ALL auth events until user has interacted with the form
+      // This prevents immediate redirect when page loads with existing session
+      if (!userHasInteracted) {
+        // Mark that we've seen the initial event
+        if (!hasSeenInitialAuthEvent) {
+          setHasSeenInitialAuthEvent(true);
+        }
+        // Don't process any events until user submits the form
+        return;
       }
+      
+      // Only process events after user has interacted (submitted form)
+      // Check if it's from OAuth callback (handled separately above)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const hash = window.location.hash.substring(1);
+      if (code || hash) {
+        // This is from OAuth callback, already handled above
+        return;
+      }
+      
+      // Only redirect on actual authentication events (SIGNED_IN, SIGNED_UP)
+      if (event === 'SIGNED_IN') {
+        if (session && session.user && !hasRedirected) {
+          // User just authenticated (via email/password, etc.), redirect to VS Code
+          setTimeout(() => {
+            redirectToVSCode(session);
+          }, 500);
+        }
+      } else if (event === 'SIGNED_UP') {
+        if (session) {
+          // User signed up and got session immediately (no email confirmation)
+          if (!hasRedirected) {
+            setTimeout(() => {
+              redirectToVSCode(session);
+            }, 500);
+          }
+        } else {
+          // User signed up but email confirmation is required
+          // DON'T redirect immediately - let the email verification handle it
+          // The email verification link will redirect back to VS Code
+          // Just show a message (handled in AuthDialog)
+        }
+      }
+      // Don't redirect on TOKEN_REFRESHED or INITIAL_SESSION - those are not user actions
     });
 
     return () => subscription.unsubscribe();
-  }, [checking]);
+  }, [checking, hasRedirected, redirectToVSCode, hasSeenInitialAuthEvent, userHasInteracted]);
 
   if (checking) {
     return (
@@ -167,6 +240,12 @@ function VSCodeAuthPageContent() {
             // We'll keep it open but they can close the browser tab
           }}
           initialMode={authMode}
+          isVSCodeAuth={true}
+          onUserInteraction={() => {
+            // Mark that user has interacted with the form (submitted signup/signin)
+            // This allows the auth state change listener to process events
+            setUserHasInteracted(true);
+          }}
         />
 
         <div className="mt-6 text-center">

@@ -3,7 +3,6 @@
 import { validateEmail, validatePassword } from '@/lib/auth-utils';
 import { createClient } from '@/lib/supabase-client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,15 +13,14 @@ interface AuthDialogProps {
   onClose: () => void;
   initialMode?: AuthMode;
   onUserInteraction?: () => void;
+  isVSCodeAuth?: boolean;
 }
 
 /**
  * Authentication dialog component
  * Supports email/password, magic link, password reset, OTP, Web3, and GitHub
  */
-export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', onUserInteraction }: AuthDialogProps) {
-  const pathname = usePathname();
-  const isVSCodeAuth = pathname?.includes('/auth/vscode');
+export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', onUserInteraction, isVSCodeAuth = false }: AuthDialogProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

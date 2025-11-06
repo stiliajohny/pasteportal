@@ -426,6 +426,7 @@ export default function Header() {
         isOpen={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
         initialMode={authDialogMode}
+        isVSCodeAuth={false}
       />
       <ExtensionInterestDialog
         isOpen={extensionDialogOpen}
