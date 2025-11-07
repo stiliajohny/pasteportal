@@ -60,6 +60,8 @@ function VSCodeAuthPageContent() {
   }, [hasRedirected]);
 
   useEffect(() => {
+    console.log('[VS Code Auth Page] useEffect for initial session check');
+    
     // Mark that this is a VS Code auth session
     // This will be checked after email verification
     localStorage.setItem('vscode_auth_pending', 'true');
@@ -70,9 +72,12 @@ function VSCodeAuthPageContent() {
     const code = urlParams.get('code');
     const hash = window.location.hash.substring(1);
     
+    console.log('[VS Code Auth Page] URL check:', { code: !!code, hash: !!hash, user: !!user, session: !!session, hasRedirected });
+    
     // If there's no OAuth callback, just show the auth dialog
     // DO NOT redirect even if user has existing session - let them sign up/sign in fresh
     if (!code && !hash) {
+      console.log('[VS Code Auth Page] No OAuth callback detected, showing auth dialog');
       setChecking(false);
       return;
     }
@@ -80,12 +85,17 @@ function VSCodeAuthPageContent() {
     // If there's a callback (OAuth or magic link), handle it in the other useEffect
     // But still check if we already have a valid session from the callback
     if (user && session && (code || hash)) {
+      console.log('[VS Code Auth Page] OAuth callback detected with session already available');
       // Only redirect if we have a callback AND a session
       // This means user came from OAuth and already has session
       if (!hasRedirected) {
+        console.log('[VS Code Auth Page] Redirecting immediately (session available from callback)');
         redirectToVSCode(session);
+      } else {
+        console.log('[VS Code Auth Page] Already redirected, skipping immediate redirect');
       }
     } else {
+      console.log('[VS Code Auth Page] OAuth callback detected but waiting for session');
       setChecking(false);
     }
   }, [user, session, hasRedirected, redirectToVSCode]);
