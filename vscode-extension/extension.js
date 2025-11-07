@@ -548,10 +548,10 @@ function multiLineClipboard(id, password) {
       if (password.length < passwordLengthMin) {
         throw new Error('Password cannot be empty')
       }
-      const clipText = `To get the paste, go to ${url} and enter the password ${password}\nYou can also use the VSCode command "PastePortal: Retrieve Encrypted Paste" to get the paste.\nUse the URL ${url} and password ${password} to get the paste.`
+      const clipText = `PastePortal Paste\n\nURL: ${url}\nPassword: ${password}\n\nYou can also use the VSCode command "PastePortal: Retrieve Encrypted Paste" to get the paste.`
       return clipText
     } else {
-      const clipText = `To get the paste, go to ${url}\nYou can also use the VSCode command "PastePortal: Retrieve Paste" to get the paste.\nUse the URL ${url} to get the paste.`
+      const clipText = `PastePortal Paste\n\nURL: ${url}\n\nYou can also use the VSCode command "PastePortal: Retrieve Paste" to get the paste.`
       return clipText
     }
   } catch (error) {
