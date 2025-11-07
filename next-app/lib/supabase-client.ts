@@ -15,7 +15,9 @@ function createPKCESafeStorage() {
     return undefined;
   }
 
-  const baseStorage = window.sessionStorage;
+  // Use localStorage instead of sessionStorage for VS Code flows
+  // sessionStorage is cleared when browser window closes, but VS Code might close the browser
+  const baseStorage = window.localStorage;
   
   // Fixed storage key for code verifier - ignores redirect URL
   const FIXED_CODE_VERIFIER_KEY = 'supabase-pkce-code-verifier';
@@ -32,34 +34,44 @@ function createPKCESafeStorage() {
         const value = baseStorage.getItem(FIXED_CODE_VERIFIER_KEY);
         
         if (!value) {
-          // Also try localStorage fallback
-          console.log(`[PKCE Storage] Not in sessionStorage, trying localStorage...`);
+          // Also try sessionStorage as fallback (in case it was stored there)
+          console.log(`[PKCE Storage] Not in localStorage, trying sessionStorage...`);
           try {
-            const localValue = window.localStorage.getItem(FIXED_CODE_VERIFIER_KEY);
-            if (localValue) {
-              console.log(`[PKCE Storage] Code verifier found in localStorage!`);
-              return localValue;
+            const sessionValue = window.sessionStorage.getItem(FIXED_CODE_VERIFIER_KEY);
+            if (sessionValue) {
+              console.log(`[PKCE Storage] Code verifier found in sessionStorage!`);
+              return sessionValue;
             }
           } catch (e) {
-            console.error('[PKCE Storage] Failed to read from localStorage:', e);
+            console.error('[PKCE Storage] Failed to read from sessionStorage:', e);
           }
           
           // Fallback: try to find any code verifier in storage
-          const allKeys = Object.keys(baseStorage);
-          console.log(`[PKCE Storage] Code verifier not found in fixed key. Searching all keys:`, allKeys);
+          const allLocalKeys = Object.keys(baseStorage);
+          const allSessionKeys = Object.keys(window.sessionStorage);
+          console.log(`[PKCE Storage] Code verifier not found in fixed key. Searching all keys...`);
+          console.log(`[PKCE Storage] LocalStorage keys:`, allLocalKeys);
+          console.log(`[PKCE Storage] SessionStorage keys:`, allSessionKeys);
           
-          const codeVerifierKey = allKeys.find(k => 
+          // Search in both storages
+          const localVerifierKey = allLocalKeys.find(k => 
+            k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
+          );
+          const sessionVerifierKey = allSessionKeys.find(k => 
             k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
           );
           
-          if (codeVerifierKey) {
-            console.log(`[PKCE Storage] Found code verifier with key: ${codeVerifierKey}`);
-            return baseStorage.getItem(codeVerifierKey);
+          if (localVerifierKey) {
+            console.log(`[PKCE Storage] Found code verifier in localStorage with key: ${localVerifierKey}`);
+            return baseStorage.getItem(localVerifierKey);
+          }
+          
+          if (sessionVerifierKey) {
+            console.log(`[PKCE Storage] Found code verifier in sessionStorage with key: ${sessionVerifierKey}`);
+            return window.sessionStorage.getItem(sessionVerifierKey);
           }
           
           console.error('[PKCE Storage] Code verifier not found in any storage key!');
-          console.error('[PKCE Storage] All sessionStorage keys:', allKeys);
-          console.error('[PKCE Storage] All localStorage keys:', Object.keys(window.localStorage));
           return null;
         }
         
@@ -87,26 +99,26 @@ function createPKCESafeStorage() {
         console.log(`[PKCE Storage] Value length: ${value?.length || 0} characters`);
         
         baseStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
-        console.log(`[PKCE Storage] ✓ Stored in sessionStorage fixed key`);
+        console.log(`[PKCE Storage] ✓ Stored in localStorage fixed key`);
         
-        // Also store in localStorage as ultimate fallback
+        // Also store in sessionStorage as backup
         try {
-          window.localStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
-          console.log(`[PKCE Storage] ✓ Also stored in localStorage as fallback`);
+          window.sessionStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
+          console.log(`[PKCE Storage] ✓ Also stored in sessionStorage as backup`);
         } catch (e) {
-          console.error('[PKCE Storage] Failed to store in localStorage:', e);
+          console.error('[PKCE Storage] Failed to store in sessionStorage:', e);
         }
         
         // Verify it was stored
         setTimeout(() => {
-          const verify = baseStorage.getItem(FIXED_CODE_VERIFIER_KEY);
-          console.log(`[PKCE Storage] Verification: code verifier ${verify ? 'EXISTS' : 'MISSING'} in sessionStorage`);
+          const verifyLocal = baseStorage.getItem(FIXED_CODE_VERIFIER_KEY);
+          console.log(`[PKCE Storage] Verification: code verifier ${verifyLocal ? 'EXISTS' : 'MISSING'} in localStorage`);
           
           try {
-            const verifyLocal = window.localStorage.getItem(FIXED_CODE_VERIFIER_KEY);
-            console.log(`[PKCE Storage] Verification: code verifier ${verifyLocal ? 'EXISTS' : 'MISSING'} in localStorage`);
+            const verifySession = window.sessionStorage.getItem(FIXED_CODE_VERIFIER_KEY);
+            console.log(`[PKCE Storage] Verification: code verifier ${verifySession ? 'EXISTS' : 'MISSING'} in sessionStorage`);
           } catch (e) {
-            console.error('[PKCE Storage] Failed to verify localStorage:', e);
+            console.error('[PKCE Storage] Failed to verify sessionStorage:', e);
           }
         }, 100);
       }
@@ -115,14 +127,15 @@ function createPKCESafeStorage() {
     removeItem: (key: string): void => {
       baseStorage.removeItem(key);
       
-      // Also remove from fixed key and localStorage
+      // Also remove from fixed key and sessionStorage
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
         console.log(`[PKCE Storage] Removing code verifier from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
         baseStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
         try {
-          window.localStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
+          window.sessionStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
+          console.log(`[PKCE Storage] Also removed from sessionStorage`);
         } catch (e) {
-          console.error('[PKCE Storage] Failed to remove from localStorage:', e);
+          console.error('[PKCE Storage] Failed to remove from sessionStorage:', e);
         }
       }
     },
