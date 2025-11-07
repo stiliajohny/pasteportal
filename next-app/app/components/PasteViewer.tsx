@@ -245,6 +245,7 @@ export default function PasteViewer() {
   const [isManualLanguageSelection, setIsManualLanguageSelection] = useState(false);
   const [pasteName, setPasteName] = useState<string>('');
   const [prismLoaded, setPrismLoaded] = useState(false);
+  const [textWrap, setTextWrap] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1602,6 +1603,30 @@ export default function PasteViewer() {
                   )}
                 </button>
               )}
+
+              {/* Text Wrap Toggle Button - only shown when text exists */}
+              {text && (
+                <button
+                  onClick={() => setTextWrap(!textWrap)}
+                  className={`px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg border transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center ${
+                    textWrap
+                      ? 'bg-positive-highlight/20 border-positive-highlight/40 text-positive-highlight hover:bg-positive-highlight/30'
+                      : 'bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant'
+                  }`}
+                  aria-label={textWrap ? 'Disable text wrap' : 'Enable text wrap'}
+                  title={textWrap ? 'Text wrap: ON' : 'Text wrap: OFF'}
+                >
+                  {textWrap ? (
+                    <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Language Selector - only shown when text exists and not loading */}
@@ -1689,7 +1714,7 @@ export default function PasteViewer() {
       <div className="flex-1 overflow-hidden relative w-full overflow-x-hidden" data-tour="main-editor">
         {isEditMode ? (
           // Edit mode: syntax-highlighted code editor with line numbers
-          <div className="w-full h-full min-h-[60vh] overflow-auto overflow-x-hidden">
+          <div className={`w-full h-full min-h-[60vh] overflow-auto ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
             <div className="flex min-w-0">
               {/* Line numbers gutter */}
               <div 
@@ -1709,14 +1734,14 @@ export default function PasteViewer() {
               </div>
               
               {/* Editor container */}
-              <div ref={editorContainerRef} className="flex-1 min-w-0 overflow-x-hidden">
+              <div ref={editorContainerRef} className={`flex-1 min-w-0 ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
                 {isClient ? (
                   <Editor
                     value={text}
                     onValueChange={(code) => setText(code)}
                     highlight={(code) => highlightCode(code, selectedLanguage)}
                     padding={16}
-                    className="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base overflow-x-hidden"
+                    className={`w-full h-full min-h-[60vh] font-mono text-sm sm:text-base ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
                     style={{
                       fontFamily: 'var(--font-mono), monospace',
                       fontSize: 'inherit',
@@ -1726,10 +1751,12 @@ export default function PasteViewer() {
                       color: 'var(--color-text)',
                       minHeight: '60vh',
                       maxWidth: '100%',
-                      overflowX: 'hidden',
+                      overflowX: textWrap ? 'hidden' : 'auto',
+                      whiteSpace: textWrap ? 'pre-wrap' : 'pre',
+                      wordBreak: textWrap ? 'break-word' : 'normal',
                     }}
-                    textareaClassName="w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current overflow-x-hidden"
-                    preClassName="m-0 p-4 sm:p-6 lg:p-8 bg-transparent overflow-x-hidden"
+                    textareaClassName={`w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+                    preClassName={`m-0 p-4 sm:p-6 lg:p-8 bg-transparent ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
                     placeholder="Start typing or paste your content here..."
                     disabled={isLoading}
                     tabSize={2}
@@ -1742,8 +1769,13 @@ export default function PasteViewer() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     readOnly={isLoading}
-                    className="w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text overflow-x-hidden"
-                    style={{ minHeight: '60vh', maxWidth: '100%' }}
+                    className={`w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+                    style={{ 
+                      minHeight: '60vh', 
+                      maxWidth: '100%',
+                      whiteSpace: textWrap ? 'pre-wrap' : 'pre',
+                      wordBreak: textWrap ? 'break-word' : 'normal',
+                    }}
                     spellCheck={false}
                     placeholder="Start typing or paste your content here..."
                   />
@@ -1753,7 +1785,7 @@ export default function PasteViewer() {
           </div>
         ) : (
           // View mode: syntax highlighting
-          <div className="w-full h-full min-h-[60vh] overflow-auto overflow-x-hidden">
+          <div className={`w-full h-full min-h-[60vh] overflow-auto ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
             {text ? (
               <SyntaxHighlighter
                 language={selectedLanguage === 'text' ? 'plaintext' : selectedLanguage}
@@ -1768,15 +1800,15 @@ export default function PasteViewer() {
                   borderRadius: 0,
                   maxWidth: '100%',
                   overflow: 'auto',
-                  overflowX: 'hidden',
-                  wordBreak: 'break-word',
-                  whiteSpace: 'pre-wrap',
+                  overflowX: textWrap ? 'hidden' : 'auto',
+                  wordBreak: textWrap ? 'break-word' : 'normal',
+                  whiteSpace: textWrap ? 'pre-wrap' : 'pre',
                 }}
                 codeTagProps={{
                   style: {
                     fontFamily: 'var(--font-mono), monospace',
-                    wordBreak: 'break-word',
-                    whiteSpace: 'pre-wrap',
+                    wordBreak: textWrap ? 'break-word' : 'normal',
+                    whiteSpace: textWrap ? 'pre-wrap' : 'pre',
                   }
                 }}
                 showLineNumbers={text.split('\n').length > 1}
@@ -1786,8 +1818,8 @@ export default function PasteViewer() {
                   color: 'var(--color-text-secondary)',
                   userSelect: 'none',
                 }}
-                wrapLines
-                wrapLongLines
+                wrapLines={textWrap}
+                wrapLongLines={textWrap}
               >
                 {text}
               </SyntaxHighlighter>
