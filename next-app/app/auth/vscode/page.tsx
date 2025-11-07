@@ -156,17 +156,21 @@ function VSCodeAuthPageContent() {
       }
       
       // Only process events after user has interacted (submitted form)
-      // Check if it's from OAuth callback (handled separately above)
+      // Check if it's from OAuth callback
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const hash = window.location.hash.substring(1);
-      if (code || hash) {
-        // This is from OAuth callback, already handled above
+      
+      // For OAuth callbacks, we DO want to handle SIGNED_IN events
+      // Only skip if it's INITIAL_SESSION (not a real auth event)
+      if ((code || hash) && event === 'INITIAL_SESSION') {
+        console.log('[VS Code Auth Page] Skipping INITIAL_SESSION from OAuth callback');
         return;
       }
       
       // Only redirect on actual authentication events (SIGNED_IN, SIGNED_UP)
       if (event === 'SIGNED_IN') {
+        console.log('[VS Code Auth Page] SIGNED_IN event received, session:', !!session);
         if (session && session.user && !hasRedirected) {
           // User just authenticated (via email/password, etc.), redirect to VS Code
           setTimeout(() => {
