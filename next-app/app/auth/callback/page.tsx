@@ -63,9 +63,18 @@ function AuthCallbackContent() {
             console.log('Supabase-related keys:', supabaseKeys);
             
             // Check for code verifier specifically
-            const codeVerifierKey = storageKeys.find(key => 
+            let codeVerifierKey = storageKeys.find(key => 
               key.includes('code-verifier') || key.includes('code_verifier') || key.includes('pkce')
             );
+            
+            // Also check for backup code verifier
+            if (!codeVerifierKey) {
+              const backupKey = storageKeys.find(key => key === 'supabase-auth-code-verifier-backup');
+              if (backupKey) {
+                console.log('Found backup code verifier key:', backupKey);
+                codeVerifierKey = backupKey;
+              }
+            }
             
             if (!codeVerifierKey) {
               console.error('PKCE code verifier not found in sessionStorage!');

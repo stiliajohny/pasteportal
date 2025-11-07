@@ -4,6 +4,58 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 let supabaseClient: SupabaseClient | null = null;
 
 /**
+ * Custom storage adapter that ensures PKCE code verifier is accessible
+ * across different redirect URLs (e.g., /auth/vscode and /auth/callback)
+ */
+function createPKCESafeStorage() {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const baseStorage = window.sessionStorage;
+
+  return {
+    getItem: (key: string): string | null => {
+      const value = baseStorage.getItem(key);
+      
+      // If this is a code verifier lookup and value is null, try alternative keys
+      if (!value && key.includes('code_verifier')) {
+        // Try to find code verifier stored with different redirect URL
+        const allKeys = Object.keys(baseStorage);
+        const codeVerifierKey = allKeys.find(k => 
+          k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
+        );
+        
+        if (codeVerifierKey) {
+          console.log(`Found code verifier with alternative key: ${codeVerifierKey}`);
+          return baseStorage.getItem(codeVerifierKey);
+        }
+      }
+      
+      return value;
+    },
+    setItem: (key: string, value: string): void => {
+      baseStorage.setItem(key, value);
+      
+      // If storing code verifier, also store a backup with a generic key
+      if (key.includes('code_verifier') || key.includes('code-verifier')) {
+        const backupKey = `supabase-auth-code-verifier-backup`;
+        baseStorage.setItem(backupKey, value);
+        console.log(`Stored code verifier backup with key: ${backupKey}`);
+      }
+    },
+    removeItem: (key: string): void => {
+      baseStorage.removeItem(key);
+      
+      // Also remove backup if removing code verifier
+      if (key.includes('code_verifier') || key.includes('code-verifier')) {
+        baseStorage.removeItem('supabase-auth-code-verifier-backup');
+      }
+    },
+  };
+}
+
+/**
  * Client-side Supabase client for authentication
  * Must be used in client components only
  * 
@@ -44,10 +96,10 @@ export function createClient(): SupabaseClient {
   // and uses cookies, which can cause PKCE issues
   supabaseClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      // Use sessionStorage for PKCE code verifier (default behavior)
+      // Use custom storage adapter that handles PKCE code verifier across redirect URLs
       // CRITICAL: This must be sessionStorage (not localStorage) for PKCE to work
       // Supabase stores the PKCE code verifier in sessionStorage with a key based on the project URL
-      storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+      storage: createPKCESafeStorage(),
       // Enable PKCE flow (default for OAuth, but explicit for clarity)
       flowType: 'pkce',
       // Auto-refresh tokens
