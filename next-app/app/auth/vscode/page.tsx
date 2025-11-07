@@ -19,6 +19,7 @@ function VSCodeAuthPageContent() {
   const [hasRedirected, setHasRedirected] = useState(false);
   const [hasSeenInitialAuthEvent, setHasSeenInitialAuthEvent] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
+  const [codeExchangeAttempted, setCodeExchangeAttempted] = useState(false);
 
   /**
    * Redirect to VS Code with authentication tokens
@@ -92,6 +93,18 @@ function VSCodeAuthPageContent() {
     const hash = window.location.hash.substring(1);
     
     if (code) {
+      // Check if we already have a valid session or if we've already attempted code exchange
+      if (session || codeExchangeAttempted) {
+        console.log('[VS Code Auth Page] Skipping code exchange - already have session or already attempted');
+        if (session && !hasRedirected) {
+          redirectToVSCode(session);
+        }
+        return;
+      }
+      
+      // Mark that we're attempting code exchange to prevent duplicate attempts
+      setCodeExchangeAttempted(true);
+      
       // OAuth callback with code - exchange for session
       (async () => {
         try {
@@ -269,7 +282,7 @@ function VSCodeAuthPageContent() {
     });
 
     return () => subscription.unsubscribe();
-  }, [checking, hasRedirected, redirectToVSCode, hasSeenInitialAuthEvent, userHasInteracted]);
+  }, [checking, hasRedirected, redirectToVSCode, hasSeenInitialAuthEvent, userHasInteracted, session, codeExchangeAttempted]);
 
   if (checking) {
     return (
