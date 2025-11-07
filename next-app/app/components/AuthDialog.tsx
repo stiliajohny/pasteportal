@@ -840,38 +840,42 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
-              <div className="flex justify-between text-sm">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('magic-link');
-                    resetForm();
-                  }}
-                  className="text-positive-highlight hover:underline"
-                >
-                  Use Magic Link
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('reset-password');
-                    resetForm();
-                  }}
-                  className="text-positive-highlight hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={handleRequestOtp}
-                  disabled={!email || !validateEmail(email) || loading}
-                  className="text-sm text-positive-highlight hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Sign in with OTP
-                </button>
-              </div>
+              {!isVSCodeAuth && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('magic-link');
+                        resetForm();
+                      }}
+                      className="text-positive-highlight hover:underline"
+                    >
+                      Use Magic Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('reset-password');
+                        resetForm();
+                      }}
+                      className="text-positive-highlight hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={handleRequestOtp}
+                      disabled={!email || !validateEmail(email) || loading}
+                      className="text-sm text-positive-highlight hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Sign in with OTP
+                    </button>
+                  </div>
+                </>
+              )}
               <p className="text-sm text-center text-text-secondary">
                 Don&apos;t have an account?{' '}
                 <button

@@ -25,7 +25,17 @@ function VSCodeAuthPageContent() {
    * Redirect to VS Code with authentication tokens
    */
   const redirectToVSCode = useCallback((session: any) => {
-    if (!session || hasRedirected) return;
+    console.log('[VS Code Auth Page] redirectToVSCode called with session:', !!session, 'hasRedirected:', hasRedirected);
+    
+    if (!session) {
+      console.error('[VS Code Auth Page] No session provided to redirectToVSCode');
+      return;
+    }
+    
+    if (hasRedirected) {
+      console.log('[VS Code Auth Page] Already redirected, skipping');
+      return;
+    }
     
     setHasRedirected(true);
     
@@ -40,8 +50,13 @@ function VSCodeAuthPageContent() {
       token_type: session.token_type || 'bearer',
     });
 
+    const vscodeUri = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+    console.log('[VS Code Auth Page] Redirecting to VS Code URI:', vscodeUri);
+    
     // Redirect to VS Code
-    window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+    window.location.href = vscodeUri;
+    
+    console.log('[VS Code Auth Page] window.location.href set, redirect should happen now');
   }, [hasRedirected]);
 
   useEffect(() => {
@@ -175,11 +190,20 @@ function VSCodeAuthPageContent() {
       // Only redirect on actual authentication events (SIGNED_IN, SIGNED_UP)
       if (event === 'SIGNED_IN') {
         console.log('[VS Code Auth Page] SIGNED_IN event received, session:', !!session);
+        console.log('[VS Code Auth Page] Session user:', !!session?.user, 'hasRedirected:', hasRedirected);
         if (session && session.user && !hasRedirected) {
+          console.log('[VS Code Auth Page] Scheduling redirect to VS Code in 500ms...');
           // User just authenticated (via email/password, etc.), redirect to VS Code
           setTimeout(() => {
+            console.log('[VS Code Auth Page] Timeout fired, calling redirectToVSCode...');
             redirectToVSCode(session);
           }, 500);
+        } else {
+          console.log('[VS Code Auth Page] Redirect conditions not met:', {
+            hasSession: !!session,
+            hasUser: !!session?.user,
+            hasRedirected: hasRedirected
+          });
         }
       } else if (event === 'SIGNED_UP') {
         if (session) {
