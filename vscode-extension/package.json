@@ -141,6 +141,24 @@
         "command": "pasteportal.sign-in-with-token",
         "title": "Sign In with Token",
         "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.delete-paste",
+        "title": "Delete Paste",
+        "category": "PastePortal",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "pasteportal.retrieve-password",
+        "title": "Retrieve Password",
+        "category": "PastePortal",
+        "icon": "$(key)"
+      },
+      {
+        "command": "pasteportal.share-paste",
+        "title": "Share Paste",
+        "category": "PastePortal",
+        "icon": "$(share)"
       }
     ],
     "keybindings": [
@@ -210,7 +228,33 @@
           "group": "pasteportal"
         }
       ],
-      "view/item/context": [],
+      "view/item/context": [
+        {
+          "command": "pasteportal.share-paste",
+          "when": "view == pasteportal-my-pastes && viewItem == paste",
+          "group": "pasteportal@1"
+        },
+        {
+          "command": "pasteportal.share-paste",
+          "when": "view == pasteportal-my-pastes && viewItem == paste.encrypted",
+          "group": "pasteportal@1"
+        },
+        {
+          "command": "pasteportal.retrieve-password",
+          "when": "view == pasteportal-my-pastes && viewItem == paste.encrypted",
+          "group": "pasteportal@2"
+        },
+        {
+          "command": "pasteportal.delete-paste",
+          "when": "view == pasteportal-my-pastes && viewItem == paste",
+          "group": "pasteportal@3"
+        },
+        {
+          "command": "pasteportal.delete-paste",
+          "when": "view == pasteportal-my-pastes && viewItem == paste.encrypted",
+          "group": "pasteportal@3"
+        }
+      ],
       "editor/title": [
         {
           "command": "pasteportal.shareFile",

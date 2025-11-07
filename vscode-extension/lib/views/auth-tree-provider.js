@@ -25,7 +25,9 @@ class PasteTreeItem extends vscode.TreeItem {
     
     this.pasteId = paste.id
     this.id = paste.id // For context menu identification
-    this.contextValue = 'paste'
+    this.paste = paste // Store full paste object for context menu actions
+    // Set contextValue based on whether paste is password protected
+    this.contextValue = paste.is_password_encrypted ? 'paste.encrypted' : 'paste'
     this.tooltip = `ID: ${paste.id}\nCreated: ${new Date(paste.created_at).toLocaleString()}\n${paste.is_password_encrypted ? 'Encrypted' : 'Plain text'}`
     this.description = new Date(paste.created_at).toLocaleDateString()
     this.command = command

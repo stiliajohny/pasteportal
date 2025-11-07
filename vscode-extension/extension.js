@@ -1203,6 +1203,248 @@ async function handleViewPaste(pasteId) {
   }
 }
 
+/**
+ * Handle delete paste from context menu
+ */
+async function handleDeletePaste(pasteItem) {
+  try {
+    // Extract paste ID from the item (could be string, object with id, or tree item)
+    let pasteId = null
+    if (typeof pasteItem === 'string') {
+      pasteId = pasteItem
+    } else if (pasteItem?.pasteId) {
+      pasteId = pasteItem.pasteId
+    } else if (pasteItem?.id) {
+      pasteId = pasteItem.id
+    } else if (pasteItem?.paste?.id) {
+      pasteId = pasteItem.paste.id
+    }
+
+    if (!pasteId) {
+      vscode.window.showErrorMessage('No paste ID provided')
+      return
+    }
+
+    // Get paste info for confirmation message
+    const paste = pasteItem?.paste || (authTreeProvider ? authTreeProvider.getPaste(pasteId) : null)
+    const pasteLabel = paste?.display_name || paste?.name || pasteId
+
+    // Confirm deletion
+    const confirm = await vscode.window.showWarningMessage(
+      `Are you sure you want to delete "${pasteLabel}"?`,
+      { modal: true },
+      'Delete',
+      'Cancel'
+    )
+
+    if (confirm !== 'Delete') {
+      return
+    }
+
+    if (!apiClient) {
+      vscode.window.showErrorMessage('API client not initialized. Please sign in.')
+      return
+    }
+
+    // Delete the paste
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Deleting paste...',
+      cancellable: false
+    }, async () => {
+      await apiClient.deletePaste(pasteId)
+    })
+
+    // Refresh the pastes list
+    if (authTreeProvider) {
+      await authTreeProvider.loadPastes()
+    }
+
+    vscode.window.showInformationMessage('Paste deleted successfully')
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to delete paste: ${error.message}`)
+  }
+}
+
+/**
+ * Handle retrieve password-protected paste from context menu
+ */
+async function handleRetrievePassword(pasteItem) {
+  try {
+    // Extract paste ID from the item
+    let pasteId = null
+    if (typeof pasteItem === 'string') {
+      pasteId = pasteItem
+    } else if (pasteItem?.pasteId) {
+      pasteId = pasteItem.pasteId
+    } else if (pasteItem?.id) {
+      pasteId = pasteItem.id
+    } else if (pasteItem?.paste?.id) {
+      pasteId = pasteItem.paste.id
+    }
+
+    if (!pasteId) {
+      vscode.window.showErrorMessage('No paste ID provided')
+      return
+    }
+
+    // Prompt for password
+    const password = await vscode.window.showInputBox({
+      prompt: 'Enter the password to decrypt the paste',
+      password: true,
+      placeHolder: 'Password'
+    })
+
+    if (!password) {
+      return
+    }
+
+    // Use the existing handleViewPaste logic but with password
+    const pasteIdStr = typeof pasteId === 'string' ? pasteId : pasteId
+    await handleViewPasteWithPassword(pasteIdStr, password)
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to retrieve paste: ${error.message}`)
+  }
+}
+
+/**
+ * Helper function to view paste with password
+ */
+async function handleViewPasteWithPassword(pasteId, password) {
+  try {
+    let editor = vscode.window.activeTextEditor
+    let isNewEditor = false
+    
+    if (!editor) {
+      const document = await vscode.workspace.openTextDocument({
+        content: '',
+        language: 'plaintext'
+      })
+      editor = await vscode.window.showTextDocument(document)
+      isNewEditor = true
+    }
+
+    const apiEndpoint = getApiEndpoint()
+    const baseURL = `${apiEndpoint}/get-paste?id=${pasteId}`
+    
+    const response = await axios.get(baseURL, {
+      decompress: false,
+      responseType: 'json',
+      timeout: 10000,
+      headers: {
+        'Accept': 'application/json'
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    })
+
+    const responseData = response.data
+    if (!responseData || !responseData.response) {
+      throw new Error('Invalid response format from server')
+    }
+
+    const { paste } = responseData.response
+
+    // Decrypt with provided password
+    const decryptedText = decrypt(password, paste)
+    
+    await editor.edit((editBuilder) => {
+      if (isNewEditor) {
+        const fullRange = new vscode.Range(
+          editor.document.positionAt(0),
+          editor.document.positionAt(editor.document.getText().length)
+        )
+        editBuilder.replace(fullRange, decryptedText)
+      } else {
+        editBuilder.insert(editor.selection.active, decryptedText)
+      }
+    })
+    
+    vscode.window.showInformationMessage('Encrypted paste retrieved and decrypted successfully.')
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to retrieve paste: ${error.message}`)
+  }
+}
+
+/**
+ * Handle share paste from context menu
+ */
+async function handleSharePaste(pasteItem) {
+  try {
+    // Extract paste ID and info from the item
+    let pasteId = null
+    let paste = null
+    
+    if (typeof pasteItem === 'string') {
+      pasteId = pasteItem
+      paste = authTreeProvider ? authTreeProvider.getPaste(pasteId) : null
+    } else if (pasteItem?.pasteId) {
+      pasteId = pasteItem.pasteId
+      paste = pasteItem.paste || (authTreeProvider ? authTreeProvider.getPaste(pasteId) : null)
+    } else if (pasteItem?.id) {
+      pasteId = pasteItem.id
+      paste = pasteItem.paste || (authTreeProvider ? authTreeProvider.getPaste(pasteId) : null)
+    } else if (pasteItem?.paste?.id) {
+      pasteId = pasteItem.paste.id
+      paste = pasteItem.paste
+    }
+
+    if (!pasteId) {
+      vscode.window.showErrorMessage('No paste ID provided')
+      return
+    }
+
+    // Check if paste is password protected
+    const isPasswordProtected = paste?.is_password_encrypted || false
+    let password = null
+
+    if (isPasswordProtected) {
+      // Ask for password to include in share instructions
+      password = await vscode.window.showInputBox({
+        prompt: 'Enter the password to include in share instructions (leave empty to share without password)',
+        password: true,
+        placeHolder: 'Password (optional)'
+      })
+
+      // If user cancelled, return
+      if (password === undefined) {
+        return
+      }
+
+      // If empty password provided, ask for confirmation
+      if (password === '') {
+        const confirm = await vscode.window.showWarningMessage(
+          'Share without password? The recipient will need to know the password separately.',
+          { modal: true },
+          'Share Without Password',
+          'Cancel'
+        )
+
+        if (confirm !== 'Share Without Password') {
+          return
+        }
+      }
+    }
+
+    // Create clipboard text with or without password
+    const clipboardText = multiLineClipboard(pasteId, password || undefined)
+    
+    // Copy to clipboard
+    await vscode.env.clipboard.writeText(clipboardText)
+    
+    // Show notification that it's on clipboard
+    vscode.window.setStatusBarMessage('Share instructions copied to clipboard', 3000)
+    
+    // Also show an information message
+    vscode.window.showInformationMessage(
+      `Share instructions ${password ? 'with password' : 'without password'} copied to clipboard!`,
+      { modal: false }
+    )
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to share paste: ${error.message}`)
+  }
+}
+
 function activate(context) {
   /**
    * This method is called when your extension is activated.
@@ -1387,6 +1629,9 @@ function activate(context) {
     const toggleSortCommand = vscode.commands.registerCommand('pasteportal.toggle-pastes-sort', handleTogglePastesSort)
     const viewPasteCommand = vscode.commands.registerCommand('pasteportal.view-paste', handleViewPaste)
     const signInWithTokenCommand = vscode.commands.registerCommand('pasteportal.sign-in-with-token', handleSignInWithToken)
+    const deletePasteCommand = vscode.commands.registerCommand('pasteportal.delete-paste', handleDeletePaste)
+    const retrievePasswordCommand = vscode.commands.registerCommand('pasteportal.retrieve-password', handleRetrievePassword)
+    const sharePasteCommand = vscode.commands.registerCommand('pasteportal.share-paste', handleSharePaste)
 
     context.subscriptions.push(
       signInCommand,
@@ -1399,7 +1644,10 @@ function activate(context) {
       refreshPastesCommand,
       toggleSortCommand,
       viewPasteCommand,
-      signInWithTokenCommand
+      signInWithTokenCommand,
+      deletePasteCommand,
+      retrievePasswordCommand,
+      sharePasteCommand
     )
 
     // Initialize automatic pastes refresh interval
