@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { Source_Code_Pro } from 'next/font/google';
+import 'prismjs/themes/prism-tomorrow.css';
 import { Suspense } from 'react';
 import Footer from './components/Footer';
+import GoogleAnalytics from './components/GoogleAnalytics';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
-import GoogleAnalytics from './components/GoogleAnalytics';
 import { ThemeProvider } from './components/ThemeProvider';
 import Tour from './components/Tour/Tour';
 import { AuthProvider } from './contexts/AuthContext';

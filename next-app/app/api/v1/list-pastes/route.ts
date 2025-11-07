@@ -70,10 +70,23 @@ export async function GET(request: NextRequest) {
     const supabase = createServerSupabaseClient(request);
 
     // Get current user session
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Check for Authorization header first (VS Code extension, etc.)
+    const authHeader = request.headers.get('authorization');
+    let user = null;
+    let authError = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // For Bearer token auth, use getUser with the token directly
+      const accessToken = authHeader.substring(7);
+      const result = await supabase.auth.getUser(accessToken);
+      user = result.data.user;
+      authError = result.error;
+    } else {
+      // For cookie-based auth (browser), use getUser() without token
+      const result = await supabase.auth.getUser();
+      user = result.data.user;
+      authError = result.error;
+    }
 
     if (authError || !user) {
       return NextResponse.json(

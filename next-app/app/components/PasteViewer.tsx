@@ -1,10 +1,10 @@
 'use client';
 
+import { fetchWithCsrf } from '@/lib/csrf-client';
 import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
-import { fetchWithCsrf } from '@/lib/csrf-client';
-import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';

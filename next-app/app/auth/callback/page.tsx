@@ -16,7 +16,26 @@ function AuthCallbackContent() {
     const handleCallback = async () => {
       const supabase = createClient();
       const code = searchParams.get('code');
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
       const isVSCodeRedirect = searchParams.get('vscode') === 'true' || searchParams.get('redirect') === 'vscode';
+      
+      // Check if this is a VS Code auth flow (from email verification or OAuth)
+      const isVSCodeAuth = isVSCodeRedirect || localStorage.getItem('vscode_auth_pending') === 'true';
+      
+      // Handle errors in URL (e.g., expired email verification link)
+      if (error) {
+        const errorMessage = errorDescription || error;
+        if (isVSCodeAuth) {
+          // Redirect to VS Code with error
+          localStorage.removeItem('vscode_auth_pending');
+          window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+          return;
+        } else {
+          router.push(`/?error=${encodeURIComponent(errorMessage)}`);
+          return;
+        }
+      }
       
       // Check if this is a VS Code redirect request
       if (isVSCodeRedirect) {
@@ -24,16 +43,54 @@ function AuthCallbackContent() {
         
         if (code) {
           // OAuth code flow: exchange code for session
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          // The PKCE code verifier should be in sessionStorage from OAuth initiation
+          // CRITICAL: Create a fresh Supabase client to ensure proper sessionStorage access
+          const supabaseClient = createClient();
+          
+          // Check if code verifier exists in sessionStorage (for debugging)
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            const storageKeys = Object.keys(window.sessionStorage);
+            const codeVerifierKey = storageKeys.find(key => 
+              key.includes('code-verifier') || key.includes('supabase.auth')
+            );
+            if (!codeVerifierKey && process.env.NODE_ENV === 'development') {
+              console.warn('PKCE code verifier not found in sessionStorage. This may cause authentication to fail.');
+            }
+          }
+          
+          const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
           
           if (error) {
-            // Redirect to VS Code with error
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(error.message)}`;
+            // Check if it's a PKCE error
+            const errorMessage = error.message || 'Authentication failed';
+            if (errorMessage.includes('code verifier') || errorMessage.includes('PKCE') || errorMessage.includes('code_verifier')) {
+              // PKCE error - redirect to VS Code with a helpful error message
+              // Clear any stale sessionStorage entries
+              if (typeof window !== 'undefined' && window.sessionStorage) {
+                try {
+                  const storageKeys = Object.keys(window.sessionStorage);
+                  storageKeys.forEach(key => {
+                    if (key.includes('supabase.auth') || key.includes('code-verifier')) {
+                      window.sessionStorage.removeItem(key);
+                    }
+                  });
+                } catch (e) {
+                  console.error('Error clearing sessionStorage:', e);
+                }
+              }
+              localStorage.removeItem('vscode_auth_pending');
+              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`;
+            } else {
+              // Other error
+              localStorage.removeItem('vscode_auth_pending');
+              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+            }
             return;
           }
           
           if (data?.session) {
             // Extract tokens from session and redirect to VS Code
+            localStorage.removeItem('vscode_auth_pending');
             const params = new URLSearchParams({
               access_token: data.session.access_token,
               refresh_token: data.session.refresh_token || '',
@@ -67,6 +124,7 @@ function AuthCallbackContent() {
             
             if (accessToken) {
               // Build VS Code redirect URL with tokens
+              localStorage.removeItem('vscode_auth_pending');
               const vscodeParams = new URLSearchParams();
               vscodeParams.set('access_token', accessToken);
               if (refreshToken) vscodeParams.set('refresh_token', refreshToken);
@@ -81,6 +139,7 @@ function AuthCallbackContent() {
         }
         
         // Fallback: redirect to VS Code with error if no tokens found
+        localStorage.removeItem('vscode_auth_pending');
         window.location.href = 'vscode://JohnStilia.pasteportal/auth-callback?error=No authentication tokens found';
         return;
       }
@@ -89,12 +148,27 @@ function AuthCallbackContent() {
       // This handles the case where magic link redirects to callback but we want VS Code flow
       const isVSCodePage = window.location.pathname.includes('/auth/vscode');
       
-      // If this is a callback from VS Code magic link flow, check hash for tokens
+      // If this is a callback from VS Code magic link flow, check hash for tokens or errors
       const hash = window.location.hash.substring(1);
       if (hash && !code) {
-        // Magic link with tokens in hash - check if this is from VS Code flow
+        // Magic link with tokens or errors in hash - check if this is from VS Code flow
         const hashParams = new URLSearchParams(hash);
+        const hashError = hashParams.get('error');
+        const hashErrorDescription = hashParams.get('error_description');
         const accessToken = hashParams.get('access_token');
+        
+        // Check for errors in hash first
+        if (hashError) {
+          const errorMessage = hashErrorDescription || hashError;
+          if (isVSCodeAuth) {
+            localStorage.removeItem('vscode_auth_pending');
+            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+            return;
+          } else {
+            router.push(`/?error=${encodeURIComponent(errorMessage)}`);
+            return;
+          }
+        }
         
         if (accessToken) {
           // Redirect to VS Code with tokens
@@ -104,12 +178,6 @@ function AuthCallbackContent() {
           const expiresAt = hashParams.get('expires_at');
           const expiresIn = hashParams.get('expires_in');
           const tokenType = hashParams.get('token_type');
-          const error = hashParams.get('error');
-          
-          if (error) {
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(hashParams.get('error_description') || error)}`;
-            return;
-          }
           
           if (refreshToken) vscodeParams.set('refresh_token', refreshToken);
           if (expiresAt) vscodeParams.set('expires_at', expiresAt);
@@ -121,13 +189,74 @@ function AuthCallbackContent() {
         }
       }
 
-      // Normal web flow (not VS Code)
+      // Normal web flow or VS Code email verification callback
       if (code) {
-        // Exchange code for session (normal web flow)
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        // Exchange code for session
+        // The PKCE code verifier should be in sessionStorage from OAuth initiation
+        // CRITICAL: Create a fresh Supabase client to ensure proper sessionStorage access
+        const supabaseClient = createClient();
+        
+        // Check if code verifier exists in sessionStorage (for debugging)
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          const storageKeys = Object.keys(window.sessionStorage);
+          const codeVerifierKey = storageKeys.find(key => 
+            key.includes('code-verifier') || key.includes('supabase.auth')
+          );
+          if (!codeVerifierKey && process.env.NODE_ENV === 'development') {
+            console.warn('PKCE code verifier not found in sessionStorage. This may cause authentication to fail.');
+          }
+        }
+        
+        const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
 
         if (error) {
-          router.push(`/?error=${encodeURIComponent(error.message)}`);
+          const errorMessage = error.message || 'Authentication failed';
+          // Check if it's a PKCE error
+          if (errorMessage.includes('code verifier') || errorMessage.includes('PKCE') || errorMessage.includes('code_verifier')) {
+            // Clear any stale sessionStorage entries
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              try {
+                const storageKeys = Object.keys(window.sessionStorage);
+                storageKeys.forEach(key => {
+                  if (key.includes('supabase.auth') || key.includes('code-verifier')) {
+                    window.sessionStorage.removeItem(key);
+                  }
+                });
+              } catch (e) {
+                console.error('Error clearing sessionStorage:', e);
+              }
+            }
+            if (isVSCodeAuth) {
+              // PKCE error - redirect to VS Code with a helpful error message
+              localStorage.removeItem('vscode_auth_pending');
+              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`;
+            } else {
+              router.push(`/?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`);
+            }
+          } else {
+            if (isVSCodeAuth) {
+              // Redirect to VS Code with error
+              localStorage.removeItem('vscode_auth_pending');
+              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+            } else {
+              router.push(`/?error=${encodeURIComponent(errorMessage)}`);
+            }
+          }
+          return;
+        }
+
+        // Check if this is a VS Code auth flow (email verification from VS Code signup)
+        if (isVSCodeAuth && data?.session) {
+          // Redirect to VS Code with session tokens
+          localStorage.removeItem('vscode_auth_pending');
+          const params = new URLSearchParams({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token || '',
+            expires_at: data.session.expires_at?.toString() || '',
+            expires_in: data.session.expires_in?.toString() || '3600',
+            token_type: data.session.token_type || 'bearer',
+          });
+          window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
           return;
         }
 
@@ -164,6 +293,22 @@ function AuthCallbackContent() {
 
         router.push('/');
       } else {
+        // No code - check if we have a session and VS Code auth pending
+        if (isVSCodeAuth) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            localStorage.removeItem('vscode_auth_pending');
+            const params = new URLSearchParams({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token || '',
+              expires_at: session.expires_at?.toString() || '',
+              expires_in: session.expires_in?.toString() || '3600',
+              token_type: session.token_type || 'bearer',
+            });
+            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+            return;
+          }
+        }
         router.push('/');
       }
     };

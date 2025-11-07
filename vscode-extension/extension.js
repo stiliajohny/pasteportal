@@ -6,6 +6,7 @@ const SecureStorage = require('./lib/secure-storage')
 const Auth = require('./lib/auth')
 const ApiClient = require('./lib/api-client')
 const AuthTreeProvider = require('./lib/views/auth-tree-provider')
+const LoginTreeProvider = require('./lib/login-tree-provider')
 
 const tos_link =
   '[Terms of Service](https://github.com/stiliajohny/pasteportal/blob/master/vscode-extension/TOS.md)'
@@ -25,6 +26,8 @@ let secureStorage = null
 let auth = null
 let apiClient = null
 let authTreeProvider = null
+let loginTreeProvider = null
+let pastesUpdateInterval = null
 
 /**
  * Validate email format
@@ -796,9 +799,12 @@ async function handleSignOut() {
         await auth.signOut()
         vscode.window.showInformationMessage('Signed out successfully')
         
-        // Clear pastes in tree view
+        // Clear pastes in tree view and refresh both views
         if (authTreeProvider) {
           authTreeProvider.clearPastes()
+        }
+        if (loginTreeProvider) {
+          loginTreeProvider.refresh()
         }
       } catch (error) {
         vscode.window.showErrorMessage(`Sign out failed: ${error.message}`)
@@ -834,6 +840,63 @@ async function handleRefreshPastes() {
   } catch (error) {
     vscode.window.showErrorMessage(`Error refreshing pastes: ${error.message}`)
   }
+}
+
+/**
+ * Handle toggle sort order
+ */
+function handleTogglePastesSort() {
+  try {
+    if (!authTreeProvider) {
+      return
+    }
+    authTreeProvider.toggleSort()
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error toggling sort: ${error.message}`)
+  }
+}
+
+/**
+ * Start or update the automatic pastes refresh interval
+ */
+function updatePastesRefreshInterval() {
+  // Clear existing interval
+  if (pastesUpdateInterval) {
+    clearInterval(pastesUpdateInterval)
+    pastesUpdateInterval = null
+  }
+
+  // Get configuration
+  const config = vscode.workspace.getConfiguration('pasteportal')
+  const intervalSeconds = config.get('pastes.updateInterval', 0)
+
+  // If interval is 0 or less, disable auto-refresh
+  if (intervalSeconds <= 0) {
+    return
+  }
+
+  // Minimum interval is 30 seconds
+  const minInterval = 30
+  const actualInterval = Math.max(intervalSeconds, minInterval) * 1000 // Convert to milliseconds
+
+  // Set up interval
+  pastesUpdateInterval = setInterval(async () => {
+    try {
+      if (!authTreeProvider || !auth) {
+        return
+      }
+
+      // Only refresh if user is authenticated
+      const isAuthenticated = await auth.isAuthenticated()
+      if (isAuthenticated) {
+        // Silent refresh (no progress notification)
+        await authTreeProvider.loadPastes()
+      }
+    } catch (error) {
+      // Silently fail - don't spam user with errors for background refresh
+      console.log('Background paste refresh failed:', error.message)
+    }
+  }, actualInterval)
 }
 
 /**
@@ -961,7 +1024,10 @@ async function completeTokenSignIn(accessToken, refreshToken, expiresAt = null, 
         
         vscode.window.showInformationMessage('Signed in successfully!')
         
-        // Refresh auth tree view to show authenticated state
+        // Refresh tree views to show authenticated state
+        if (loginTreeProvider) {
+          loginTreeProvider.refresh()
+        }
         if (authTreeProvider) {
           authTreeProvider.refresh()
           // Load pastes after session is confirmed saved
@@ -1009,7 +1075,10 @@ async function completeTokenSignIn(accessToken, refreshToken, expiresAt = null, 
       
       vscode.window.showWarningMessage('Signed in with access token only. Session will expire in 1 hour. For persistent sessions, include the refresh_token.')
       
-      // Refresh auth tree view to show authenticated state
+      // Refresh tree views to show authenticated state
+      if (loginTreeProvider) {
+        loginTreeProvider.refresh()
+      }
       if (authTreeProvider) {
         authTreeProvider.refresh()
         // Load pastes after session is confirmed saved
@@ -1043,10 +1112,17 @@ async function handleViewPaste(pasteId) {
 
     // Get the paste first to check if it's encrypted
     try {
-      const editor = vscode.window.activeTextEditor
+      let editor = vscode.window.activeTextEditor
+      let isNewEditor = false
+      
+      // If no active editor, create a new clean one
       if (!editor) {
-        vscode.window.showErrorMessage('No active text editor.')
-        return
+        const document = await vscode.workspace.openTextDocument({
+          content: '',
+          language: 'plaintext'
+        })
+        editor = await vscode.window.showTextDocument(document)
+        isNewEditor = true
       }
 
       const apiEndpoint = getApiEndpoint()
@@ -1084,8 +1160,19 @@ async function handleViewPaste(pasteId) {
         // Use get-encrypted-paste flow
         try {
           const decryptedText = decrypt(password, paste)
+          
           await editor.edit((editBuilder) => {
-            editBuilder.insert(editor.selection.active, decryptedText)
+            if (isNewEditor) {
+              // Replace all content for new editor
+              const fullRange = new vscode.Range(
+                editor.document.positionAt(0),
+                editor.document.positionAt(editor.document.getText().length)
+              )
+              editBuilder.replace(fullRange, decryptedText)
+            } else {
+              // Insert at cursor position for existing editor
+              editBuilder.insert(editor.selection.active, decryptedText)
+            }
           })
           vscode.window.showInformationMessage('Encrypted paste retrieved and decrypted successfully.')
         } catch (decryptError) {
@@ -1094,7 +1181,17 @@ async function handleViewPaste(pasteId) {
       } else {
         // Insert plain text paste
         await editor.edit((editBuilder) => {
-          editBuilder.insert(editor.selection.active, paste)
+          if (isNewEditor) {
+            // Replace all content for new editor
+            const fullRange = new vscode.Range(
+              editor.document.positionAt(0),
+              editor.document.positionAt(editor.document.getText().length)
+            )
+            editBuilder.replace(fullRange, paste)
+          } else {
+            // Insert at cursor position for existing editor
+            editBuilder.insert(editor.selection.active, paste)
+          }
         })
         vscode.window.showInformationMessage('Paste retrieved successfully.')
       }
@@ -1125,14 +1222,22 @@ function activate(context) {
     auth = new Auth(secureStorage)
     apiClient = new ApiClient(auth)
     authTreeProvider = new AuthTreeProvider(auth, apiClient)
+    loginTreeProvider = new LoginTreeProvider(auth)
     
+    // Register "Authentication" tree view
+    const loginTreeView = vscode.window.createTreeView('pasteportal-auth', {
+      treeDataProvider: loginTreeProvider
+    })
+    context.subscriptions.push(loginTreeView)
+
     // Register "My Pastes" tree view
     const authTreeView = vscode.window.createTreeView('pasteportal-my-pastes', {
       treeDataProvider: authTreeProvider
     })
     context.subscriptions.push(authTreeView)
 
-    // Refresh tree view after initialization
+    // Refresh tree views after initialization
+    loginTreeProvider.refresh()
     authTreeProvider.refresh()
 
     // Load pastes if user is already authenticated
@@ -1196,13 +1301,21 @@ function activate(context) {
                     
                     vscode.window.showInformationMessage('Authentication successful!')
                     
-                    // Refresh auth tree view to show authenticated state
+                    // Refresh tree views to show authenticated state
+                    if (loginTreeProvider) {
+                      loginTreeProvider.refresh()
+                    }
                     if (authTreeProvider) {
                       authTreeProvider.refresh()
                       // Load pastes after session is confirmed saved
                       await authTreeProvider.loadPastes()
                     }
+                  } else {
+                    // No session after code exchange - likely email confirmation required
+                    throw new Error('Auth session missing! Email confirmation may be required. Please check your email and confirm your account, then sign in.')
                   }
+                } else {
+                  throw new Error('Supabase client not initialized')
                 }
               })
             } catch (error) {
@@ -1233,17 +1346,28 @@ function activate(context) {
                   
                   vscode.window.showInformationMessage('Authentication successful!')
                   
-                  // Refresh auth tree view to show authenticated state
+                  // Refresh tree views to show authenticated state
+                  if (loginTreeProvider) {
+                    loginTreeProvider.refresh()
+                  }
                   if (authTreeProvider) {
                     authTreeProvider.refresh()
                     // Load pastes after session is confirmed saved
                     await authTreeProvider.loadPastes()
                   }
+                } else {
+                  // No session after setting tokens - this shouldn't happen but handle it
+                  throw new Error('Auth session missing! Failed to create session from tokens.')
                 }
+              } else {
+                throw new Error('Supabase client not initialized')
               }
             } catch (error) {
               vscode.window.showErrorMessage(`Authentication error: ${error.message}`)
             }
+          } else if (!code && !accessToken && !refreshToken && !error) {
+            // No tokens or code provided - likely a signup that requires email confirmation
+            vscode.window.showWarningMessage('No authentication tokens received. If you just signed up, please check your email to confirm your account, then sign in.')
           }
         }
       }
@@ -1260,6 +1384,7 @@ function activate(context) {
     const resetPasswordCommand = vscode.commands.registerCommand('pasteportal.reset-password', handlePasswordReset)
     const signOutCommand = vscode.commands.registerCommand('pasteportal.sign-out', handleSignOut)
     const refreshPastesCommand = vscode.commands.registerCommand('pasteportal.refresh-pastes', handleRefreshPastes)
+    const toggleSortCommand = vscode.commands.registerCommand('pasteportal.toggle-pastes-sort', handleTogglePastesSort)
     const viewPasteCommand = vscode.commands.registerCommand('pasteportal.view-paste', handleViewPaste)
     const signInWithTokenCommand = vscode.commands.registerCommand('pasteportal.sign-in-with-token', handleSignInWithToken)
 
@@ -1272,9 +1397,13 @@ function activate(context) {
       resetPasswordCommand,
       signOutCommand,
       refreshPastesCommand,
+      toggleSortCommand,
       viewPasteCommand,
       signInWithTokenCommand
     )
+
+    // Initialize automatic pastes refresh interval
+    updatePastesRefreshInterval()
   } catch (error) {
     console.error('Error initializing auth system:', error)
     vscode.window.showErrorMessage(`Failed to initialize authentication: ${error.message}`)
@@ -1288,11 +1417,15 @@ function activate(context) {
     })
   )
 
-  // Listen for API endpoint configuration changes
+  // Listen for configuration changes
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('pasteportal.apiEndpoint') || e.affectsConfiguration('pasteportal.serverUrl')) {
+    if (e.affectsConfiguration('pasteportal.apiEndpoint') || e.affectsConfiguration('pasteportal.serverUrl')) {
       // Refresh status bar on endpoint change
       checkAndUpdateStatus()
+    }
+    if (e.affectsConfiguration('pasteportal.pastes.updateInterval')) {
+      // Update refresh interval when setting changes
+      updatePastesRefreshInterval()
     }
   })
   context.subscriptions.push(configChangeDisposable)
@@ -2188,6 +2321,11 @@ function deactivate() {
   if (connectivityCheckInterval) {
     clearInterval(connectivityCheckInterval)
     connectivityCheckInterval = null
+  }
+  // Clean up pastes update interval
+  if (pastesUpdateInterval) {
+    clearInterval(pastesUpdateInterval)
+    pastesUpdateInterval = null
   }
 }
 

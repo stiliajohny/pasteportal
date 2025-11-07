@@ -87,10 +87,13 @@ body {
 
 /* Tour trigger animations */
 @keyframes gentle-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.9;
     transform: scale(1.02);
@@ -98,9 +101,12 @@ body {
 }
 
 @keyframes glow-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 10px rgba(0, 217, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.3);
   }
+
   50% {
     box-shadow: 0 0 20px rgba(0, 217, 255, 0.8), 0 0 30px rgba(255, 0, 255, 0.5);
   }
@@ -112,9 +118,11 @@ body {
     transform: scale(0);
     opacity: 0;
   }
+
   20% {
     opacity: 1;
   }
+
   100% {
     transform: scale(1);
     opacity: 0.95;
@@ -127,9 +135,11 @@ body {
     transform: scale(2);
     opacity: 0.8;
   }
+
   20% {
     opacity: 1;
   }
+
   100% {
     transform: scale(0);
     opacity: 0.95;
@@ -137,10 +147,13 @@ body {
 }
 
 @keyframes portal-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.8;
     filter: brightness(1);
   }
+
   50% {
     opacity: 1;
     filter: brightness(1.2);
@@ -151,9 +164,11 @@ body {
   0% {
     opacity: 0;
   }
+
   60% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
   }
@@ -163,6 +178,7 @@ body {
   0% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -170,10 +186,13 @@ body {
 
 /* Galaxy effects */
 @keyframes star-twinkle {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(1);
   }
+
   50% {
     opacity: 1;
     transform: scale(1.2);
@@ -185,9 +204,11 @@ body {
     transform: rotate(0deg) scale(1);
     opacity: 0.6;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     transform: rotate(360deg) scale(1.1);
     opacity: 0.6;
@@ -199,12 +220,15 @@ body {
     transform: translate(0, 0) rotate(0deg);
     opacity: 0;
   }
+
   20% {
     opacity: 0.8;
   }
+
   80% {
     opacity: 0.8;
   }
+
   100% {
     transform: translate(var(--particle-x, 100px), var(--particle-y, 100px)) rotate(360deg);
     opacity: 0;
@@ -212,9 +236,12 @@ body {
 }
 
 @keyframes nebula-shift {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -224,6 +251,7 @@ body {
   0% {
     transform: rotate(0deg) translateX(var(--orbit-radius, 200px)) rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg) translateX(var(--orbit-radius, 200px)) rotate(-360deg);
   }
@@ -276,7 +304,7 @@ select option:focus {
     background-color: var(--color-surface);
     color: var(--color-text);
   }
-  
+
   select option:checked {
     background-color: var(--color-positive-highlight);
     color: var(--color-background);
@@ -285,7 +313,9 @@ select option:focus {
 
 /* Prism syntax highlighting - custom theme colors */
 code[class*="language-"],
-pre[class*="language-"] {
+pre[class*="language-"],
+.react-simple-code-editor pre,
+.react-simple-code-editor code {
   color: var(--color-text);
   background: transparent;
   text-shadow: none;
@@ -294,16 +324,21 @@ pre[class*="language-"] {
   line-height: inherit;
 }
 
-/* Prism token colors - Dark theme */
+/* Prism token colors - Dark theme (apply to editor and all contexts) */
 .token.comment,
 .token.prolog,
 .token.doctype,
-.token.cdata {
+.token.cdata,
+.react-simple-code-editor .token.comment,
+.react-simple-code-editor .token.prolog,
+.react-simple-code-editor .token.doctype,
+.react-simple-code-editor .token.cdata {
   color: var(--color-text-secondary);
   opacity: 0.8;
 }
 
-.token.punctuation {
+.token.punctuation,
+.react-simple-code-editor .token.punctuation {
   color: var(--color-text);
   opacity: 0.7;
 }
@@ -314,7 +349,14 @@ pre[class*="language-"] {
 .token.number,
 .token.constant,
 .token.symbol,
-.token.deleted {
+.token.deleted,
+.react-simple-code-editor .token.property,
+.react-simple-code-editor .token.tag,
+.react-simple-code-editor .token.boolean,
+.react-simple-code-editor .token.number,
+.react-simple-code-editor .token.constant,
+.react-simple-code-editor .token.symbol,
+.react-simple-code-editor .token.deleted {
   color: #ff6b9d;
 }
 
@@ -323,7 +365,13 @@ pre[class*="language-"] {
 .token.string,
 .token.char,
 .token.builtin,
-.token.inserted {
+.token.inserted,
+.react-simple-code-editor .token.selector,
+.react-simple-code-editor .token.attr-name,
+.react-simple-code-editor .token.string,
+.react-simple-code-editor .token.char,
+.react-simple-code-editor .token.builtin,
+.react-simple-code-editor .token.inserted {
   color: #51cf66;
 }
 
@@ -331,24 +379,37 @@ pre[class*="language-"] {
 .token.entity,
 .token.url,
 .language-css .token.string,
-.style .token.string {
+.style .token.string,
+.react-simple-code-editor .token.operator,
+.react-simple-code-editor .token.entity,
+.react-simple-code-editor .token.url,
+.react-simple-code-editor .language-css .token.string,
+.react-simple-code-editor .style .token.string {
   color: #ffd43b;
 }
 
 .token.atrule,
 .token.attr-value,
-.token.keyword {
+.token.keyword,
+.react-simple-code-editor .token.atrule,
+.react-simple-code-editor .token.attr-value,
+.react-simple-code-editor .token.keyword {
   color: #74c0fc;
 }
 
 .token.function,
-.token.class-name {
+.token.class-name,
+.react-simple-code-editor .token.function,
+.react-simple-code-editor .token.class-name {
   color: #ffd43b;
 }
 
 .token.regex,
 .token.important,
-.token.variable {
+.token.variable,
+.react-simple-code-editor .token.regex,
+.react-simple-code-editor .token.important,
+.react-simple-code-editor .token.variable {
   color: #ff8787;
 }
 
@@ -359,7 +420,14 @@ pre[class*="language-"] {
 .light .token.number,
 .light .token.constant,
 .light .token.symbol,
-.light .token.deleted {
+.light .token.deleted,
+.light .react-simple-code-editor .token.property,
+.light .react-simple-code-editor .token.tag,
+.light .react-simple-code-editor .token.boolean,
+.light .react-simple-code-editor .token.number,
+.light .react-simple-code-editor .token.constant,
+.light .react-simple-code-editor .token.symbol,
+.light .react-simple-code-editor .token.deleted {
   color: #c92a2a;
 }
 
@@ -368,7 +436,13 @@ pre[class*="language-"] {
 .light .token.string,
 .light .token.char,
 .light .token.builtin,
-.light .token.inserted {
+.light .token.inserted,
+.light .react-simple-code-editor .token.selector,
+.light .react-simple-code-editor .token.attr-name,
+.light .react-simple-code-editor .token.string,
+.light .react-simple-code-editor .token.char,
+.light .react-simple-code-editor .token.builtin,
+.light .react-simple-code-editor .token.inserted {
   color: #2b8a3e;
 }
 
@@ -376,24 +450,37 @@ pre[class*="language-"] {
 .light .token.entity,
 .light .token.url,
 .light .language-css .token.string,
-.light .style .token.string {
+.light .style .token.string,
+.light .react-simple-code-editor .token.operator,
+.light .react-simple-code-editor .token.entity,
+.light .react-simple-code-editor .token.url,
+.light .react-simple-code-editor .language-css .token.string,
+.light .react-simple-code-editor .style .token.string {
   color: #f59f00;
 }
 
 .light .token.atrule,
 .light .token.attr-value,
-.light .token.keyword {
+.light .token.keyword,
+.light .react-simple-code-editor .token.atrule,
+.light .react-simple-code-editor .token.attr-value,
+.light .react-simple-code-editor .token.keyword {
   color: #1971c2;
 }
 
 .light .token.function,
-.light .token.class-name {
+.light .token.class-name,
+.light .react-simple-code-editor .token.function,
+.light .react-simple-code-editor .token.class-name {
   color: #f59f00;
 }
 
 .light .token.regex,
 .light .token.important,
-.light .token.variable {
+.light .token.variable,
+.light .react-simple-code-editor .token.regex,
+.light .react-simple-code-editor .token.important,
+.light .react-simple-code-editor .token.variable {
   color: #e03131;
 }
 
@@ -413,4 +500,66 @@ pre[class*="language-"] {
 .react-simple-code-editor pre {
   background: transparent;
   color: var(--color-text);
+}
+
+/* Ensure Prism tokens are visible in the editor - override any theme defaults */
+.react-simple-code-editor pre code,
+.react-simple-code-editor pre {
+  color: inherit;
+}
+
+/* Re-apply token colors with higher specificity to override Prism theme */
+.react-simple-code-editor .token.comment,
+.react-simple-code-editor .token.prolog,
+.react-simple-code-editor .token.doctype,
+.react-simple-code-editor .token.cdata {
+  color: var(--color-text-secondary) !important;
+  opacity: 0.8;
+}
+
+.react-simple-code-editor .token.punctuation {
+  color: var(--color-text) !important;
+  opacity: 0.7;
+}
+
+.react-simple-code-editor .token.property,
+.react-simple-code-editor .token.tag,
+.react-simple-code-editor .token.boolean,
+.react-simple-code-editor .token.number,
+.react-simple-code-editor .token.constant,
+.react-simple-code-editor .token.symbol,
+.react-simple-code-editor .token.deleted {
+  color: #ff6b9d !important;
+}
+
+.react-simple-code-editor .token.selector,
+.react-simple-code-editor .token.attr-name,
+.react-simple-code-editor .token.string,
+.react-simple-code-editor .token.char,
+.react-simple-code-editor .token.builtin,
+.react-simple-code-editor .token.inserted {
+  color: #51cf66 !important;
+}
+
+.react-simple-code-editor .token.operator,
+.react-simple-code-editor .token.entity,
+.react-simple-code-editor .token.url {
+  color: #ffd43b !important;
+}
+
+.react-simple-code-editor .token.atrule,
+.react-simple-code-editor .token.attr-value,
+.react-simple-code-editor .token.keyword {
+  color: #74c0fc !important;
+}
+
+.react-simple-code-editor .token.function,
+.react-simple-code-editor .token.class-name {
+  color: #ffd43b !important;
+}
+
+.react-simple-code-editor .token.regex,
+.react-simple-code-editor .token.important,
+.react-simple-code-editor .token.variable {
+  color: #ff8787 !important;
 }

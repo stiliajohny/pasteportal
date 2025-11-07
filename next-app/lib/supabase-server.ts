@@ -1,9 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 
 /**
  * Create a server-side Supabase client for API routes
- * Uses cookies from NextRequest to maintain session
+ * Supports both cookie-based auth (browser) and Bearer token auth (VS Code extension, etc.)
  * Follows @db.mdc rule: all database content must be encrypted
  */
 export function createServerSupabaseClient(request: NextRequest) {
@@ -14,6 +15,29 @@ export function createServerSupabaseClient(request: NextRequest) {
     throw new Error('Missing Supabase environment variables');
   }
 
+  // Check for Authorization header (Bearer token) - used by VS Code extension
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const accessToken = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    // Create a client with the access token in global headers
+    // This allows getUser() and other auth methods to work with the token
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+      auth: {
+        persistSession: false, // Don't persist session in server context
+        autoRefreshToken: false, // Don't auto-refresh in server context
+      },
+    });
+    
+    return supabase;
+  }
+
+  // Fall back to cookie-based auth (browser requests)
   // Create cookie handler from request
   // Parse cookies from the cookie header
   const getCookie = (name: string): string | undefined => {

@@ -23,6 +23,7 @@
     "onCommand:pasteportal.store-paste",
     "onCommand:pasteportal.get-paste",
     "onCommand:pasteportal.sign-in",
+    "onView:pasteportal-auth",
     "onView:pasteportal-my-pastes",
     "onUri"
   ],
@@ -126,6 +127,11 @@
         "category": "PastePortal"
       },
       {
+        "command": "pasteportal.toggle-pastes-sort",
+        "title": "Toggle Sort Order",
+        "category": "PastePortal"
+      },
+      {
         "command": "pasteportal.view-paste",
         "title": "View Paste",
         "category": "PastePortal"
@@ -145,6 +151,11 @@
     ],
     "views": {
       "pasteportal": [
+        {
+          "id": "pasteportal-auth",
+          "name": "Authentication",
+          "when": "true"
+        },
         {
           "id": "pasteportal-my-pastes",
           "name": "My Pastes",
@@ -249,6 +260,12 @@
           "type": "string",
           "default": "",
           "description": "Supabase anonymous key (required for authentication)"
+        },
+        "pasteportal.pastes.updateInterval": {
+          "type": "number",
+          "default": 0,
+          "description": "Automatic pastes refresh interval in seconds (0 to disable, minimum 30)",
+          "minimum": 0
         }
       }
     },
@@ -280,4 +297,3 @@
   },
   "homepage": "https://pasteportal.app"
 }
-

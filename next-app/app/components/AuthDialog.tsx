@@ -357,20 +357,32 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
     setLoading(true);
     try {
       // Use VS Code callback URL if on VS Code auth page, otherwise normal callback
+      // IMPORTANT: For VS Code auth, we MUST redirect back to /auth/vscode to ensure
+      // the PKCE code verifier in sessionStorage is accessible
       const redirectTo = isVSCodeAuth 
         ? `${window.location.origin}/auth/vscode`
         : `${window.location.origin}/auth/callback`;
         
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      // Ensure we're using a fresh Supabase client instance for OAuth
+      // This ensures the PKCE code verifier is properly stored in sessionStorage
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           redirectTo: redirectTo,
+          // Ensure PKCE is enabled (should be default, but explicit is better)
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
       if (oauthError) {
         setError(oauthError.message);
         setLoading(false);
+      } else if (data?.url) {
+        // Redirect to GitHub OAuth
+        window.location.href = data.url;
       }
       // User will be redirected to GitHub
     } catch (err) {

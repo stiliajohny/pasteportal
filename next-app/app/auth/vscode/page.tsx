@@ -95,11 +95,48 @@ function VSCodeAuthPageContent() {
       // OAuth callback with code - exchange for session
       (async () => {
         try {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          // CRITICAL: Ensure we're using a fresh Supabase client instance
+          // that has access to the same sessionStorage where the PKCE code verifier is stored
+          // The code verifier should be in sessionStorage from the OAuth initiation
+          // Create a new client instance to ensure proper sessionStorage access
+          const supabaseClient = createClient();
+          
+          // Check if code verifier exists in sessionStorage (for debugging)
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            const storageKeys = Object.keys(window.sessionStorage);
+            const codeVerifierKey = storageKeys.find(key => 
+              key.includes('code-verifier') || key.includes('supabase.auth')
+            );
+            if (!codeVerifierKey && process.env.NODE_ENV === 'development') {
+              console.warn('PKCE code verifier not found in sessionStorage. This may cause authentication to fail.');
+            }
+          }
+          
+          const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
           
           if (error) {
-            // Redirect to VS Code with error
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(error.message)}`;
+            // Check if it's a PKCE error
+            const errorMessage = error.message || 'Authentication failed';
+            if (errorMessage.includes('code verifier') || errorMessage.includes('PKCE') || errorMessage.includes('code_verifier')) {
+              // PKCE error - redirect to VS Code with a helpful error message
+              // Clear any stale sessionStorage entries
+              if (typeof window !== 'undefined' && window.sessionStorage) {
+                try {
+                  const storageKeys = Object.keys(window.sessionStorage);
+                  storageKeys.forEach(key => {
+                    if (key.includes('supabase.auth') || key.includes('code-verifier')) {
+                      window.sessionStorage.removeItem(key);
+                    }
+                  });
+                } catch (e) {
+                  console.error('Error clearing sessionStorage:', e);
+                }
+              }
+              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`;
+            } else {
+              // Other error
+              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+            }
             return;
           }
           
