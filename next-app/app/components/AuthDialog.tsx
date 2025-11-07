@@ -591,6 +591,14 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
       // Now sign in with Web3 using the connected wallet
       setMessage(`Authenticating with ${walletName}...`);
       
+      // Check if signInWithWeb3 is available
+      if (!supabase.auth.signInWithWeb3) {
+        setError('Web3 authentication is not available. Please ensure your Supabase project supports Web3 authentication.');
+        setLoading(false);
+        console.error('signInWithWeb3 method not available on supabase.auth');
+        return;
+      }
+      
       // Supabase uses window.location.origin in the EIP-4361 message signature
       // The origin MUST match what's configured in Supabase Dashboard:
       // Dashboard > Authentication > URL Configuration > Redirect URLs
@@ -601,22 +609,61 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
       if (process.env.NODE_ENV === 'development') {
         console.log('Web3 Auth - Current origin:', currentOrigin);
         console.log('Web3 Auth - Ensure this origin is in Supabase Redirect URLs');
+        console.log('Web3 Auth - Wallet:', walletName, 'Chain:', chain);
       }
       
-      const { data, error: web3Error } = await (chain === 'ethereum'
-        ? supabase.auth.signInWithWeb3({
-            chain: 'ethereum',
-            wallet,
-            statement: 'I accept the Terms of Service',
-          })
-        : supabase.auth.signInWithWeb3({
-            chain: 'solana',
-            wallet,
-            statement: 'I accept the Terms of Service',
-          }));
+      let web3Result;
+      try {
+        const web3Options = {
+          chain: chain,
+          wallet: wallet,
+          statement: 'I accept the Terms of Service',
+        };
+        
+        console.log('Web3 Auth - Calling signInWithWeb3 with options:', {
+          chain: web3Options.chain,
+          hasWallet: !!web3Options.wallet,
+          statement: web3Options.statement,
+        });
+        
+        web3Result = await supabase.auth.signInWithWeb3(web3Options);
+        
+        console.log('Web3 Auth - signInWithWeb3 result:', {
+          hasData: !!web3Result?.data,
+          hasError: !!web3Result?.error,
+          errorMessage: web3Result?.error?.message,
+        });
+      } catch (signInError: any) {
+        // Catch any errors during the signInWithWeb3 call itself
+        console.error('Web3 signInWithWeb3 call error:', signInError);
+        console.error('Error details:', {
+          message: signInError?.message,
+          code: signInError?.code,
+          name: signInError?.name,
+          stack: signInError?.stack,
+          fullError: JSON.stringify(signInError, Object.getOwnPropertyNames(signInError)),
+        });
+        
+        const errorMsg = signInError?.message || 
+                        signInError?.error?.message ||
+                        signInError?.toString() || 
+                        'Web3 authentication failed. Please try again.';
+        setError(`Web3 authentication error: ${errorMsg}`);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: web3Error } = web3Result || {};
 
       if (web3Error) {
         console.error('Web3 auth error:', web3Error);
+        console.error('Error details:', {
+          message: web3Error?.message,
+          status: web3Error?.status,
+          name: web3Error?.name,
+          fullError: JSON.stringify(web3Error, Object.getOwnPropertyNames(web3Error)),
+        });
+        
         const errorMsg = web3Error.message || 'Web3 authentication failed. Please try again.';
         
         // Provide specific guidance for URI mismatch errors
@@ -637,7 +684,21 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
       setMessage('Authentication successful!');
     } catch (err: any) {
       console.error('Web3 auth exception:', err);
-      const errorMessage = err?.message || err?.toString() || 'An unexpected error occurred';
+      console.error('Exception details:', {
+        message: err?.message,
+        code: err?.code,
+        name: err?.name,
+        stack: err?.stack,
+        error: err?.error,
+        fullError: JSON.stringify(err, Object.getOwnPropertyNames(err)),
+      });
+      
+      // Try to extract error message from various possible locations
+      const errorMessage = err?.message || 
+                          err?.error?.message ||
+                          err?.error?.error_description ||
+                          err?.toString() || 
+                          'An unexpected error occurred';
       setError(`Web3 authentication error: ${errorMessage}`);
       setLoading(false);
     }

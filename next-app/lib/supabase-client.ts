@@ -73,7 +73,9 @@ function createPKCESafeStorage() {
             return window.sessionStorage.getItem(sessionVerifierKey);
           }
           
-          console.error('[PKCE Storage] Code verifier not found in any storage key!');
+          // This is expected for Web3 auth flows which don't use PKCE
+          // Only log as warning, not error, to avoid confusion
+          console.warn('[PKCE Storage] Code verifier not found in any storage key. This is normal for Web3 auth flows.');
           return null;
         }
         
