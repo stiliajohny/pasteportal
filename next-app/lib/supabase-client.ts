@@ -22,12 +22,28 @@ function createPKCESafeStorage() {
 
   return {
     getItem: (key: string): string | null => {
+      console.log(`[PKCE Storage] getItem called with key: "${key}"`);
+      
       // For code verifier, always use the fixed key
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
-        console.log(`[PKCE Storage] Reading code verifier from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+        console.log(`[PKCE Storage] This is a code verifier request!`);
+        console.log(`[PKCE Storage] Reading from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+        
         const value = baseStorage.getItem(FIXED_CODE_VERIFIER_KEY);
         
         if (!value) {
+          // Also try localStorage fallback
+          console.log(`[PKCE Storage] Not in sessionStorage, trying localStorage...`);
+          try {
+            const localValue = window.localStorage.getItem(FIXED_CODE_VERIFIER_KEY);
+            if (localValue) {
+              console.log(`[PKCE Storage] Code verifier found in localStorage!`);
+              return localValue;
+            }
+          } catch (e) {
+            console.error('[PKCE Storage] Failed to read from localStorage:', e);
+          }
+          
           // Fallback: try to find any code verifier in storage
           const allKeys = Object.keys(baseStorage);
           console.log(`[PKCE Storage] Code verifier not found in fixed key. Searching all keys:`, allKeys);
@@ -42,6 +58,8 @@ function createPKCESafeStorage() {
           }
           
           console.error('[PKCE Storage] Code verifier not found in any storage key!');
+          console.error('[PKCE Storage] All sessionStorage keys:', allKeys);
+          console.error('[PKCE Storage] All localStorage keys:', Object.keys(window.localStorage));
           return null;
         }
         
@@ -50,26 +68,47 @@ function createPKCESafeStorage() {
       }
       
       // For other keys, use default behavior
-      return baseStorage.getItem(key);
+      const value = baseStorage.getItem(key);
+      console.log(`[PKCE Storage] Regular key "${key}" -> ${value ? 'found' : 'not found'}`);
+      return value;
     },
     
     setItem: (key: string, value: string): void => {
+      console.log(`[PKCE Storage] setItem called with key: "${key}"`);
+      
       // Store in the original key for compatibility
       baseStorage.setItem(key, value);
+      console.log(`[PKCE Storage] Stored in original key: ${key}`);
       
       // For code verifier, ALSO store in fixed key
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
-        console.log(`[PKCE Storage] Storing code verifier in fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
-        console.log(`[PKCE Storage] Original key was: ${key}`);
+        console.log(`[PKCE Storage] This is a code verifier! Storing in fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+        console.log(`[PKCE Storage] Original key was: "${key}"`);
+        console.log(`[PKCE Storage] Value length: ${value?.length || 0} characters`);
+        
         baseStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
+        console.log(`[PKCE Storage] ✓ Stored in sessionStorage fixed key`);
         
         // Also store in localStorage as ultimate fallback
         try {
           window.localStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
-          console.log(`[PKCE Storage] Also stored code verifier in localStorage as fallback`);
+          console.log(`[PKCE Storage] ✓ Also stored in localStorage as fallback`);
         } catch (e) {
           console.error('[PKCE Storage] Failed to store in localStorage:', e);
         }
+        
+        // Verify it was stored
+        setTimeout(() => {
+          const verify = baseStorage.getItem(FIXED_CODE_VERIFIER_KEY);
+          console.log(`[PKCE Storage] Verification: code verifier ${verify ? 'EXISTS' : 'MISSING'} in sessionStorage`);
+          
+          try {
+            const verifyLocal = window.localStorage.getItem(FIXED_CODE_VERIFIER_KEY);
+            console.log(`[PKCE Storage] Verification: code verifier ${verifyLocal ? 'EXISTS' : 'MISSING'} in localStorage`);
+          } catch (e) {
+            console.error('[PKCE Storage] Failed to verify localStorage:', e);
+          }
+        }, 100);
       }
     },
     

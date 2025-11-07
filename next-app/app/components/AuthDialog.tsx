@@ -368,13 +368,15 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
         localStorage.setItem('vscode_oauth_redirect', redirectTo);
       }
       
-      // Debug: Log sessionStorage keys before OAuth initiation
-      if (typeof window !== 'undefined' && window.sessionStorage && process.env.NODE_ENV === 'development') {
-        console.log('SessionStorage keys before OAuth:', Object.keys(window.sessionStorage));
+      // Debug: Log storage state before OAuth initiation
+      if (typeof window !== 'undefined') {
+        console.log('[AuthDialog] SessionStorage keys before OAuth:', Object.keys(window.sessionStorage));
+        console.log('[AuthDialog] LocalStorage keys before OAuth:', Object.keys(window.localStorage));
       }
         
       // Ensure we're using a fresh Supabase client instance for OAuth
       // This ensures the PKCE code verifier is properly stored in sessionStorage
+      console.log('[AuthDialog] Calling signInWithOAuth...');
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
@@ -387,18 +389,35 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
         },
       });
 
+      console.log('[AuthDialog] signInWithOAuth result:', { hasData: !!data, hasUrl: !!data?.url, hasError: !!oauthError });
+
       if (oauthError) {
+        console.error('[AuthDialog] OAuth error:', oauthError);
         setError(oauthError.message);
         setLoading(false);
       } else if (data?.url) {
-        // Debug: Log sessionStorage keys after OAuth initiation
-        if (typeof window !== 'undefined' && window.sessionStorage && process.env.NODE_ENV === 'development') {
+        // Debug: Log storage state after OAuth initiation
+        if (typeof window !== 'undefined') {
           setTimeout(() => {
-            console.log('SessionStorage keys after OAuth initiation:', Object.keys(window.sessionStorage));
-          }, 100);
+            console.log('[AuthDialog] SessionStorage keys after OAuth initiation:', Object.keys(window.sessionStorage));
+            console.log('[AuthDialog] LocalStorage keys after OAuth initiation:', Object.keys(window.localStorage));
+            
+            // Check if our fixed key exists
+            const fixedKey = 'supabase-pkce-code-verifier';
+            const hasSession = window.sessionStorage.getItem(fixedKey);
+            const hasLocal = window.localStorage.getItem(fixedKey);
+            console.log(`[AuthDialog] Fixed code verifier key in sessionStorage: ${hasSession ? 'YES' : 'NO'}`);
+            console.log(`[AuthDialog] Fixed code verifier key in localStorage: ${hasLocal ? 'YES' : 'NO'}`);
+          }, 200);
         }
+        
+        console.log('[AuthDialog] Redirecting to GitHub:', data.url);
         // Redirect to GitHub OAuth
         window.location.href = data.url;
+      } else {
+        console.error('[AuthDialog] No URL returned from signInWithOAuth');
+        setError('Failed to initiate GitHub sign in');
+        setLoading(false);
       }
       // User will be redirected to GitHub
     } catch (err) {
