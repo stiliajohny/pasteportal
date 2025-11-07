@@ -47,14 +47,39 @@ function AuthCallbackContent() {
           // CRITICAL: Create a fresh Supabase client to ensure proper sessionStorage access
           const supabaseClient = createClient();
           
+          // Check if this is a VS Code OAuth flow (redirected from /auth/vscode)
+          const vscodeRedirect = localStorage.getItem('vscode_oauth_redirect');
+          const isVSCodeOAuthFlow = vscodeRedirect && vscodeRedirect.includes('/auth/vscode');
+          
           // Check if code verifier exists in sessionStorage (for debugging)
           if (typeof window !== 'undefined' && window.sessionStorage) {
             const storageKeys = Object.keys(window.sessionStorage);
-            const codeVerifierKey = storageKeys.find(key => 
-              key.includes('code-verifier') || key.includes('supabase.auth')
+            console.log('SessionStorage keys on callback:', storageKeys);
+            
+            // Look for Supabase auth storage keys
+            const supabaseKeys = storageKeys.filter(key => 
+              key.includes('supabase') || key.includes('auth') || key.includes('code')
             );
-            if (!codeVerifierKey && process.env.NODE_ENV === 'development') {
-              console.warn('PKCE code verifier not found in sessionStorage. This may cause authentication to fail.');
+            console.log('Supabase-related keys:', supabaseKeys);
+            
+            // Check for code verifier specifically
+            const codeVerifierKey = storageKeys.find(key => 
+              key.includes('code-verifier') || key.includes('code_verifier') || key.includes('pkce')
+            );
+            
+            if (!codeVerifierKey) {
+              console.error('PKCE code verifier not found in sessionStorage!');
+              console.error('Available keys:', storageKeys);
+              
+              // If this is a VS Code flow and code verifier is missing, redirect to /auth/vscode
+              // where the code verifier should be accessible
+              if (isVSCodeOAuthFlow) {
+                console.log('Redirecting to /auth/vscode to access code verifier');
+                window.location.href = `${window.location.origin}/auth/vscode?code=${code}`;
+                return;
+              }
+            } else {
+              console.log('Found code verifier key:', codeVerifierKey);
             }
           }
           
@@ -91,6 +116,7 @@ function AuthCallbackContent() {
           if (data?.session) {
             // Extract tokens from session and redirect to VS Code
             localStorage.removeItem('vscode_auth_pending');
+            localStorage.removeItem('vscode_oauth_redirect');
             const params = new URLSearchParams({
               access_token: data.session.access_token,
               refresh_token: data.session.refresh_token || '',

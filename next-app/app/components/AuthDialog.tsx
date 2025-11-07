@@ -362,6 +362,16 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
       const redirectTo = isVSCodeAuth 
         ? `${window.location.origin}/auth/vscode`
         : `${window.location.origin}/auth/callback`;
+      
+      // Store the redirect URL in localStorage so callback pages know where to redirect
+      if (isVSCodeAuth) {
+        localStorage.setItem('vscode_oauth_redirect', redirectTo);
+      }
+      
+      // Debug: Log sessionStorage keys before OAuth initiation
+      if (typeof window !== 'undefined' && window.sessionStorage && process.env.NODE_ENV === 'development') {
+        console.log('SessionStorage keys before OAuth:', Object.keys(window.sessionStorage));
+      }
         
       // Ensure we're using a fresh Supabase client instance for OAuth
       // This ensures the PKCE code verifier is properly stored in sessionStorage
@@ -381,6 +391,12 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
         setError(oauthError.message);
         setLoading(false);
       } else if (data?.url) {
+        // Debug: Log sessionStorage keys after OAuth initiation
+        if (typeof window !== 'undefined' && window.sessionStorage && process.env.NODE_ENV === 'development') {
+          setTimeout(() => {
+            console.log('SessionStorage keys after OAuth initiation:', Object.keys(window.sessionStorage));
+          }, 100);
+        }
         // Redirect to GitHub OAuth
         window.location.href = data.url;
       }

@@ -104,11 +104,31 @@ function VSCodeAuthPageContent() {
           // Check if code verifier exists in sessionStorage (for debugging)
           if (typeof window !== 'undefined' && window.sessionStorage) {
             const storageKeys = Object.keys(window.sessionStorage);
-            const codeVerifierKey = storageKeys.find(key => 
-              key.includes('code-verifier') || key.includes('supabase.auth')
+            console.log('SessionStorage keys on callback:', storageKeys);
+            
+            // Look for Supabase auth storage keys
+            const supabaseKeys = storageKeys.filter(key => 
+              key.includes('supabase') || key.includes('auth') || key.includes('code')
             );
-            if (!codeVerifierKey && process.env.NODE_ENV === 'development') {
-              console.warn('PKCE code verifier not found in sessionStorage. This may cause authentication to fail.');
+            console.log('Supabase-related keys:', supabaseKeys);
+            
+            // Check for code verifier specifically
+            const codeVerifierKey = storageKeys.find(key => 
+              key.includes('code-verifier') || key.includes('code_verifier') || key.includes('pkce')
+            );
+            
+            if (!codeVerifierKey) {
+              console.error('PKCE code verifier not found in sessionStorage!');
+              console.error('Available keys:', storageKeys);
+              // Try to find any Supabase auth token storage
+              const authTokenKey = storageKeys.find(key => key.includes('auth-token'));
+              if (authTokenKey) {
+                console.log('Found auth token key:', authTokenKey);
+                const authData = window.sessionStorage.getItem(authTokenKey);
+                console.log('Auth data:', authData ? 'exists' : 'missing');
+              }
+            } else {
+              console.log('Found code verifier key:', codeVerifierKey);
             }
           }
           
@@ -141,6 +161,9 @@ function VSCodeAuthPageContent() {
           }
           
           if (data?.session) {
+            // Clear VS Code OAuth redirect flag
+            localStorage.removeItem('vscode_oauth_redirect');
+            
             // Check if this is a new signup and user accepted terms/privacy
             if (data.user) {
               const pendingTermsAccepted = localStorage.getItem('pending_terms_accepted');
@@ -151,7 +174,7 @@ function VSCodeAuthPageContent() {
               if (pendingTermsAccepted === 'true' && pendingPrivacyAccepted === 'true') {
                 const userMetadata = data.user.user_metadata;
                 if (!userMetadata?.terms_accepted || !userMetadata?.privacy_accepted) {
-                  await supabase.auth.updateUser({
+                  await supabaseClient.auth.updateUser({
                     data: {
                       ...userMetadata,
                       terms_accepted: true,
