@@ -1414,7 +1414,7 @@ export default function PasteViewer() {
 
       {/* Pull/Push Section - Apple-inspired design */}
       <div className="border-b border-divider/50 w-full overflow-x-hidden">
-        <div className="mx-auto px-4 sm:px-6 py-2 sm:py-1.5 max-w-4xl">
+        <div className="mx-auto px-4 sm:px-6 py-2 sm:py-1.5 max-w-4xl w-full">
           {/* Single Row Layout: Everything on one line on desktop, stacked on mobile */}
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full flex-wrap">
             {/* Hidden file input */}
@@ -1482,7 +1482,7 @@ export default function PasteViewer() {
                   onClick={handlePasteIdSubmit}
                   disabled={!isValidPasteId(pasteIdInput) || isLoading}
                   className={`
-                    flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0
+                    flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0 w-full sm:w-auto
                     disabled:opacity-40 disabled:cursor-not-allowed
                     ${
                       isValidPasteId(pasteIdInput) && !isLoading
@@ -1505,12 +1505,12 @@ export default function PasteViewer() {
               </button>
 
               {/* Push Button with Dropdown */}
-              <div ref={pushButtonRef} data-tour="push-button" className="relative flex flex-1 sm:flex-none">
+              <div ref={pushButtonRef} data-tour="push-button" className="relative flex flex-1 sm:flex-none w-full sm:w-auto">
                 <button
                     onClick={handlePushButtonClick}
                     disabled={!text || text.trim().length === 0 || isPushing}
                     className={`
-                      flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-l-lg sm:rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0
+                      flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-l-lg sm:rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0 w-full sm:w-auto
                       disabled:opacity-40 disabled:cursor-not-allowed
                       ${
                         text && text.trim().length > 0 && !isPushing
@@ -1547,13 +1547,13 @@ export default function PasteViewer() {
               </div>
             </div>
 
-            {/* Utility Buttons - larger touch targets on mobile */}
+            {/* Utility Buttons - larger touch targets on mobile, evenly distributed */}
             <div className="flex gap-2 sm:gap-1 w-full sm:w-auto">
               {/* Upload Button */}
               <button
                   data-tour="upload-button"
                   onClick={handleFileUpload}
-                  className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                  className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                   aria-label="Upload file"
                   title="Upload file"
                 >
@@ -1567,7 +1567,7 @@ export default function PasteViewer() {
                 <button
                   data-tour="download-button"
                   onClick={handleDownload}
-                  className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                  className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                   aria-label={downloaded ? 'Downloaded!' : 'Download paste'}
                   title="Download"
                 >
@@ -1588,7 +1588,7 @@ export default function PasteViewer() {
                 <button
                   data-tour="copy-button"
                   onClick={handleCopy}
-                  className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                  className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                   aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
                   title="Copy"
                 >
@@ -1608,7 +1608,7 @@ export default function PasteViewer() {
               {text && (
                 <button
                   onClick={() => setTextWrap(!textWrap)}
-                  className={`px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg border transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center ${
+                  className={`flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg border transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center ${
                     textWrap
                       ? 'bg-positive-highlight/20 border-positive-highlight/40 text-positive-highlight hover:bg-positive-highlight/30'
                       : 'bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant'
@@ -1631,7 +1631,7 @@ export default function PasteViewer() {
 
             {/* Language Selector - only shown when text exists and not loading */}
             {!isLoading && text && (
-              <div className="relative flex-1 sm:flex-none min-w-[120px] sm:min-w-0">
+              <div className="relative w-full sm:flex-none sm:min-w-[120px]">
                 <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
                 <select
                   id="language-select"
@@ -1690,7 +1690,7 @@ export default function PasteViewer() {
                     }, 100);
                   }
                 }}
-                className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                className="w-full sm:w-auto px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
                 aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
                 title={isEditMode ? 'View mode' : 'Edit mode'}
               >
