@@ -15,6 +15,8 @@ function createPKCESafeStorage() {
     return undefined;
   }
 
+  console.log('[PKCE Storage] ===== CUSTOM STORAGE ADAPTER INITIALIZED =====');
+
   // Use localStorage instead of sessionStorage for VS Code flows
   // sessionStorage is cleared when browser window closes, but VS Code might close the browser
   const baseStorage = window.localStorage;
@@ -22,9 +24,9 @@ function createPKCESafeStorage() {
   // Fixed storage key for code verifier - ignores redirect URL
   const FIXED_CODE_VERIFIER_KEY = 'supabase-pkce-code-verifier';
 
-  return {
+  const adapter = {
     getItem: (key: string): string | null => {
-      console.log(`[PKCE Storage] getItem called with key: "${key}"`);
+      console.log(`[PKCE Storage] ⬅️ getItem called with key: "${key}"`);
       
       // For code verifier, always use the fixed key
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
@@ -81,16 +83,17 @@ function createPKCESafeStorage() {
       
       // For other keys, use default behavior
       const value = baseStorage.getItem(key);
-      console.log(`[PKCE Storage] Regular key "${key}" -> ${value ? 'found' : 'not found'}`);
+      console.log(`[PKCE Storage] ⬅️ Regular key "${key}" -> ${value ? 'found' : 'not found'}`);
       return value;
     },
     
     setItem: (key: string, value: string): void => {
-      console.log(`[PKCE Storage] setItem called with key: "${key}"`);
+      console.log(`[PKCE Storage] ➡️ setItem called with key: "${key}"`);
+      console.log(`[PKCE Storage] ➡️ Value preview: ${value?.substring(0, 50)}...`);
       
       // Store in the original key for compatibility
       baseStorage.setItem(key, value);
-      console.log(`[PKCE Storage] Stored in original key: ${key}`);
+      console.log(`[PKCE Storage] ➡️ Stored in original key: ${key}`);
       
       // For code verifier, ALSO store in fixed key
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
@@ -140,6 +143,11 @@ function createPKCESafeStorage() {
       }
     },
   };
+  
+  console.log('[PKCE Storage] ===== STORAGE ADAPTER READY =====');
+  console.log('[PKCE Storage] Adapter methods:', Object.keys(adapter));
+  
+  return adapter;
 }
 
 /**
@@ -177,6 +185,13 @@ export function createClient(): SupabaseClient {
     throw new Error(`Invalid Supabase URL: ${supabaseUrl}`);
   }
 
+  console.log('[Supabase Client] Creating Supabase client...');
+  console.log('[Supabase Client] URL:', supabaseUrl);
+  console.log('[Supabase Client] Anon Key (first 20 chars):', supabaseAnonKey.substring(0, 20) + '...');
+  
+  const customStorage = createPKCESafeStorage();
+  console.log('[Supabase Client] Custom storage created:', !!customStorage);
+  
   // Use the standard Supabase client for client-side OAuth flows
   // This properly handles PKCE with sessionStorage
   // The SSR client (createBrowserClient) is designed for server-side rendering
@@ -184,16 +199,24 @@ export function createClient(): SupabaseClient {
   supabaseClient = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       // Use custom storage adapter that handles PKCE code verifier across redirect URLs
-      // CRITICAL: This must be sessionStorage (not localStorage) for PKCE to work
-      // Supabase stores the PKCE code verifier in sessionStorage with a key based on the project URL
-      storage: createPKCESafeStorage(),
+      storage: customStorage,
       // Enable PKCE flow (default for OAuth, but explicit for clarity)
       flowType: 'pkce',
       // Auto-refresh tokens
       autoRefreshToken: true,
       // Persist session
       persistSession: true,
+      // Debug mode
+      debug: process.env.NODE_ENV === 'development',
     },
+  });
+
+  console.log('[Supabase Client] Client created successfully');
+  console.log('[Supabase Client] Auth config:', {
+    flowType: 'pkce',
+    hasCustomStorage: !!customStorage,
+    autoRefreshToken: true,
+    persistSession: true,
   });
 
   return supabaseClient;
