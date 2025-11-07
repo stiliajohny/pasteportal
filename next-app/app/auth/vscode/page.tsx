@@ -93,125 +93,35 @@ function VSCodeAuthPageContent() {
     const hash = window.location.hash.substring(1);
     
     if (code) {
-      // Check if we already have a valid session or if we've already attempted code exchange
-      if (session || codeExchangeAttempted) {
-        console.log('[VS Code Auth Page] Skipping code exchange - already have session or already attempted');
-        if (session && !hasRedirected) {
-          redirectToVSCode(session);
+      // OAuth callback with code - let Supabase handle code exchange automatically
+      // The Supabase client will automatically exchange the code when it initializes
+      // We just need to wait for the session to be available via the auth state listener
+      console.log('[VS Code Auth Page] OAuth callback detected - waiting for automatic code exchange...');
+      
+      // Check if code verifier exists (for debugging)
+      if (typeof window !== 'undefined') {
+        console.log('[VS Code Auth Page] Checking for code verifier on OAuth callback...');
+        console.log('[VS Code Auth Page] SessionStorage keys:', Object.keys(window.sessionStorage));
+        console.log('[VS Code Auth Page] LocalStorage keys:', Object.keys(window.localStorage));
+        
+        const fixedKey = 'supabase-pkce-code-verifier';
+        const codeVerifier = window.sessionStorage.getItem(fixedKey) || window.localStorage.getItem(fixedKey);
+        
+        if (codeVerifier) {
+          console.log(`[VS Code Auth Page] Code verifier found in ${window.sessionStorage.getItem(fixedKey) ? 'sessionStorage' : 'localStorage'}`);
+        } else {
+          console.error('[VS Code Auth Page] Code verifier NOT found in fixed key!');
         }
-        return;
       }
       
-      // Mark that we're attempting code exchange to prevent duplicate attempts
-      setCodeExchangeAttempted(true);
+      // If we already have a session from auto-exchange, redirect immediately
+      if (session && !hasRedirected) {
+        console.log('[VS Code Auth Page] Session already available from auto-exchange');
+        redirectToVSCode(session);
+      }
       
-      // OAuth callback with code - exchange for session
-      (async () => {
-        try {
-          // CRITICAL: Ensure we're using a fresh Supabase client instance
-          // that has access to the same sessionStorage where the PKCE code verifier is stored
-          // The code verifier should be in sessionStorage from the OAuth initiation
-          // Create a new client instance to ensure proper sessionStorage access
-          const supabaseClient = createClient();
-          
-          // Check if code verifier exists in sessionStorage (for debugging)
-          if (typeof window !== 'undefined') {
-            console.log('[VS Code Auth Page] Checking for code verifier on OAuth callback...');
-            console.log('[VS Code Auth Page] SessionStorage keys:', Object.keys(window.sessionStorage));
-            console.log('[VS Code Auth Page] LocalStorage keys:', Object.keys(window.localStorage));
-            
-            // Check for our fixed code verifier key
-            const fixedKey = 'supabase-pkce-code-verifier';
-            const codeVerifier = window.sessionStorage.getItem(fixedKey) || window.localStorage.getItem(fixedKey);
-            
-            if (codeVerifier) {
-              console.log(`[VS Code Auth Page] Code verifier found in ${window.sessionStorage.getItem(fixedKey) ? 'sessionStorage' : 'localStorage'}`);
-            } else {
-              console.error('[VS Code Auth Page] Code verifier NOT found in fixed key!');
-              
-              // Try to find any code verifier
-              const allSessionKeys = Object.keys(window.sessionStorage);
-              const codeVerifierKey = allSessionKeys.find(k => 
-                k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
-              );
-              
-              if (codeVerifierKey) {
-                console.log(`[VS Code Auth Page] Found code verifier with alternative key: ${codeVerifierKey}`);
-              } else {
-                console.error('[VS Code Auth Page] No code verifier found in any storage key!');
-                console.error('[VS Code Auth Page] This will cause PKCE verification to fail');
-              }
-            }
-          }
-          
-          const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code);
-          
-          if (error) {
-            // Check if it's a PKCE error
-            const errorMessage = error.message || 'Authentication failed';
-            if (errorMessage.includes('code verifier') || errorMessage.includes('PKCE') || errorMessage.includes('code_verifier')) {
-              // PKCE error - redirect to VS Code with a helpful error message
-              // Clear any stale sessionStorage entries
-              if (typeof window !== 'undefined' && window.sessionStorage) {
-                try {
-                  const storageKeys = Object.keys(window.sessionStorage);
-                  storageKeys.forEach(key => {
-                    if (key.includes('supabase.auth') || key.includes('code-verifier')) {
-                      window.sessionStorage.removeItem(key);
-                    }
-                  });
-                } catch (e) {
-                  console.error('Error clearing sessionStorage:', e);
-                }
-              }
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`;
-            } else {
-              // Other error
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
-            }
-            return;
-          }
-          
-          if (data?.session) {
-            // Clear VS Code OAuth redirect flag
-            localStorage.removeItem('vscode_oauth_redirect');
-            
-            // Check if this is a new signup and user accepted terms/privacy
-            if (data.user) {
-              const pendingTermsAccepted = localStorage.getItem('pending_terms_accepted');
-              const pendingPrivacyAccepted = localStorage.getItem('pending_privacy_accepted');
-              const termsAcceptedAt = localStorage.getItem('pending_terms_accepted_at');
-              const privacyAcceptedAt = localStorage.getItem('pending_privacy_accepted_at');
-
-              if (pendingTermsAccepted === 'true' && pendingPrivacyAccepted === 'true') {
-                const userMetadata = data.user.user_metadata;
-                if (!userMetadata?.terms_accepted || !userMetadata?.privacy_accepted) {
-                  await supabaseClient.auth.updateUser({
-                    data: {
-                      ...userMetadata,
-                      terms_accepted: true,
-                      privacy_accepted: true,
-                      terms_accepted_at: termsAcceptedAt || new Date().toISOString(),
-                      privacy_accepted_at: privacyAcceptedAt || new Date().toISOString(),
-                    },
-                  });
-                }
-                
-                localStorage.removeItem('pending_terms_accepted');
-                localStorage.removeItem('pending_privacy_accepted');
-                localStorage.removeItem('pending_terms_accepted_at');
-                localStorage.removeItem('pending_privacy_accepted_at');
-              }
-            }
-            
-            if (!hasRedirected) {
-              redirectToVSCode(data.session);
-            }
-          }
-        } catch (error: any) {
-          window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(error.message || 'Authentication failed')}`;
-        }
-      })();
+      // Mark that we're handling OAuth callback
+      setCodeExchangeAttempted(true);
     } else if (hash) {
       // Magic link callback with tokens in hash
       const hashParams = new URLSearchParams(hash);
