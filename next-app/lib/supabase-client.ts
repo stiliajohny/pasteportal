@@ -128,19 +128,30 @@ function createPKCESafeStorage() {
     },
     
     removeItem: (key: string): void => {
-      baseStorage.removeItem(key);
-      
-      // Also remove from fixed key and sessionStorage
+      // For code verifier, DELAY removal to allow multiple token exchange attempts
+      // This fixes the issue where multiple Supabase client instances try to exchange
+      // the code simultaneously, and the first one removes the verifier before the others finish
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
-        console.log(`[PKCE Storage] Removing code verifier from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
-        baseStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
-        try {
-          window.sessionStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
-          console.log(`[PKCE Storage] Also removed from sessionStorage`);
-        } catch (e) {
-          console.error('[PKCE Storage] Failed to remove from sessionStorage:', e);
-        }
+        console.log(`[PKCE Storage] 🕐 Delaying code verifier removal to allow multiple token exchanges...`);
+        
+        // Wait 5 seconds before removing to ensure all token exchanges complete
+        setTimeout(() => {
+          console.log(`[PKCE Storage] 🗑️ Now removing code verifier from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+          baseStorage.removeItem(key);
+          baseStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
+          try {
+            window.sessionStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
+            console.log(`[PKCE Storage] ✓ Code verifier cleaned up from all storage`);
+          } catch (e) {
+            console.error('[PKCE Storage] Failed to remove from sessionStorage:', e);
+          }
+        }, 5000);
+        
+        return; // Don't remove immediately
       }
+      
+      // For non-verifier keys, remove immediately
+      baseStorage.removeItem(key);
     },
   };
   
