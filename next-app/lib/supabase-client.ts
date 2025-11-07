@@ -6,6 +6,9 @@ let supabaseClient: SupabaseClient | null = null;
 /**
  * Custom storage adapter that ensures PKCE code verifier is accessible
  * across different redirect URLs (e.g., /auth/vscode and /auth/callback)
+ * 
+ * This adapter normalizes storage keys to ensure the code verifier is accessible
+ * regardless of which redirect URL Supabase uses.
  */
 function createPKCESafeStorage() {
   if (typeof window === 'undefined') {
@@ -13,43 +16,75 @@ function createPKCESafeStorage() {
   }
 
   const baseStorage = window.sessionStorage;
+  
+  // Fixed storage key for code verifier - ignores redirect URL
+  const FIXED_CODE_VERIFIER_KEY = 'supabase-pkce-code-verifier';
 
   return {
     getItem: (key: string): string | null => {
-      const value = baseStorage.getItem(key);
-      
-      // If this is a code verifier lookup and value is null, try alternative keys
-      if (!value && key.includes('code_verifier')) {
-        // Try to find code verifier stored with different redirect URL
-        const allKeys = Object.keys(baseStorage);
-        const codeVerifierKey = allKeys.find(k => 
-          k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
-        );
+      // For code verifier, always use the fixed key
+      if (key.includes('code_verifier') || key.includes('code-verifier')) {
+        console.log(`[PKCE Storage] Reading code verifier from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+        const value = baseStorage.getItem(FIXED_CODE_VERIFIER_KEY);
         
-        if (codeVerifierKey) {
-          console.log(`Found code verifier with alternative key: ${codeVerifierKey}`);
-          return baseStorage.getItem(codeVerifierKey);
+        if (!value) {
+          // Fallback: try to find any code verifier in storage
+          const allKeys = Object.keys(baseStorage);
+          console.log(`[PKCE Storage] Code verifier not found in fixed key. Searching all keys:`, allKeys);
+          
+          const codeVerifierKey = allKeys.find(k => 
+            k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
+          );
+          
+          if (codeVerifierKey) {
+            console.log(`[PKCE Storage] Found code verifier with key: ${codeVerifierKey}`);
+            return baseStorage.getItem(codeVerifierKey);
+          }
+          
+          console.error('[PKCE Storage] Code verifier not found in any storage key!');
+          return null;
         }
+        
+        console.log(`[PKCE Storage] Code verifier found in fixed key`);
+        return value;
       }
       
-      return value;
+      // For other keys, use default behavior
+      return baseStorage.getItem(key);
     },
+    
     setItem: (key: string, value: string): void => {
+      // Store in the original key for compatibility
       baseStorage.setItem(key, value);
       
-      // If storing code verifier, also store a backup with a generic key
+      // For code verifier, ALSO store in fixed key
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
-        const backupKey = `supabase-auth-code-verifier-backup`;
-        baseStorage.setItem(backupKey, value);
-        console.log(`Stored code verifier backup with key: ${backupKey}`);
+        console.log(`[PKCE Storage] Storing code verifier in fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+        console.log(`[PKCE Storage] Original key was: ${key}`);
+        baseStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
+        
+        // Also store in localStorage as ultimate fallback
+        try {
+          window.localStorage.setItem(FIXED_CODE_VERIFIER_KEY, value);
+          console.log(`[PKCE Storage] Also stored code verifier in localStorage as fallback`);
+        } catch (e) {
+          console.error('[PKCE Storage] Failed to store in localStorage:', e);
+        }
       }
     },
+    
     removeItem: (key: string): void => {
       baseStorage.removeItem(key);
       
-      // Also remove backup if removing code verifier
+      // Also remove from fixed key and localStorage
       if (key.includes('code_verifier') || key.includes('code-verifier')) {
-        baseStorage.removeItem('supabase-auth-code-verifier-backup');
+        console.log(`[PKCE Storage] Removing code verifier from fixed key: ${FIXED_CODE_VERIFIER_KEY}`);
+        baseStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
+        try {
+          window.localStorage.removeItem(FIXED_CODE_VERIFIER_KEY);
+        } catch (e) {
+          console.error('[PKCE Storage] Failed to remove from localStorage:', e);
+        }
       }
     },
   };

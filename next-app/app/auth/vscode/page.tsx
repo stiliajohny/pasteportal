@@ -102,33 +102,32 @@ function VSCodeAuthPageContent() {
           const supabaseClient = createClient();
           
           // Check if code verifier exists in sessionStorage (for debugging)
-          if (typeof window !== 'undefined' && window.sessionStorage) {
-            const storageKeys = Object.keys(window.sessionStorage);
-            console.log('SessionStorage keys on callback:', storageKeys);
+          if (typeof window !== 'undefined') {
+            console.log('[VS Code Auth Page] Checking for code verifier on OAuth callback...');
+            console.log('[VS Code Auth Page] SessionStorage keys:', Object.keys(window.sessionStorage));
+            console.log('[VS Code Auth Page] LocalStorage keys:', Object.keys(window.localStorage));
             
-            // Look for Supabase auth storage keys
-            const supabaseKeys = storageKeys.filter(key => 
-              key.includes('supabase') || key.includes('auth') || key.includes('code')
-            );
-            console.log('Supabase-related keys:', supabaseKeys);
+            // Check for our fixed code verifier key
+            const fixedKey = 'supabase-pkce-code-verifier';
+            const codeVerifier = window.sessionStorage.getItem(fixedKey) || window.localStorage.getItem(fixedKey);
             
-            // Check for code verifier specifically
-            const codeVerifierKey = storageKeys.find(key => 
-              key.includes('code-verifier') || key.includes('code_verifier') || key.includes('pkce')
-            );
-            
-            if (!codeVerifierKey) {
-              console.error('PKCE code verifier not found in sessionStorage!');
-              console.error('Available keys:', storageKeys);
-              // Try to find any Supabase auth token storage
-              const authTokenKey = storageKeys.find(key => key.includes('auth-token'));
-              if (authTokenKey) {
-                console.log('Found auth token key:', authTokenKey);
-                const authData = window.sessionStorage.getItem(authTokenKey);
-                console.log('Auth data:', authData ? 'exists' : 'missing');
-              }
+            if (codeVerifier) {
+              console.log(`[VS Code Auth Page] Code verifier found in ${window.sessionStorage.getItem(fixedKey) ? 'sessionStorage' : 'localStorage'}`);
             } else {
-              console.log('Found code verifier key:', codeVerifierKey);
+              console.error('[VS Code Auth Page] Code verifier NOT found in fixed key!');
+              
+              // Try to find any code verifier
+              const allSessionKeys = Object.keys(window.sessionStorage);
+              const codeVerifierKey = allSessionKeys.find(k => 
+                k.includes('code_verifier') || k.includes('code-verifier') || k.includes('pkce')
+              );
+              
+              if (codeVerifierKey) {
+                console.log(`[VS Code Auth Page] Found code verifier with alternative key: ${codeVerifierKey}`);
+              } else {
+                console.error('[VS Code Auth Page] No code verifier found in any storage key!');
+                console.error('[VS Code Auth Page] This will cause PKCE verification to fail');
+              }
             }
           }
           
