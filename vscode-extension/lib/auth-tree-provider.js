@@ -122,22 +122,6 @@ class AuthTreeProvider {
           }
         ),
         new AuthTreeItem(
-          '$(mail) Magic Link',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-in-magic-link',
-            title: 'Sign In with Magic Link'
-          }
-        ),
-        new AuthTreeItem(
-          '$(key) Sign In with OTP',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-in-otp',
-            title: 'Sign In with OTP'
-          }
-        ),
-        new AuthTreeItem(
           'Sign in to view your pastes',
           vscode.TreeItemCollapsibleState.None
         )
