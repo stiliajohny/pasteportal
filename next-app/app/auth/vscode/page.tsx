@@ -98,6 +98,10 @@ function VSCodeAuthPageContent() {
       // We just need to wait for the session to be available via the auth state listener
       console.log('[VS Code Auth Page] OAuth callback detected - waiting for automatic code exchange...');
       
+      // Mark user as having interacted since they completed OAuth flow
+      // This allows the auth state listener to process the SIGNED_IN event
+      setUserHasInteracted(true);
+      
       // Check if code verifier exists (for debugging)
       if (typeof window !== 'undefined') {
         console.log('[VS Code Auth Page] Checking for code verifier on OAuth callback...');
