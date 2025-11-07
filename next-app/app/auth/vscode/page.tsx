@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import AuthDialog from '@/app/components/AuthDialog';
@@ -16,7 +16,7 @@ function VSCodeAuthPageContent() {
   const [authDialogOpen, setAuthDialogOpen] = useState(true);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [checking, setChecking] = useState(true);
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const hasRedirectedRef = useRef(false); // Use ref instead of state to avoid circular dependencies
   const [hasSeenInitialAuthEvent, setHasSeenInitialAuthEvent] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
   const [codeExchangeAttempted, setCodeExchangeAttempted] = useState(false);
@@ -25,19 +25,21 @@ function VSCodeAuthPageContent() {
    * Redirect to VS Code with authentication tokens
    */
   const redirectToVSCode = useCallback((session: any) => {
-    console.log('[VS Code Auth Page] redirectToVSCode called with session:', !!session, 'hasRedirected:', hasRedirected);
+    console.log('[VS Code Auth Page] redirectToVSCode called with session:', !!session, 'hasRedirected:', hasRedirectedRef.current);
     
     if (!session) {
       console.error('[VS Code Auth Page] No session provided to redirectToVSCode');
       return;
     }
     
-    if (hasRedirected) {
+    if (hasRedirectedRef.current) {
       console.log('[VS Code Auth Page] Already redirected, skipping');
       return;
     }
     
-    setHasRedirected(true);
+    // Mark as redirected using ref (won't trigger re-render)
+    hasRedirectedRef.current = true;
+    console.log('[VS Code Auth Page] Set hasRedirectedRef.current = true');
     
     // Clear the VS Code auth pending flag since we're redirecting
     localStorage.removeItem('vscode_auth_pending');
@@ -57,7 +59,7 @@ function VSCodeAuthPageContent() {
     window.location.href = vscodeUri;
     
     console.log('[VS Code Auth Page] window.location.href set, redirect should happen now');
-  }, [hasRedirected]);
+  }, []); // Empty dependencies - no need to recreate this function
 
   useEffect(() => {
     console.log('[VS Code Auth Page] useEffect for initial session check');
@@ -72,7 +74,7 @@ function VSCodeAuthPageContent() {
     const code = urlParams.get('code');
     const hash = window.location.hash.substring(1);
     
-    console.log('[VS Code Auth Page] URL check:', { code: !!code, hash: !!hash, user: !!user, session: !!session, hasRedirected });
+    console.log('[VS Code Auth Page] URL check:', { code: !!code, hash: !!hash, user: !!user, session: !!session, hasRedirected: hasRedirectedRef.current });
     
     // If there's no OAuth callback, just show the auth dialog
     // DO NOT redirect even if user has existing session - let them sign up/sign in fresh
@@ -88,7 +90,7 @@ function VSCodeAuthPageContent() {
       console.log('[VS Code Auth Page] OAuth callback detected with session already available');
       // Only redirect if we have a callback AND a session
       // This means user came from OAuth and already has session
-      if (!hasRedirected) {
+      if (!hasRedirectedRef.current) {
         console.log('[VS Code Auth Page] Redirecting immediately (session available from callback)');
         redirectToVSCode(session);
       } else {
@@ -98,7 +100,7 @@ function VSCodeAuthPageContent() {
       console.log('[VS Code Auth Page] OAuth callback detected but waiting for session');
       setChecking(false);
     }
-  }, [user, session, hasRedirected, redirectToVSCode]);
+  }, [user, session, redirectToVSCode]);
 
   useEffect(() => {
     // Check for mode parameter
@@ -144,7 +146,7 @@ function VSCodeAuthPageContent() {
       }
       
       // If we already have a session from auto-exchange, redirect immediately
-      if (session && !hasRedirected) {
+      if (session && !hasRedirectedRef.current) {
         console.log('[VS Code Auth Page] Session already available from auto-exchange');
         redirectToVSCode(session);
       }
@@ -160,7 +162,7 @@ function VSCodeAuthPageContent() {
         // Wait a bit for Supabase to process, then check session
         setTimeout(async () => {
           const { data: { session } } = await supabase.auth.getSession();
-          if (session && !hasRedirected) {
+          if (session && !hasRedirectedRef.current) {
             redirectToVSCode(session);
           }
         }, 1000);
@@ -200,8 +202,8 @@ function VSCodeAuthPageContent() {
       // Only redirect on actual authentication events (SIGNED_IN, SIGNED_UP)
       if (event === 'SIGNED_IN') {
         console.log('[VS Code Auth Page] SIGNED_IN event received, session:', !!session);
-        console.log('[VS Code Auth Page] Session user:', !!session?.user, 'hasRedirected:', hasRedirected);
-        if (session && session.user && !hasRedirected) {
+        console.log('[VS Code Auth Page] Session user:', !!session?.user, 'hasRedirected:', hasRedirectedRef.current);
+        if (session && session.user && !hasRedirectedRef.current) {
           console.log('[VS Code Auth Page] Scheduling redirect to VS Code in 500ms...');
           // User just authenticated (via email/password, etc.), redirect to VS Code
           setTimeout(() => {
@@ -212,13 +214,13 @@ function VSCodeAuthPageContent() {
           console.log('[VS Code Auth Page] Redirect conditions not met:', {
             hasSession: !!session,
             hasUser: !!session?.user,
-            hasRedirected: hasRedirected
+            hasRedirected: hasRedirectedRef.current
           });
         }
       } else if (event === 'SIGNED_UP') {
         if (session) {
           // User signed up and got session immediately (no email confirmation)
-          if (!hasRedirected) {
+          if (!hasRedirectedRef.current) {
             setTimeout(() => {
               redirectToVSCode(session);
             }, 500);
@@ -234,7 +236,7 @@ function VSCodeAuthPageContent() {
     });
 
     return () => subscription.unsubscribe();
-  }, [checking, hasRedirected, redirectToVSCode, hasSeenInitialAuthEvent, userHasInteracted, session, codeExchangeAttempted]);
+  }, [checking, redirectToVSCode, hasSeenInitialAuthEvent, userHasInteracted, session, codeExchangeAttempted]);
 
   if (checking) {
     return (

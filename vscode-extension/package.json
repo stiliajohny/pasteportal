@@ -4,6 +4,7 @@
   "description": "Share and retrieve text snippets with PastePortal - A secure paste service for developers",
   "version": "1.0.0",
   "publisher": "JohnStilia",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -173,7 +174,7 @@
         {
           "id": "pasteportal",
           "title": "PastePortal",
-          "icon": "$(paste)"
+          "icon": "media/logo.svg"
         }
       ]
     },
