@@ -707,26 +707,62 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="relative w-full max-w-md mx-4 bg-surface border border-divider rounded-lg shadow-xl">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-text-secondary hover:text-text transition-colors"
-          aria-label="Close dialog"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {/* Close Button - Hidden for VS Code auth */}
+        {!isVSCodeAuth && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-text-secondary hover:text-text transition-colors"
+            aria-label="Close dialog"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
 
         <div className="p-6">
           {/* Header */}
-          <h2 className="text-2xl font-bold mb-6 text-text">
-            {mode === 'signup' && 'Sign Up'}
-            {mode === 'signin' && 'Sign In'}
-            {mode === 'magic-link' && 'Magic Link'}
-            {mode === 'reset-password' && 'Reset Password'}
-            {mode === 'otp' && 'Enter OTP'}
-          </h2>
+          {isVSCodeAuth ? (
+            <div className="mb-6 text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                {/* VS Code Icon */}
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-12 h-12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <rect width="24" height="24" rx="2" fill="#007ACC" />
+                    <path
+                      d="M16.5 6.5L9 14L5.5 10.5L4 12L9 17L18 8L16.5 6.5Z"
+                      fill="white"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-text">
+                    {mode === 'signup' && 'Sign Up for VS Code'}
+                    {mode === 'signin' && 'Sign In to VS Code'}
+                    {mode === 'magic-link' && 'Magic Link'}
+                    {mode === 'reset-password' && 'Reset Password'}
+                    {mode === 'otp' && 'Enter OTP'}
+                  </h2>
+                  <p className="text-sm text-text-secondary mt-1">
+                    Authenticate with PastePortal
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <h2 className="text-2xl font-bold mb-6 text-text">
+              {mode === 'signup' && 'Sign Up'}
+              {mode === 'signin' && 'Sign In'}
+              {mode === 'magic-link' && 'Magic Link'}
+              {mode === 'reset-password' && 'Reset Password'}
+              {mode === 'otp' && 'Enter OTP'}
+            </h2>
+          )}
 
           {/* Error Message */}
           {error && (
