@@ -1414,11 +1414,19 @@ export default function PasteViewer() {
       {/* Pull/Push Section - Apple-inspired design */}
       <div className="border-b border-divider/50 w-full overflow-x-hidden">
         <div className="mx-auto px-4 sm:px-6 py-2 sm:py-1.5 max-w-4xl">
-          <div className="flex flex-col gap-3 sm:gap-2">
-            {/* Top Row: Inputs and Primary Actions */}
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+          {/* Single Row Layout: Everything on one line on desktop, stacked on mobile */}
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full flex-wrap">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="text/*,.txt,.json,.js,.ts,.jsx,.tsx,.css,.html,.md,.py,.java,.cpp,.c,.go,.rs,.php,.rb,.swift,.kt,.scala,.sh,.yaml,.yml,.xml,.sql"
+              onChange={handleFileChange}
+              className="hidden"
+              aria-label="File upload input"
+            />
               {/* Paste ID Input */}
-              <div className="flex-1 w-full sm:w-auto min-w-0 sm:min-w-[200px]">
+            <div className="flex-1 w-full sm:w-auto min-w-0 sm:min-w-[200px]">
                 <label htmlFor="paste-id-input" className="sr-only">Enter paste ID</label>
                 <div className="relative w-full">
                   <input
@@ -1539,20 +1547,8 @@ export default function PasteViewer() {
               </div>
             </div>
 
-            {/* Bottom Row: Utility Buttons - Stack on mobile, row on desktop */}
-            <div className="flex flex-wrap gap-2 sm:gap-1.5 items-center w-full">
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="text/*,.txt,.json,.js,.ts,.jsx,.tsx,.css,.html,.md,.py,.java,.cpp,.c,.go,.rs,.php,.rb,.swift,.kt,.scala,.sh,.yaml,.yml,.xml,.sql"
-                onChange={handleFileChange}
-                className="hidden"
-                aria-label="File upload input"
-              />
-
-              {/* Utility Buttons - larger touch targets on mobile */}
-              <div className="flex gap-2 sm:gap-1">
+            {/* Utility Buttons - larger touch targets on mobile */}
+            <div className="flex gap-2 sm:gap-1 w-full sm:w-auto">
                 {/* Upload Button */}
                 <button
                   data-tour="upload-button"
@@ -1607,73 +1603,73 @@ export default function PasteViewer() {
                     )}
                   </button>
                 )}
-              </div>
+            </div>
 
-              {/* Language Selector - only shown when text exists and not loading */}
-              {!isLoading && text && (
-                <div className="relative flex-1 sm:flex-none min-w-[120px] sm:min-w-0">
-                  <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
-                  <select
-                    id="language-select"
-                    data-tour="language-selector"
-                    value={selectedLanguage}
-                    onChange={(e) => {
-                      setSelectedLanguage(e.target.value as LanguageValue);
-                      setIsManualLanguageSelection(true);
-                    }}
-                    className="w-full px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 sm:pr-6 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black min-h-[44px] sm:min-h-0"
-                    style={{
-                      backgroundColor: 'var(--color-surface-variant)',
-                      color: 'var(--color-text)',
-                    }}
-                    aria-label="Select syntax highlighting language"
-                    title="Language"
-                  >
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <option 
-                        key={lang.value} 
-                        value={lang.value}
-                        style={{
-                          backgroundColor: 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                        }}
-                      >
-                        {lang.label}
-                      </option>
-                    ))}
-                  </select>
-                  <svg 
-                    className="absolute right-2 sm:right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3 sm:h-3 text-text-secondary/60 pointer-events-none" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              )}
-
-              {/* Edit/View Mode Toggle - always visible when not loading */}
-              {!isLoading && (
-                <button
-                  data-tour="edit-view-toggle"
-                  onClick={() => {
-                    setIsEditMode(!isEditMode);
-                    // Auto-focus editor when switching to edit mode
-                    if (!isEditMode) {
-                      setTimeout(() => {
-                        const editorContainer = editorContainerRef.current;
-                        if (editorContainer) {
-                          const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
-                          textarea?.focus();
-                        }
-                      }, 100);
-                    }
+            {/* Language Selector - only shown when text exists and not loading */}
+            {!isLoading && text && (
+              <div className="relative flex-1 sm:flex-none min-w-[120px] sm:min-w-0">
+                <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
+                <select
+                  id="language-select"
+                  data-tour="language-selector"
+                  value={selectedLanguage}
+                  onChange={(e) => {
+                    setSelectedLanguage(e.target.value as LanguageValue);
+                    setIsManualLanguageSelection(true);
                   }}
-                  className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                  aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
-                  title={isEditMode ? 'View mode' : 'Edit mode'}
+                  className="w-full px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 sm:pr-6 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black min-h-[44px] sm:min-h-0"
+                  style={{
+                    backgroundColor: 'var(--color-surface-variant)',
+                    color: 'var(--color-text)',
+                  }}
+                  aria-label="Select syntax highlighting language"
+                  title="Language"
                 >
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <option 
+                      key={lang.value} 
+                      value={lang.value}
+                      style={{
+                        backgroundColor: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+                <svg 
+                  className="absolute right-2 sm:right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3 sm:h-3 text-text-secondary/60 pointer-events-none" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            )}
+
+            {/* Edit/View Mode Toggle - always visible when not loading */}
+            {!isLoading && (
+              <button
+                data-tour="edit-view-toggle"
+                onClick={() => {
+                  setIsEditMode(!isEditMode);
+                  // Auto-focus editor when switching to edit mode
+                  if (!isEditMode) {
+                    setTimeout(() => {
+                      const editorContainer = editorContainerRef.current;
+                      if (editorContainer) {
+                        const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+                        textarea?.focus();
+                      }
+                    }, 100);
+                  }
+                }}
+                className="px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
+                title={isEditMode ? 'View mode' : 'Edit mode'}
+              >
                   {isEditMode ? (
                     <svg className="w-5 h-5 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
