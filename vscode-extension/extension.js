@@ -365,9 +365,9 @@ function validatePassword(password) {
  * @returns {Buffer} Derived key (32 bytes for AES-256)
  */
 function deriveKeyFromPassword(password, salt) {
-  // Use PBKDF2 with same parameters as web UI: 100000 iterations, SHA-256
+  // Use PBKDF2 with same parameters as web UI: 600000 iterations, SHA-256
   // This ensures compatibility between VS Code extension and web UI
-  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256')
+  return crypto.pbkdf2Sync(password, salt, 600000, 32, 'sha256')
 }
 
 /**
@@ -1110,6 +1110,15 @@ async function handleViewPaste(pasteId) {
       return
     }
 
+    // Check if this paste is in the user's list (which includes the password)
+    let storedPassword = null
+    if (authTreeProvider) {
+      const userPaste = authTreeProvider.getPaste(pasteIdStr)
+      if (userPaste && userPaste.is_password_encrypted && userPaste.password) {
+        storedPassword = userPaste.password
+      }
+    }
+
     // Get the paste first to check if it's encrypted
     try {
       let editor = vscode.window.activeTextEditor
@@ -1147,14 +1156,19 @@ async function handleViewPaste(pasteId) {
       const { paste, is_password_encrypted } = responseData.response
 
       if (is_password_encrypted) {
-        // Ask for password
-        const password = await vscode.window.showInputBox({
-          prompt: 'Enter the password to decrypt the paste',
-          password: true
-        })
-
+        // Use stored password if available, otherwise prompt
+        let password = storedPassword
+        
         if (!password) {
-          return
+          // Ask for password
+          password = await vscode.window.showInputBox({
+            prompt: 'Enter the password to decrypt the paste',
+            password: true
+          })
+
+          if (!password) {
+            return
+          }
         }
 
         // Use get-encrypted-paste flow
@@ -1267,20 +1281,26 @@ async function handleDeletePaste(pasteItem) {
 }
 
 /**
- * Handle retrieve password-protected paste from context menu
+ * Handle retrieve password from encrypted paste context menu
  */
 async function handleRetrievePassword(pasteItem) {
   try {
     // Extract paste ID from the item
     let pasteId = null
+    let paste = null
+    
     if (typeof pasteItem === 'string') {
       pasteId = pasteItem
+      paste = authTreeProvider ? authTreeProvider.getPaste(pasteId) : null
     } else if (pasteItem?.pasteId) {
       pasteId = pasteItem.pasteId
+      paste = pasteItem.paste || (authTreeProvider ? authTreeProvider.getPaste(pasteId) : null)
     } else if (pasteItem?.id) {
       pasteId = pasteItem.id
+      paste = pasteItem.paste || (authTreeProvider ? authTreeProvider.getPaste(pasteId) : null)
     } else if (pasteItem?.paste?.id) {
       pasteId = pasteItem.paste.id
+      paste = pasteItem.paste
     }
 
     if (!pasteId) {
@@ -1288,22 +1308,32 @@ async function handleRetrievePassword(pasteItem) {
       return
     }
 
-    // Prompt for password
-    const password = await vscode.window.showInputBox({
-      prompt: 'Enter the password to decrypt the paste',
-      password: true,
-      placeHolder: 'Password'
-    })
+    // Get paste from tree provider if not already available
+    if (!paste && authTreeProvider) {
+      paste = authTreeProvider.getPaste(pasteId)
+    }
 
-    if (!password) {
+    // Check if paste is encrypted and has stored password
+    if (!paste) {
+      vscode.window.showErrorMessage('Paste not found in your list. Please refresh your pastes.')
       return
     }
 
-    // Use the existing handleViewPaste logic but with password
-    const pasteIdStr = typeof pasteId === 'string' ? pasteId : pasteId
-    await handleViewPasteWithPassword(pasteIdStr, password)
+    if (!paste.is_password_encrypted) {
+      vscode.window.showWarningMessage('This paste is not password-protected.')
+      return
+    }
+
+    if (!paste.password) {
+      vscode.window.showErrorMessage('Password not available for this paste. The password may not have been stored when the paste was created.')
+      return
+    }
+
+    // Copy password to clipboard
+    await vscode.env.clipboard.writeText(paste.password)
+    vscode.window.showInformationMessage('Password copied to clipboard!')
   } catch (error) {
-    vscode.window.showErrorMessage(`Failed to retrieve paste: ${error.message}`)
+    vscode.window.showErrorMessage(`Failed to retrieve password: ${error.message}`)
   }
 }
 
@@ -1367,6 +1397,346 @@ async function handleViewPasteWithPassword(pasteId, password) {
 }
 
 /**
+ * Get HTML content for the paste portal webview
+ * @returns {string} HTML content
+ */
+function getWebviewContent() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PastePortal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--vscode-font-family);
+      background-color: var(--vscode-editor-background);
+      color: var(--vscode-foreground);
+      padding: 10px;
+      overflow-x: hidden;
+    }
+    
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      width: 100%;
+      min-width: 0;
+      overflow: visible;
+    }
+    
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    
+    .toolbar-group.flex-grow {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
+    }
+    
+    input[type="text"],
+    select,
+    button {
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      border: 1px solid var(--vscode-input-border);
+      background-color: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border-radius: 4px;
+      padding: 6px 10px;
+      height: 32px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    
+    input[type="text"]:focus,
+    select:focus,
+    button:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+    
+    input[type="text"] {
+      flex: 1 1 auto;
+      min-width: 180px;
+      width: 100%;
+    }
+    
+    input[type="text"]::placeholder {
+      color: var(--vscode-input-placeholderForeground);
+    }
+    
+    button {
+      cursor: pointer;
+      white-space: nowrap;
+      padding: 6px 12px;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
+    }
+    
+    button:hover {
+      background-color: var(--vscode-button-hoverBackground);
+    }
+    
+    button.primary {
+      background-color: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+    }
+    
+    button.primary:hover {
+      background-color: var(--vscode-button-hoverBackground);
+    }
+    
+    button.icon-button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      min-width: 32px;
+    }
+    
+    .push-button-group {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+    
+    .push-button-group button:first-child {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      border-right: none;
+      padding: 6px 12px;
+    }
+    
+    .push-button-group button:last-child {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      padding: 6px 6px;
+      min-width: 28px;
+    }
+    
+    select {
+      min-width: 100px;
+      max-width: 150px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    
+    #languageButton {
+      min-width: 80px;
+    }
+    
+    .icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+    
+    @media (max-width: 768px) {
+      .toolbar {
+        flex-wrap: wrap;
+      }
+      
+      input[type="text"] {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="toolbar-group flex-grow">
+      <input type="text" id="pasteIdInput" placeholder="Enter paste ID" />
+    </div>
+    
+    <div class="toolbar-group">
+      <button id="pullButton">Pull</button>
+      
+      <div class="push-button-group">
+        <button id="pushButton" class="primary">Push</button>
+        <button id="pushDropdown" class="primary">▼</button>
+      </div>
+      
+      <button class="icon-button" id="uploadButton" title="Upload">
+        <svg class="icon" viewBox="0 0 16 16">
+          <path d="M8 2L3 7h3v5h4V7h3L8 2zM2 13h12v1H2v-1z"/>
+        </svg>
+      </button>
+      
+      <button class="icon-button" id="downloadButton" title="Download">
+        <svg class="icon" viewBox="0 0 16 16">
+          <path d="M8 11L3 6h3V2h4v4h3L8 11zM2 13h12v1H2v-1z"/>
+        </svg>
+      </button>
+      
+      <button class="icon-button" id="copyButton" title="Copy">
+        <svg class="icon" viewBox="0 0 16 16">
+          <path d="M4 2h8v1H4V2zm0 2h8v8H4V4zm1 1v6h6V5H5z"/>
+        </svg>
+      </button>
+      
+      <button class="icon-button" id="menuButton" title="Menu">
+        <svg class="icon" viewBox="0 0 16 16">
+          <path d="M2 4h12v1H2V4zm0 3h12v1H2V7zm0 3h12v1H2v-1z"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="toolbar-group">
+      <select id="languageSelect">
+        <option value="sql">SQL</option>
+        <option value="javascript">JavaScript</option>
+        <option value="python">Python</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="json">JSON</option>
+        <option value="plaintext">Plain Text</option>
+      </select>
+      
+      <button id="languageButton">Language</button>
+      
+      <button class="icon-button" id="eyeButton" title="Preview">
+        <svg class="icon" viewBox="0 0 16 16">
+          <path d="M8 3C4 3 1 6 0 8c1 2 4 5 8 5s7-3 8-5c-1-2-4-5-8-5zm0 8c-2 0-4-2-4-4s2-4 4-4 4 2 4 4-2 4-4 4zm0-6c-1 0-2 1-2 2s1 2 2 2 2-1 2-2-1-2-2-2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  
+  <script>
+    const vscode = acquireVsCodeApi();
+    
+    document.getElementById('pullButton').addEventListener('click', () => {
+      const pasteId = document.getElementById('pasteIdInput').value;
+      vscode.postMessage({ command: 'pull', pasteId });
+    });
+    
+    document.getElementById('pushButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'push' });
+    });
+    
+    document.getElementById('pushDropdown').addEventListener('click', () => {
+      vscode.postMessage({ command: 'pushDropdown' });
+    });
+    
+    document.getElementById('uploadButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'upload' });
+    });
+    
+    document.getElementById('downloadButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'download' });
+    });
+    
+    document.getElementById('copyButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'copy' });
+    });
+    
+    document.getElementById('menuButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'menu' });
+    });
+    
+    document.getElementById('languageButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'language' });
+    });
+    
+    document.getElementById('eyeButton').addEventListener('click', () => {
+      vscode.postMessage({ command: 'preview' });
+    });
+    
+    document.getElementById('pasteIdInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('pullButton').click();
+      }
+    });
+    
+    // Handle messages from extension
+    window.addEventListener('message', event => {
+      const message = event.data;
+      switch (message.command) {
+        case 'updatePasteId':
+          document.getElementById('pasteIdInput').value = message.pasteId || '';
+          break;
+      }
+    });
+  </script>
+</body>
+</html>`;
+}
+
+/**
+ * Create and show the paste portal webview panel
+ * @param {vscode.ExtensionContext} context
+ */
+function createPastePortalWebview(context) {
+  const panel = vscode.window.createWebviewPanel(
+    'pastePortal',
+    'PastePortal',
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true
+    }
+  );
+  
+  panel.webview.html = getWebviewContent();
+  
+  // Handle messages from webview
+  panel.webview.onDidReceiveMessage(
+    message => {
+      switch (message.command) {
+        case 'pull':
+          if (message.pasteId) {
+            vscode.commands.executeCommand('pasteportal.get-paste');
+          } else {
+            vscode.window.showWarningMessage('Please enter a paste ID');
+          }
+          break;
+        case 'push':
+          vscode.commands.executeCommand('pasteportal.store-paste');
+          break;
+        case 'upload':
+          vscode.commands.executeCommand('pasteportal.shareFile');
+          break;
+        case 'download':
+          vscode.commands.executeCommand('pasteportal.get-paste');
+          break;
+        case 'copy':
+          vscode.commands.executeCommand('pasteportal.copyPasteId');
+          break;
+        case 'menu':
+          // Show context menu or options
+          break;
+        case 'language':
+          // Handle language selection
+          break;
+        case 'preview':
+          // Handle preview
+          break;
+      }
+    },
+    null,
+    context.subscriptions
+  );
+  
+  return panel;
+}
+
+/**
  * Handle share paste from context menu
  */
 async function handleSharePaste(pasteItem) {
@@ -1394,35 +1764,22 @@ async function handleSharePaste(pasteItem) {
       return
     }
 
-    // Check if paste is password protected
-    const isPasswordProtected = paste?.is_password_encrypted || false
+    // Get paste from tree provider if not already available
+    if (!paste && authTreeProvider) {
+      paste = authTreeProvider.getPaste(pasteId)
+    }
+
+    // Check if paste is password protected and get stored password
     let password = null
-
-    if (isPasswordProtected) {
-      // Ask for password to include in share instructions
-      password = await vscode.window.showInputBox({
-        prompt: 'Enter the password to include in share instructions (leave empty to share without password)',
-        password: true,
-        placeHolder: 'Password (optional)'
-      })
-
-      // If user cancelled, return
-      if (password === undefined) {
-        return
-      }
-
-      // If empty password provided, ask for confirmation
-      if (password === '') {
-        const confirm = await vscode.window.showWarningMessage(
-          'Share without password? The recipient will need to know the password separately.',
-          { modal: true },
-          'Share Without Password',
-          'Cancel'
+    if (paste?.is_password_encrypted) {
+      // Get password from stored paste data (same way as retrieve password)
+      if (paste.password) {
+        password = paste.password
+      } else {
+        // Password not available - show warning but still share without password
+        vscode.window.showWarningMessage(
+          'Password not available for this paste. Sharing without password. The recipient will need to know the password separately.'
         )
-
-        if (confirm !== 'Share Without Password') {
-          return
-        }
       }
     }
 
@@ -1754,12 +2111,40 @@ function activate(context) {
           // Update status bar to reflect successful connection
           updateStatusBar(true)
 
-          // insert the paste content into the active editor
-          await editor.edit((editBuilder) => {
-            editBuilder.insert(editor.selection.active, paste)
-          })
-          
-          vscode.window.showInformationMessage('Paste retrieved successfully.')
+          // Check if paste is password-encrypted and handle accordingly
+          if (is_password_encrypted) {
+            // Prompt for password to decrypt
+            const password = await vscode.window.showInputBox({
+              prompt: 'Enter the password to decrypt the paste',
+              password: true
+            })
+
+            if (!password) {
+              vscode.window.showWarningMessage('Password is required to decrypt this paste.')
+              return
+            }
+
+            // Decrypt the paste
+            try {
+              const decryptedText = decrypt(password, paste)
+              
+              // Insert decrypted content into the active editor
+              await editor.edit((editBuilder) => {
+                editBuilder.insert(editor.selection.active, decryptedText)
+              })
+              
+              vscode.window.showInformationMessage('Encrypted paste retrieved and decrypted successfully.')
+            } catch (decryptError) {
+              vscode.window.showErrorMessage(`Decryption failed: ${decryptError.message}`)
+            }
+          } else {
+            // Insert plain text paste
+            await editor.edit((editBuilder) => {
+              editBuilder.insert(editor.selection.active, paste)
+            })
+            
+            vscode.window.showInformationMessage('Paste retrieved successfully.')
+          }
         } catch (error) {
           console.error('Error retrieving paste:', error)
           
@@ -2549,6 +2934,10 @@ function activate(context) {
     }
   })
 
+  const openPastePortalPanelCommand = vscode.commands.registerCommand('pasteportal.openPanel', () => {
+    createPastePortalWebview(context)
+  })
+
   context.subscriptions.push(get_paste)
   context.subscriptions.push(store_paste)
   context.subscriptions.push(get_encrypted_paste)
@@ -2560,6 +2949,7 @@ function activate(context) {
   context.subscriptions.push(getEncryptedPasteCommand)
   context.subscriptions.push(createPasteCommand)
   context.subscriptions.push(copyPasteIdCommand)
+  context.subscriptions.push(openPastePortalPanelCommand)
 }
 
 
