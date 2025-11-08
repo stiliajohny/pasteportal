@@ -439,6 +439,62 @@ export default function PasteViewer() {
   }, [text, uploadedFileName, isManualLanguageSelection]);
 
   /**
+   * Handle paste event for CodeMirror editor
+   * This handles paste events on the editor's textarea element
+   */
+  const handleEditorPaste = useCallback((e: ClipboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Get clipboard data
+    const clipboardData = e.clipboardData || (window as any).clipboardData;
+    if (!clipboardData) {
+      return;
+    }
+
+    // Try to get plain text first (preferred)
+    let pastedText = clipboardData.getData('text/plain');
+    
+    // If no plain text, try to get HTML and extract text from it
+    if (!pastedText) {
+      const htmlData = clipboardData.getData('text/html');
+      if (htmlData) {
+        pastedText = htmlData;
+      } else {
+        // Fallback: try text format
+        pastedText = clipboardData.getData('text') || '';
+      }
+    }
+
+    // Sanitize the pasted text
+    const sanitizedText = sanitizePastedText(pastedText);
+
+    // Get the textarea element
+    const textarea = e.target as HTMLTextAreaElement;
+    if (!textarea) {
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    // Use a function to get current text state
+    setText((currentText) => {
+      // Insert sanitized text at cursor position
+      const newText = currentText.substring(0, start) + sanitizedText + currentText.substring(end);
+      
+      // Set cursor position after the inserted text
+      setTimeout(() => {
+        const newCursorPos = start + sanitizedText.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }, 0);
+      
+      return newText;
+    });
+  }, []);
+
+  /**
    * Attach paste handler to CodeMirror editor textarea
    */
   useEffect(() => {
@@ -773,62 +829,6 @@ export default function PasteViewer() {
       textarea.focus();
     }, 0);
   };
-
-  /**
-   * Handle paste event for CodeMirror editor
-   * This handles paste events on the editor's textarea element
-   */
-  const handleEditorPaste = useCallback((e: ClipboardEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Get clipboard data
-    const clipboardData = e.clipboardData || (window as any).clipboardData;
-    if (!clipboardData) {
-      return;
-    }
-
-    // Try to get plain text first (preferred)
-    let pastedText = clipboardData.getData('text/plain');
-    
-    // If no plain text, try to get HTML and extract text from it
-    if (!pastedText) {
-      const htmlData = clipboardData.getData('text/html');
-      if (htmlData) {
-        pastedText = htmlData;
-      } else {
-        // Fallback: try text format
-        pastedText = clipboardData.getData('text') || '';
-      }
-    }
-
-    // Sanitize the pasted text
-    const sanitizedText = sanitizePastedText(pastedText);
-
-    // Get the textarea element
-    const textarea = e.target as HTMLTextAreaElement;
-    if (!textarea) {
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    
-    // Use a function to get current text state
-    setText((currentText) => {
-      // Insert sanitized text at cursor position
-      const newText = currentText.substring(0, start) + sanitizedText + currentText.substring(end);
-      
-      // Set cursor position after the inserted text
-      setTimeout(() => {
-        const newCursorPos = start + sanitizedText.length;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-        textarea.focus();
-      }, 0);
-      
-      return newText;
-    });
-  }, []);
 
   /**
    * Handle encryption dialog confirmation
