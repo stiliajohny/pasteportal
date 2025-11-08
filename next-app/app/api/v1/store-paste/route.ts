@@ -24,10 +24,9 @@ import { NextRequest } from 'next/server';
  *     summary: Store a new paste
  *     description: |
  *       Store a new paste in the database. Supports both JSON and multipart/form-data.
- *       Public endpoint, but authentication is required if:
- *       - Providing user_id (must match authenticated user)
+ *       Public endpoint. Authentication is required only if:
  *       - Providing password for password-protected paste
- *       - Providing name/title for the paste
+ *       If user_id is provided but authentication fails, the paste will be created anonymously.
  *     tags:
  *       - Public
  *     security:
@@ -199,9 +198,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Security: Validate user authentication if userId or password is provided
+    // Security: Validate user authentication
+    // Only require authentication if password is provided (for password-protected pastes)
+    // For userId, try to authenticate but allow anonymous pastes if auth fails
     let authenticatedUserId: string | null = null;
-    if (userId || password) {
+    
+    // If password is provided, authentication is required
+    if (password) {
       // CSRF Protection: Validate request when authentication is used
       const csrfValidation = validateCsrf(request, true);
       if (!csrfValidation.isValid) {
@@ -223,7 +226,7 @@ export async function POST(request: NextRequest) {
         return generateResponse(
           401,
           {
-            message: 'Authentication required when providing user_id or password',
+            message: 'Authentication required when providing password for password-protected pastes',
             joke: generateBanterComment(),
           },
           undefined,
@@ -232,6 +235,11 @@ export async function POST(request: NextRequest) {
       }
       
       authenticatedUserId = user.id;
+      
+      // If userId wasn't provided but password was, use authenticated user's ID
+      if (!userId) {
+        userId = authenticatedUserId;
+      }
       
       // Security: Ensure userId in request matches authenticated user
       // Prevent user_id spoofing attacks
@@ -246,23 +254,36 @@ export async function POST(request: NextRequest) {
           request
         );
       }
-      
-      // If userId wasn't provided but password was, use authenticated user's ID
-      if (!userId && password) {
-        userId = authenticatedUserId;
-      }
-      
-      // Security: Only allow password storage for authenticated users
-      if (password && !authenticatedUserId) {
-        return generateResponse(
-          401,
-          {
-            message: 'Authentication required to store passwords',
-            joke: generateBanterComment(),
-          },
-          undefined,
-          request
-        );
+    } else if (userId) {
+      // If userId is provided but no password, try to authenticate
+      // If auth fails, just ignore userId and create anonymous paste
+      // This allows logged-in users to create pastes, but doesn't block if auth fails
+      try {
+        const csrfValidation = validateCsrf(request, true);
+        if (csrfValidation.isValid) {
+          const authSupabase = createServerSupabaseClient(request);
+          const { data: { user }, error: authError } = await authSupabase.auth.getUser();
+          
+          if (!authError && user) {
+            authenticatedUserId = user.id;
+            
+            // Security: Ensure userId in request matches authenticated user
+            // Prevent user_id spoofing attacks
+            if (userId !== authenticatedUserId) {
+              // If userId doesn't match, ignore it and create anonymous paste
+              userId = null;
+            }
+          } else {
+            // Auth failed, ignore userId and create anonymous paste
+            userId = null;
+          }
+        } else {
+          // CSRF validation failed, ignore userId and create anonymous paste
+          userId = null;
+        }
+      } catch (error) {
+        // If any error occurs during auth check, ignore userId and create anonymous paste
+        userId = null;
       }
     }
 
