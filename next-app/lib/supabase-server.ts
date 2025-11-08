@@ -39,13 +39,32 @@ export function createServerSupabaseClient(request: NextRequest) {
 
   // Fall back to cookie-based auth (browser requests)
   // Create cookie handler from request
-  // Parse cookies from the cookie header
+  // Parse cookies from the cookie header with proper URL decoding
   const getCookie = (name: string): string | undefined => {
     const cookieHeader = request.headers.get('cookie') || '';
+    if (!cookieHeader) {
+      return undefined;
+    }
+    
+    // Parse cookies, handling URL encoding
     const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [key, ...valueParts] = cookie.trim().split('=');
+      const trimmed = cookie.trim();
+      const equalIndex = trimmed.indexOf('=');
+      if (equalIndex === -1) {
+        return acc;
+      }
+      
+      const key = trimmed.substring(0, equalIndex).trim();
+      const value = trimmed.substring(equalIndex + 1).trim();
+      
       if (key) {
-        acc[key] = valueParts.join('=');
+        try {
+          // Decode URL-encoded cookie values
+          acc[key] = decodeURIComponent(value);
+        } catch {
+          // If decoding fails, use raw value
+          acc[key] = value;
+        }
       }
       return acc;
     }, {} as Record<string, string>);

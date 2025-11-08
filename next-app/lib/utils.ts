@@ -302,6 +302,67 @@ export function validateInputLength(
 }
 
 /**
+ * Sanitize pasted text content
+ * Extracts plain text from HTML/rich text clipboard content
+ * Removes formatting while preserving the actual text content
+ * @param pastedText - Text content from clipboard (may contain HTML)
+ * @returns Sanitized plain text
+ */
+export function sanitizePastedText(pastedText: string): string {
+  if (typeof pastedText !== 'string') {
+    return '';
+  }
+
+  // Create a temporary DOM element to extract plain text from HTML
+  // This handles cases where users paste from rich text sources (Word, web pages, etc.)
+  if (typeof document !== 'undefined') {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = pastedText;
+    
+    // Extract plain text, preserving line breaks
+    // Replace <br>, <p>, <div> with newlines
+    const brRegex = /<br\s*\/?>/gi;
+    const blockElements = /<\/?(p|div|tr|td|th|li|h[1-6]|pre|code|blockquote)[^>]*>/gi;
+    
+    let plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // If the original had HTML tags, process them to preserve structure
+    if (pastedText.includes('<')) {
+      // Replace block elements with newlines
+      plainText = pastedText
+        .replace(blockElements, '\n')
+        .replace(brRegex, '\n');
+      
+      // Extract text again after processing
+      tempDiv.innerHTML = plainText;
+      plainText = tempDiv.textContent || tempDiv.innerText || '';
+    }
+    
+    // Normalize line breaks (convert all types to \n)
+    plainText = plainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // Remove null bytes and other problematic control characters
+    // Keep: \n (newline), \t (tab), and printable characters
+    plainText = plainText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
+    
+    return plainText;
+  }
+  
+  // Fallback for server-side: basic HTML tag removal
+  return pastedText
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&amp;/g, '&') // Replace &amp; with &
+    .replace(/&lt;/g, '<') // Replace &lt; with <
+    .replace(/&gt;/g, '>') // Replace &gt; with >
+    .replace(/&quot;/g, '"') // Replace &quot; with "
+    .replace(/&#39;/g, "'") // Replace &#39; with '
+    .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+}
+
+/**
  * Maximum allowed request body size (1MB)
  * Used for validating request sizes in API routes
  */

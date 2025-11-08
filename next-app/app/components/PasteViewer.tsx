@@ -3,8 +3,9 @@
 import { fetchWithCsrf } from '@/lib/csrf-client';
 import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
+import { sanitizePastedText } from '@/lib/utils';
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';
@@ -175,8 +176,9 @@ async function storePaste(
   if (userId) {
     body.user_id = userId;
   }
-  // Only include password if user is authenticated and paste is password-protected
-  if (password && userId) {
+  // Include password if provided - server will verify authentication
+  // Don't require userId on frontend since server validates auth anyway
+  if (password) {
     body.password = password;
   }
 
@@ -437,6 +439,58 @@ export default function PasteViewer() {
   }, [text, uploadedFileName, isManualLanguageSelection]);
 
   /**
+   * Attach paste handler to CodeMirror editor textarea
+   */
+  useEffect(() => {
+    if (!isClient || !isEditMode) {
+      return;
+    }
+
+    const attachPasteHandler = () => {
+      const editorContainer = editorContainerRef.current;
+      if (editorContainer) {
+        const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+        if (textarea && !textarea.hasAttribute('data-paste-handler-attached')) {
+          // Mark as attached to avoid duplicate handlers
+          textarea.setAttribute('data-paste-handler-attached', 'true');
+          // Add paste handler
+          textarea.addEventListener('paste', handleEditorPaste);
+        }
+      }
+    };
+
+    // Attach handler after a short delay to ensure editor is rendered
+    const timeoutId = setTimeout(attachPasteHandler, 100);
+
+    // Use MutationObserver to detect when editor textarea is added/removed
+    const observer = new MutationObserver(() => {
+      attachPasteHandler();
+    });
+
+    const editorContainer = editorContainerRef.current;
+    if (editorContainer) {
+      observer.observe(editorContainer, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+      // Cleanup: remove handler
+      const editorContainer = editorContainerRef.current;
+      if (editorContainer) {
+        const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+        if (textarea) {
+          textarea.removeAttribute('data-paste-handler-attached');
+          textarea.removeEventListener('paste', handleEditorPaste);
+        }
+      }
+    };
+  }, [isClient, isEditMode, handleEditorPaste]);
+
+  /**
    * Auto-focus editor when entering edit mode
    */
   useEffect(() => {
@@ -670,6 +724,111 @@ export default function PasteViewer() {
       setIsPushing(false);
     }
   };
+
+  /**
+   * Handle paste event to sanitize pasted content
+   * Extracts plain text from HTML/rich text clipboard content
+   * @param e - Paste event
+   */
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    
+    // Get clipboard data
+    const clipboardData = e.clipboardData || (window as any).clipboardData;
+    if (!clipboardData) {
+      return;
+    }
+
+    // Try to get plain text first (preferred)
+    let pastedText = clipboardData.getData('text/plain');
+    
+    // If no plain text, try to get HTML and extract text from it
+    if (!pastedText) {
+      const htmlData = clipboardData.getData('text/html');
+      if (htmlData) {
+        pastedText = htmlData;
+      } else {
+        // Fallback: try text format
+        pastedText = clipboardData.getData('text') || '';
+      }
+    }
+
+    // Sanitize the pasted text
+    const sanitizedText = sanitizePastedText(pastedText);
+
+    // Get the textarea element
+    const textarea = e.currentTarget;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = text;
+
+    // Insert sanitized text at cursor position
+    const newText = currentText.substring(0, start) + sanitizedText + currentText.substring(end);
+    setText(newText);
+
+    // Set cursor position after the inserted text
+    setTimeout(() => {
+      const newCursorPos = start + sanitizedText.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.focus();
+    }, 0);
+  };
+
+  /**
+   * Handle paste event for CodeMirror editor
+   * This handles paste events on the editor's textarea element
+   */
+  const handleEditorPaste = useCallback((e: ClipboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Get clipboard data
+    const clipboardData = e.clipboardData || (window as any).clipboardData;
+    if (!clipboardData) {
+      return;
+    }
+
+    // Try to get plain text first (preferred)
+    let pastedText = clipboardData.getData('text/plain');
+    
+    // If no plain text, try to get HTML and extract text from it
+    if (!pastedText) {
+      const htmlData = clipboardData.getData('text/html');
+      if (htmlData) {
+        pastedText = htmlData;
+      } else {
+        // Fallback: try text format
+        pastedText = clipboardData.getData('text') || '';
+      }
+    }
+
+    // Sanitize the pasted text
+    const sanitizedText = sanitizePastedText(pastedText);
+
+    // Get the textarea element
+    const textarea = e.target as HTMLTextAreaElement;
+    if (!textarea) {
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    // Use a function to get current text state
+    setText((currentText) => {
+      // Insert sanitized text at cursor position
+      const newText = currentText.substring(0, start) + sanitizedText + currentText.substring(end);
+      
+      // Set cursor position after the inserted text
+      setTimeout(() => {
+        const newCursorPos = start + sanitizedText.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.focus();
+      }, 0);
+      
+      return newText;
+    });
+  }, []);
 
   /**
    * Handle encryption dialog confirmation
@@ -1743,37 +1902,39 @@ export default function PasteViewer() {
               <div ref={editorContainerRef} className={`flex-1 min-w-0 ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
                 {isClient ? (
                   <Editor
-                    value={text}
-                    onValueChange={(code) => setText(code)}
-                    highlight={(code) => highlightCode(code, selectedLanguage)}
-                    padding={16}
-                    className={`w-full h-full min-h-[60vh] font-mono text-sm sm:text-base ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
-                    style={{
-                      fontFamily: 'var(--font-mono), monospace',
-                      fontSize: 'inherit',
-                      lineHeight: '1.75rem',
-                      outline: 'none',
-                      background: 'var(--color-background)',
-                      color: 'var(--color-text)',
-                      minHeight: '60vh',
-                      maxWidth: '100%',
-                      overflowX: textWrap ? 'hidden' : 'auto',
-                      whiteSpace: textWrap ? 'pre-wrap' : 'pre',
-                      wordBreak: textWrap ? 'break-word' : 'normal',
-                    }}
-                    textareaClassName={`w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
-                    preClassName={`m-0 p-4 sm:p-6 lg:p-8 bg-transparent ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
-                    placeholder="Start typing or paste your content here..."
-                    disabled={isLoading}
-                    tabSize={2}
-                    insertSpaces={true}
-                  />
+                      value={text}
+                      onValueChange={(code) => setText(code)}
+                      highlight={(code) => highlightCode(code, selectedLanguage)}
+                      padding={16}
+                      className={`w-full h-full min-h-[60vh] font-mono text-sm sm:text-base ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+                      style={{
+                        fontFamily: 'var(--font-mono), monospace',
+                        fontSize: 'inherit',
+                        lineHeight: '1.75rem',
+                        outline: 'none',
+                        background: 'var(--color-background)',
+                        color: 'var(--color-text)',
+                        minHeight: '60vh',
+                        maxWidth: '100%',
+                        overflowX: textWrap ? 'hidden' : 'auto',
+                        whiteSpace: textWrap ? 'pre-wrap' : 'pre',
+                        wordBreak: textWrap ? 'break-word' : 'normal',
+                      }}
+                      textareaClassName={`w-full h-full min-h-[60vh] font-mono text-sm sm:text-base resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text bg-transparent text-inherit caret-current ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+                      preClassName={`m-0 p-4 sm:p-6 lg:p-8 bg-transparent ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+                      placeholder="Start typing or paste your content here..."
+                      disabled={isLoading}
+                      tabSize={2}
+                      insertSpaces={true}
+                    />
+                  </div>
                 ) : (
                   // Fallback textarea while Editor loads (SSR/hydration)
                   <textarea
                     ref={textareaRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
+                    onPaste={handlePaste}
                     readOnly={isLoading}
                     className={`w-full h-full min-h-[60vh] bg-background text-text font-mono text-sm sm:text-base p-4 sm:p-6 lg:p-8 resize-none outline-none leading-relaxed focus:outline-none focus:ring-0 border-0 cursor-text ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
                     style={{ 

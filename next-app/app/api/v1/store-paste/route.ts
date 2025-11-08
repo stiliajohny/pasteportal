@@ -223,10 +223,16 @@ export async function POST(request: NextRequest) {
       const { data: { user }, error: authError } = await authSupabase.auth.getUser();
       
       if (authError || !user) {
+        // Log auth error for debugging (in development only)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[store-paste] Auth error:', authError);
+          console.error('[store-paste] Cookie header:', request.headers.get('cookie')?.substring(0, 200));
+        }
+        
         return generateResponse(
           401,
           {
-            message: 'Authentication required when providing password for password-protected pastes',
+            message: 'Authentication required when providing password for password-protected pastes. Please sign in again.',
             joke: generateBanterComment(),
           },
           undefined,
