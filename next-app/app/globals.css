@@ -123,6 +123,10 @@ body {
     opacity: 1;
   }
 
+  60% {
+    transform: scale(0.6);
+  }
+
   100% {
     transform: scale(1);
     opacity: 0.95;
@@ -138,6 +142,10 @@ body {
 
   20% {
     opacity: 1;
+  }
+
+  60% {
+    transform: scale(0.8);
   }
 
   100% {

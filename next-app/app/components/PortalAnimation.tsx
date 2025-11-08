@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 /**
  * PortalAnimation component that creates a portal-opening effect on page load
@@ -149,7 +149,7 @@ export default function PortalAnimation() {
     <div
       className="fixed inset-0 z-[9999] pointer-events-none"
       style={{
-        animation: isFadingOut ? `portal-fade-out ${fadeOutDuration}ms ease-out forwards` : undefined,
+        animation: isFadingOut ? `portal-fade-out ${fadeOutDuration}ms cubic-bezier(0.1, 0, 0.2, 1) forwards` : undefined,
       }}
     >
       {/* Galaxy nebula background */}
@@ -255,7 +255,7 @@ export default function PortalAnimation() {
               0 0 80px var(--color-positive-highlight),
               inset 0 0 40px var(--color-positive-highlight)
             `,
-            animation: `${animationName} ${animationDurationMs} ease-out, portal-glow 1.5s ease-in-out infinite`,
+            animation: `${animationName} ${animationDurationMs} cubic-bezier(0.1, 0, 0.2, 1), portal-glow 1.5s ease-in-out infinite`,
             transform: initialTransform,
             animationFillMode: 'forwards',
           }}
@@ -276,7 +276,7 @@ export default function PortalAnimation() {
               0 0 60px var(--color-negative-highlight),
               inset 0 0 30px var(--color-negative-highlight)
             `,
-            animation: `${animationName} ${animationDurationMs} ease-out ${delay1}, portal-glow 1.5s ease-in-out infinite ${delay1}`,
+            animation: `${animationName} ${animationDurationMs} cubic-bezier(0.1, 0, 0.2, 1) ${delay1}, portal-glow 1.5s ease-in-out infinite ${delay1}`,
             transform: initialTransform,
             animationFillMode: 'forwards',
           }}
@@ -297,7 +297,7 @@ export default function PortalAnimation() {
               0 0 40px var(--color-positive-highlight),
               inset 0 0 20px var(--color-positive-highlight)
             `,
-            animation: `${animationName} ${animationDurationMs} ease-out ${delay2}, portal-glow 1.5s ease-in-out infinite ${delay2}`,
+            animation: `${animationName} ${animationDurationMs} cubic-bezier(0.1, 0, 0.2, 1) ${delay2}, portal-glow 1.5s ease-in-out infinite ${delay2}`,
             transform: initialTransform,
             animationFillMode: 'forwards',
           }}
@@ -329,7 +329,7 @@ export default function PortalAnimation() {
               inset 0 0 60px var(--color-positive-highlight),
               inset 0 0 120px rgba(255, 0, 255, 0.3)
             `,
-            animation: `${animationName} ${animationDurationMs} ease-out ${delay3}, portal-glow 1.5s ease-in-out infinite ${delay3}`,
+            animation: `${animationName} ${animationDurationMs} cubic-bezier(0.1, 0, 0.2, 1) ${delay3}, portal-glow 1.5s ease-in-out infinite ${delay3}`,
             transform: initialTransform,
             animationFillMode: 'forwards',
           }}
@@ -369,7 +369,7 @@ export default function PortalAnimation() {
         className="absolute inset-0 bg-[var(--color-background)]"
         style={{
           opacity: 0,
-          animation: `portal-reveal ${animationDurationMs} ease-out reverse`,
+          animation: `portal-reveal ${animationDurationMs} cubic-bezier(0.1, 0, 0.2, 1) reverse`,
         }}
       />
     </div>
