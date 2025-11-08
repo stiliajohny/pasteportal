@@ -1927,7 +1927,6 @@ export default function PasteViewer() {
                       tabSize={2}
                       insertSpaces={true}
                     />
-                  </div>
                 ) : (
                   // Fallback textarea while Editor loads (SSR/hydration)
                   <textarea
