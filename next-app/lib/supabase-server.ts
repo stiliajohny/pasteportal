@@ -15,13 +15,13 @@ export function createServerSupabaseClient(request: NextRequest) {
     throw new Error('Missing Supabase environment variables');
   }
 
-  // Check for Authorization header (Bearer token) - used by VS Code extension
+  // Check for Authorization header (Bearer token) - used by VS Code extension and browser clients
   const authHeader = request.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const accessToken = authHeader.substring(7); // Remove 'Bearer ' prefix
     
     // Create a client with the access token in global headers
-    // This allows getUser() and other auth methods to work with the token
+    // getUser() will use the Authorization header to validate the token
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {

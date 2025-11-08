@@ -156,13 +156,20 @@ async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncryp
 
 /**
  * Store paste content to API (Push)
+ * @param pasteContent - The paste content to store
+ * @param recipientGhUsername - GitHub username of the recipient
+ * @param name - Optional paste name
+ * @param userId - Optional user ID
+ * @param password - Optional password for password-protected paste
+ * @param accessToken - Optional Supabase access token for authentication
  */
 async function storePaste(
   pasteContent: string,
   recipientGhUsername: string = 'unknown',
   name: string | null = null,
   userId: string | null = null,
-  password: string | null = null
+  password: string | null = null,
+  accessToken: string | null = null
 ): Promise<{ id: string; message: string }> {
   const body: any = {
     paste: pasteContent,
@@ -182,13 +189,17 @@ async function storePaste(
     body.password = password;
   }
 
-  const response = await fetchWithCsrf(`${API_BASE}/store-paste`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const response = await fetchWithCsrf(
+    `${API_BASE}/store-paste`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    accessToken
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
@@ -217,7 +228,7 @@ async function storePaste(
  * - Progressive Disclosure: Show/hide advanced features
  */
 export default function PasteViewer() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { resolvedTheme } = useTheme();
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -747,12 +758,17 @@ export default function PasteViewer() {
       const userId = user?.id || null;
 
       const nameToStore = pasteName.trim() || null;
+      // Pass access token to authenticate the request
+      // This is needed because the client uses localStorage for sessions,
+      // but the server expects cookies or Bearer tokens
+      const accessToken = session?.access_token || null;
       const result = await storePaste(
         contentToStore,
         recipientGhUsername,
         nameToStore,
         userId,
-        isEncrypted && password ? password : null
+        isEncrypted && password ? password : null,
+        accessToken
       );
       setPushedPasteId(result.id);
       setPushedPasteName(nameToStore);

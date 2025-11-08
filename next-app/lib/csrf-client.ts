@@ -20,13 +20,16 @@ export function getCsrfToken(): string | null {
 /**
  * Include CSRF token in fetch request headers
  * Adds X-CSRF-Token header if token is available
+ * Also adds Authorization header with Bearer token if accessToken is provided
  * @param url - Request URL
  * @param options - Fetch options
+ * @param accessToken - Optional Supabase access token for authentication
  * @returns Fetch response
  */
 export async function fetchWithCsrf(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  accessToken?: string | null
 ): Promise<Response> {
   const token = getCsrfToken();
   
@@ -36,6 +39,12 @@ export async function fetchWithCsrf(
   // Add CSRF token if available
   if (token) {
     headers.set('X-CSRF-Token', token);
+  }
+  
+  // Add Authorization header with Bearer token if access token is provided
+  // This allows the server to authenticate the user even if cookies aren't available
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
   }
   
   // Ensure credentials are included for cookie-based auth
