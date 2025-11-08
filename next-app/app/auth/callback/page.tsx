@@ -20,8 +20,9 @@ function AuthCallbackContent() {
       const errorDescription = searchParams.get('error_description');
       const isVSCodeRedirect = searchParams.get('vscode') === 'true' || searchParams.get('redirect') === 'vscode';
       
-      // Check if this is a VS Code auth flow (from email verification or OAuth)
-      const isVSCodeAuth = isVSCodeRedirect || localStorage.getItem('vscode_auth_pending') === 'true';
+      // Only redirect to VS Code if explicitly requested via query parameter
+      // The /auth/vscode page handles its own redirects
+      const isVSCodeAuth = isVSCodeRedirect;
       
       // Handle errors in URL (e.g., expired email verification link)
       if (error) {
@@ -203,21 +204,28 @@ function AuthCallbackContent() {
         }
         
         if (accessToken) {
-          // Redirect to VS Code with tokens
-          const vscodeParams = new URLSearchParams();
-          vscodeParams.set('access_token', accessToken);
-          const refreshToken = hashParams.get('refresh_token');
-          const expiresAt = hashParams.get('expires_at');
-          const expiresIn = hashParams.get('expires_in');
-          const tokenType = hashParams.get('token_type');
-          
-          if (refreshToken) vscodeParams.set('refresh_token', refreshToken);
-          if (expiresAt) vscodeParams.set('expires_at', expiresAt);
-          if (expiresIn) vscodeParams.set('expires_in', expiresIn);
-          if (tokenType) vscodeParams.set('token_type', tokenType);
-          
-          window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${vscodeParams.toString()}`;
-          return;
+          // Only redirect to VS Code if explicitly requested
+          if (isVSCodeAuth) {
+            const vscodeParams = new URLSearchParams();
+            vscodeParams.set('access_token', accessToken);
+            const refreshToken = hashParams.get('refresh_token');
+            const expiresAt = hashParams.get('expires_at');
+            const expiresIn = hashParams.get('expires_in');
+            const tokenType = hashParams.get('token_type');
+            
+            if (refreshToken) vscodeParams.set('refresh_token', refreshToken);
+            if (expiresAt) vscodeParams.set('expires_at', expiresAt);
+            if (expiresIn) vscodeParams.set('expires_in', expiresIn);
+            if (tokenType) vscodeParams.set('token_type', tokenType);
+            
+            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${vscodeParams.toString()}`;
+            return;
+          } else {
+            // Normal web flow - exchange tokens for session and redirect to home
+            // The tokens in hash will be automatically processed by Supabase client
+            router.push('/');
+            return;
+          }
         }
       }
 
