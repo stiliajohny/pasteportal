@@ -612,10 +612,17 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
         console.log('Web3 Auth - Wallet:', walletName, 'Chain:', chain);
       }
       
+      // Supabase signInWithWeb3 currently only supports Ethereum
+      if (chain !== 'ethereum') {
+        setError(`Web3 authentication for ${chain} is not yet supported. Please use Ethereum.`);
+        setLoading(false);
+        return;
+      }
+      
       let web3Result;
       try {
         const web3Options = {
-          chain: chain,
+          chain: chain as 'ethereum',
           wallet: wallet,
           statement: 'I accept the Terms of Service',
         };

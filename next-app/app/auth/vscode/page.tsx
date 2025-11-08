@@ -217,21 +217,10 @@ function VSCodeAuthPageContent() {
             hasRedirected: hasRedirectedRef.current
           });
         }
-      } else if (event === 'SIGNED_UP') {
-        if (session) {
-          // User signed up and got session immediately (no email confirmation)
-          if (!hasRedirectedRef.current) {
-            setTimeout(() => {
-              redirectToVSCode(session);
-            }, 500);
-          }
-        } else {
-          // User signed up but email confirmation is required
-          // DON'T redirect immediately - let the email verification handle it
-          // The email verification link will redirect back to VS Code
-          // Just show a message (handled in AuthDialog)
-        }
       }
+      // Note: SIGNED_UP is not a valid auth event type in Supabase
+      // Signups that result in immediate sessions will trigger SIGNED_IN event
+      // Signups requiring email confirmation will be handled via email verification flow
       // Don't redirect on TOKEN_REFRESHED or INITIAL_SESSION - those are not user actions
     });
 
