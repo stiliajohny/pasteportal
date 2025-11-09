@@ -1,7 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Git Commit Rules
 
 When making commits, always follow these rules:

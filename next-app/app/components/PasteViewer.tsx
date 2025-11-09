@@ -1590,7 +1590,7 @@ export default function PasteViewer() {
       {/* Pull/Push Section - Apple-inspired design */}
       <div className="border-b border-divider/50 w-full overflow-x-hidden">
         <div className="mx-auto px-4 sm:px-6 py-2 sm:py-1.5 max-w-4xl">
-          {/* Single Row Layout: Logical grouping - Inputs → Primary Actions → File Ops → Content Ops → View Controls */}
+          {/* Single Row Layout: Logical grouping - Enter Paste ID + Pull | Spacer | Name Paste + Push | Spacer | Formatting buttons */}
           <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:flex-nowrap flex-wrap">
             {/* Hidden file input */}
             <input
@@ -1602,155 +1602,108 @@ export default function PasteViewer() {
               aria-label="File upload input"
             />
 
-            {/* GROUP 1: Inputs & Configuration (Left) */}
-            {/* Paste ID Input */}
-            <div className="flex-1 w-full sm:flex-none sm:w-auto sm:shrink-0 min-w-0 sm:min-w-[180px] sm:max-w-[220px]">
-              <label htmlFor="paste-id-input" className="sr-only">Enter paste ID</label>
-              <div className="relative w-full">
-                <input
-                  id="paste-id-input"
-                  data-tour="paste-id-input"
-                  type="text"
-                  value={pasteIdInput}
-                  onChange={(e) => setPasteIdInput(e.target.value)}
-                  placeholder="Enter paste ID"
-                  className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-200 font-mono text-sm min-h-[44px] sm:min-h-0"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && isValidPasteId(pasteIdInput)) {
-                      handlePasteIdSubmit();
-                    }
-                  }}
-                />
-                {pasteIdInput.length > 0 && (
-                  <button
-                    onClick={() => setPasteIdInput('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary/60 hover:text-text transition-colors p-1"
-                    aria-label="Clear input"
-                  >
-                    <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Paste Name Input (optional, only for authenticated users) */}
-            {user && (
-              <div className="w-full sm:w-36 sm:shrink-0 min-w-0 sm:max-w-[160px]">
-                <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
-                <input
-                  id="paste-name-input"
-                  data-tour="paste-name-input"
-                  type="text"
-                  value={pasteName}
-                  onChange={(e) => setPasteName(e.target.value)}
-                  placeholder="Name your paste"
-                  className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm min-h-[44px] sm:min-h-0"
-                />
-              </div>
-            )}
-
-            {/* Language Selector - only shown when text exists and not loading */}
-            {!isLoading && text && (
-              <div className="relative w-full sm:flex-none sm:shrink-0 sm:w-[110px] sm:min-w-[110px] sm:max-w-[110px]">
-                <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
-                <select
-                  id="language-select"
-                  data-tour="language-selector"
-                  value={selectedLanguage}
-                  onChange={(e) => {
-                    setSelectedLanguage(e.target.value as LanguageValue);
-                    setIsManualLanguageSelection(true);
-                  }}
-                  className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 sm:pr-7 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black min-h-[44px] sm:min-h-0"
-                  style={{
-                    backgroundColor: 'var(--color-surface-variant)',
-                    color: 'var(--color-text)',
-                  }}
-                  aria-label="Select syntax highlighting language"
-                  title="Language"
-                >
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <option 
-                      key={lang.value} 
-                      value={lang.value}
-                      style={{
-                        backgroundColor: 'var(--color-surface)',
-                        color: 'var(--color-text)',
-                      }}
-                    >
-                      {lang.label}
-                    </option>
-                  ))}
-                </select>
-                <svg 
-                  className="absolute right-2 sm:right-2 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3.5 sm:h-3.5 text-text-secondary/60 pointer-events-none" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            )}
-
-            {/* GROUP 2: Primary Actions (Center-Left) */}
+            {/* GROUP 1: Enter Paste ID + Pull Button */}
             <div className="flex gap-2 sm:gap-1.5 w-full sm:w-auto shrink-0">
+              {/* Paste ID Input */}
+              <div className="flex-1 w-full sm:flex-none sm:w-auto sm:shrink-0 min-w-0 sm:min-w-[180px] sm:max-w-[220px]">
+                <label htmlFor="paste-id-input" className="sr-only">Enter paste ID</label>
+                <div className="relative w-full">
+                  <input
+                    id="paste-id-input"
+                    data-tour="paste-id-input"
+                    type="text"
+                    value={pasteIdInput}
+                    onChange={(e) => setPasteIdInput(e.target.value)}
+                    placeholder="Enter paste ID"
+                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-200 font-mono text-sm min-h-[44px] sm:min-h-0"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && isValidPasteId(pasteIdInput)) {
+                        handlePasteIdSubmit();
+                      }
+                    }}
+                  />
+                  {pasteIdInput.length > 0 && (
+                    <button
+                      onClick={() => setPasteIdInput('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary/60 hover:text-text transition-colors p-1"
+                      aria-label="Clear input"
+                    >
+                      <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Pull Button */}
               <button
-                  data-tour="pull-button"
-                  onClick={handlePasteIdSubmit}
-                  disabled={!isValidPasteId(pasteIdInput) || isLoading}
-                  className={`
-                    flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    ${
-                      isValidPasteId(pasteIdInput) && !isLoading
-                        ? 'bg-neon-cyan text-black hover:opacity-90 active:scale-[0.98]'
-                        : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
-                    }
-                  `}
+                data-tour="pull-button"
+                onClick={handlePasteIdSubmit}
+                disabled={!isValidPasteId(pasteIdInput) || isLoading}
+                className={`flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isValidPasteId(pasteIdInput) && !isLoading
+                    ? 'bg-neon-cyan text-black hover:opacity-90 active:scale-[0.98]'
+                    : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
+                }`}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <svg className="animate-spin h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Pulling
+                  </span>
+                ) : (
+                  'Pull'
+                )}
+              </button>
+            </div>
+
+            {/* Spacer */}
+            <div className="hidden sm:block w-px h-6 bg-divider/40 mx-1"></div>
+
+            {/* GROUP 2: Name Paste + Push Button */}
+            <div className="flex gap-2 sm:gap-1.5 w-full sm:w-auto shrink-0">
+              {/* Paste Name Input (optional, only for authenticated users) */}
+              {user && (
+                <div className="w-full sm:w-36 sm:shrink-0 min-w-0 sm:max-w-[160px]">
+                  <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
+                  <input
+                    id="paste-name-input"
+                    data-tour="paste-name-input"
+                    type="text"
+                    value={pasteName}
+                    onChange={(e) => setPasteName(e.target.value)}
+                    placeholder="Name your paste"
+                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm min-h-[44px] sm:min-h-0"
+                  />
+                </div>
+              )}
+
+              {/* Push Button with Dropdown */}
+              <div ref={pushButtonRef} data-tour="push-button" className="relative flex flex-1 sm:flex-none">
+                <button
+                  onClick={handlePushButtonClick}
+                  disabled={!text || text.trim().length === 0 || isPushing}
+                  className={`flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-l-lg sm:rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    text && text.trim().length > 0 && !isPushing
+                      ? 'bg-neon-magenta text-white hover:opacity-90 active:scale-[0.98]'
+                      : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
+                  }`}
                 >
-                  {isLoading ? (
+                  {isPushing ? (
                     <span className="flex items-center justify-center gap-1.5">
                       <svg className="animate-spin h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Pulling
+                      Pushing
                     </span>
                   ) : (
-                    'Pull'
+                    'Push'
                   )}
-              </button>
-
-              {/* Push Button with Dropdown */}
-              <div ref={pushButtonRef} data-tour="push-button" className="relative flex flex-1 sm:flex-none">
-                <button
-                    onClick={handlePushButtonClick}
-                    disabled={!text || text.trim().length === 0 || isPushing}
-                    className={`
-                      flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-l-lg sm:rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0
-                      disabled:opacity-40 disabled:cursor-not-allowed
-                      ${
-                        text && text.trim().length > 0 && !isPushing
-                          ? 'bg-neon-magenta text-white hover:opacity-90 active:scale-[0.98]'
-                          : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
-                      }
-                    `}
-                  >
-                    {isPushing ? (
-                      <span className="flex items-center justify-center gap-1.5">
-                        <svg className="animate-spin h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Pushing
-                      </span>
-                    ) : (
-                      'Push'
-                    )}
                 </button>
                 {text && text.trim().length > 0 && !isPushing && (
                   <button
@@ -1768,20 +1721,67 @@ export default function PasteViewer() {
               </div>
             </div>
 
-            {/* GROUP 3: File Operations (Center) */}
-            <div className="flex gap-2 sm:gap-1 w-full sm:w-auto shrink-0">
+            {/* Spacer */}
+            <div className="hidden sm:block w-px h-6 bg-divider/40 mx-1"></div>
+
+            {/* GROUP 3: Formatting Buttons (Language, Upload, Download, Copy, Text Wrap, Edit/View) */}
+            <div className="flex gap-2 sm:gap-1 w-full sm:w-auto shrink-0 flex-wrap">
+              {/* Language Selector - only shown when text exists and not loading */}
+              {!isLoading && text && (
+                <div className="relative w-full sm:flex-none sm:shrink-0 sm:w-[110px] sm:min-w-[110px] sm:max-w-[110px]">
+                  <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
+                  <select
+                    id="language-select"
+                    data-tour="language-selector"
+                    value={selectedLanguage}
+                    onChange={(e) => {
+                      setSelectedLanguage(e.target.value as LanguageValue);
+                      setIsManualLanguageSelection(true);
+                    }}
+                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 sm:pr-7 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black min-h-[44px] sm:min-h-0"
+                    style={{
+                      backgroundColor: 'var(--color-surface-variant)',
+                      color: 'var(--color-text)',
+                    }}
+                    aria-label="Select syntax highlighting language"
+                    title="Language"
+                  >
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <option 
+                        key={lang.value} 
+                        value={lang.value}
+                        style={{
+                          backgroundColor: 'var(--color-surface)',
+                          color: 'var(--color-text)',
+                        }}
+                      >
+                        {lang.label}
+                      </option>
+                    ))}
+                  </select>
+                  <svg 
+                    className="absolute right-2 sm:right-2 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3.5 sm:h-3.5 text-text-secondary/60 pointer-events-none" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              )}
+
               {/* Upload Button */}
               <button
-                  data-tour="upload-button"
-                  onClick={handleFileUpload}
-                  className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                  aria-label="Upload file"
-                  title="Upload file"
-                >
-                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </button>
+                data-tour="upload-button"
+                onClick={handleFileUpload}
+                className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                aria-label="Upload file"
+                title="Upload file"
+              >
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </button>
 
               {/* Download Button - only shown when text exists */}
               {text && (
@@ -1803,10 +1803,7 @@ export default function PasteViewer() {
                   )}
                 </button>
               )}
-            </div>
 
-            {/* GROUP 4: Content Operations (Center-Right) */}
-            <div className="flex gap-2 sm:gap-1 w-full sm:w-auto shrink-0">
               {/* Copy Button - only shown when text exists */}
               {text && (
                 <button
@@ -1851,45 +1848,44 @@ export default function PasteViewer() {
                   )}
                 </button>
               )}
-            </div>
 
-            {/* GROUP 5: View Controls (Right) */}
-            {/* Edit/View Mode Toggle - always visible when not loading */}
-            {!isLoading && (
-              <button
-                data-tour="edit-view-toggle"
-                onClick={() => {
-                  setIsEditMode(!isEditMode);
-                  // Auto-focus editor when switching to edit mode
-                  if (!isEditMode) {
-                    setTimeout(() => {
-                      const editorContainer = editorContainerRef.current;
-                      if (editorContainer) {
-                        const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
-                        textarea?.focus();
-                      }
-                    }, 100);
-                  }
-                }}
-                className="w-full sm:w-auto sm:shrink-0 px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
-                title={isEditMode ? 'View mode' : 'Edit mode'}
-              >
-                {isEditMode ? (
-                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                )}
-              </button>
-            )}
+              {/* Edit/View Mode Toggle - always visible when not loading */}
+              {!isLoading && (
+                <button
+                  data-tour="edit-view-toggle"
+                  onClick={() => {
+                    setIsEditMode(!isEditMode);
+                    // Auto-focus editor when switching to edit mode
+                    if (!isEditMode) {
+                      setTimeout(() => {
+                        const editorContainer = editorContainerRef.current;
+                        if (editorContainer) {
+                          const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+                          textarea?.focus();
+                        }
+                      }, 100);
+                    }
+                  }}
+                  className="w-full sm:w-auto sm:shrink-0 px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
+                  aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
+                  title={isEditMode ? 'View mode' : 'Edit mode'}
+                >
+                  {isEditMode ? (
+                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative w-full overflow-x-hidden" data-tour="main-editor">

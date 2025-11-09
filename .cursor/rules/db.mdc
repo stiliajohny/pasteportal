@@ -1,8 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
-
 ## SQL Migration File Deletion Rules
 
 When deleting SQL migration files:

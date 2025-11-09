@@ -1,7 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
 # Mobile Design and Responsiveness Rules
 
 When designing and implementing UI components for mobile devices, follow these rules:
