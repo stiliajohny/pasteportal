@@ -1,7 +1,7 @@
 [build]
   base = "./next-app"
   command = "npm install && npm run build"
-  publish = ".next"
+  # publish directory is handled automatically by @netlify/plugin-nextjs
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
