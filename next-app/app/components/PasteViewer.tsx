@@ -702,27 +702,71 @@ export default function PasteViewer() {
   }, [pushedPasteId, pushedPasteName, isClient]);
 
   /**
+   * Check for pending push action in sessionStorage on mount
+   * This handles the case where user was redirected for OAuth authentication
+   */
+  useEffect(() => {
+    if (isClient) {
+      const storedPendingPush = sessionStorage.getItem('pending-push-after-auth');
+      if (storedPendingPush) {
+        try {
+          const action = JSON.parse(storedPendingPush);
+          setPendingPushAfterAuth(action);
+          // Restore text content if it was stored
+          const storedText = sessionStorage.getItem('pending-push-text');
+          if (storedText && (!text || text === introParagraph)) {
+            setText(storedText);
+          }
+          // Don't remove from storage yet - wait until push is executed
+        } catch (error) {
+          console.error('Failed to parse pending push action:', error);
+          sessionStorage.removeItem('pending-push-after-auth');
+          sessionStorage.removeItem('pending-push-text');
+        }
+      }
+
+      // Clear any OAuth error from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('error')) {
+        // Remove error parameter from URL without reload
+        urlParams.delete('error');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient]);
+
+  /**
    * Handle push after authentication
    * When user becomes authenticated and there's a pending push action, execute it
    */
   useEffect(() => {
-    if (user && pendingPushAfterAuth && !showAuthDialog) {
+    if (user && pendingPushAfterAuth && !showAuthDialog && isClient) {
       // User just authenticated and auth dialog is closed
       const action = pendingPushAfterAuth;
       // Clear pending action first to prevent re-triggering
       setPendingPushAfterAuth(null);
+      // Clear from sessionStorage now that we're executing
+      sessionStorage.removeItem('pending-push-after-auth');
+      sessionStorage.removeItem('pending-push-text');
       
-      // Execute the pending push action
-      if (action.isEncrypted) {
-        // Show encryption dialog
-        setShowEncryptDialog(true);
-      } else {
-        // Push directly without encryption
-        handlePushPaste(false, null);
-      }
+      // Small delay to ensure auth state is fully settled
+      const timer = setTimeout(() => {
+        // Execute the pending push action
+        if (action.isEncrypted) {
+          // Show encryption dialog
+          setShowEncryptDialog(true);
+        } else {
+          // Push directly without encryption
+          handlePushPaste(false, null);
+        }
+      }, 300); // Increased delay to ensure auth is fully settled
+
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, pendingPushAfterAuth, showAuthDialog]);
+  }, [user, pendingPushAfterAuth, showAuthDialog, isClient]);
 
   /**
    * Validate UUID v4 or legacy 6-character hex format
@@ -862,11 +906,19 @@ export default function PasteViewer() {
     // Check if user is authenticated
     if (!user) {
       // Store the push action to execute after authentication
+      // Also store in sessionStorage in case of OAuth redirect
       const isEncryptClick = target.closest('.push-dropdown-arrow');
-      setPendingPushAfterAuth({ 
+      const pushAction = { 
         isEncrypted: isEncryptClick ? true : false, 
         password: null 
-      });
+      };
+      setPendingPushAfterAuth(pushAction);
+      // Store in sessionStorage for OAuth redirect scenarios
+      sessionStorage.setItem('pending-push-after-auth', JSON.stringify(pushAction));
+      // Also store the current text content so we can push it after auth
+      if (text && text.trim()) {
+        sessionStorage.setItem('pending-push-text', text);
+      }
       setShowAuthDialog(true);
       return;
     }
@@ -1851,6 +1903,8 @@ export default function PasteViewer() {
           // Clear pending push action if user closes dialog without authenticating
           if (!user) {
             setPendingPushAfterAuth(null);
+            sessionStorage.removeItem('pending-push-after-auth');
+            sessionStorage.removeItem('pending-push-text');
           }
         }}
         initialMode="signin"
@@ -2032,7 +2086,14 @@ Join thousands of developers sharing code snippets with style!`}
                     data-tour="push-encrypt"
                     onClick={() => {
                       if (!user) {
-                        setPendingPushAfterAuth({ isEncrypted: true, password: null });
+                        const pushAction = { isEncrypted: true, password: null };
+                        setPendingPushAfterAuth(pushAction);
+                        // Store in sessionStorage for OAuth redirect scenarios
+                        sessionStorage.setItem('pending-push-after-auth', JSON.stringify(pushAction));
+                        // Also store the current text content
+                        if (text && text.trim()) {
+                          sessionStorage.setItem('pending-push-text', text);
+                        }
                         setShowAuthDialog(true);
                       } else {
                         setShowEncryptDialog(true);
