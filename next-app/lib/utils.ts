@@ -389,6 +389,117 @@ export function sanitizePastedText(pastedText: string): string {
 }
 
 /**
+ * Clipboard permission state
+ */
+export type ClipboardPermissionState = 'granted' | 'denied' | 'prompt' | 'unavailable';
+
+/**
+ * Result of clipboard write operation
+ */
+export type ClipboardWriteResult = {
+  success: boolean;
+  error?: string;
+  permissionState?: ClipboardPermissionState;
+};
+
+/**
+ * Check clipboard write permissions
+ * @returns Permission state
+ */
+export async function checkClipboardPermission(): Promise<ClipboardPermissionState> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    return 'unavailable';
+  }
+
+  // Check if permissions API is available
+  if (typeof navigator.permissions !== 'undefined') {
+    try {
+      const result = await navigator.permissions.query({ name: 'clipboard-write' as PermissionName });
+      return result.state as ClipboardPermissionState;
+    } catch (err) {
+      // Permissions API might not support clipboard-write in all browsers
+      // Fall through to availability check
+    }
+  }
+
+  // If clipboard API is available, assume prompt state
+  // (user hasn't been asked yet or permission is implicit)
+  return 'prompt';
+}
+
+/**
+ * Request clipboard write permissions
+ * Attempts to write to clipboard to trigger permission prompt
+ * @returns Permission state after request
+ */
+export async function requestClipboardPermission(): Promise<ClipboardPermissionState> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    return 'unavailable';
+  }
+
+  try {
+    // Try to write empty string to trigger permission prompt
+    // This is a common pattern to request clipboard permissions
+    await navigator.clipboard.writeText('');
+    return 'granted';
+  } catch (err: any) {
+    // Check if it's a permission error
+    if (err?.name === 'NotAllowedError' || err?.message?.includes('permission')) {
+      return 'denied';
+    }
+    // Other errors might indicate unavailable clipboard
+    return 'unavailable';
+  }
+}
+
+/**
+ * Write text to clipboard with permission handling
+ * @param text - Text to copy to clipboard
+ * @returns Result object with success status and error information
+ */
+export async function writeToClipboard(text: string): Promise<ClipboardWriteResult> {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) {
+    return {
+      success: false,
+      error: 'Clipboard API is not available in this browser',
+      permissionState: 'unavailable',
+    };
+  }
+
+  if (!text) {
+    return {
+      success: false,
+      error: 'No text provided to copy',
+    };
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return {
+      success: true,
+      permissionState: 'granted',
+    };
+  } catch (err: any) {
+    const errorMessage = err?.message || 'Failed to copy to clipboard';
+    const isPermissionError = 
+      err?.name === 'NotAllowedError' || 
+      errorMessage.toLowerCase().includes('permission') ||
+      errorMessage.toLowerCase().includes('denied');
+
+    let permissionState: ClipboardPermissionState = 'prompt';
+    if (isPermissionError) {
+      permissionState = 'denied';
+    }
+
+    return {
+      success: false,
+      error: errorMessage,
+      permissionState,
+    };
+  }
+}
+
+/**
  * Maximum allowed request body size (1MB)
  * Used for validating request sizes in API routes
  */

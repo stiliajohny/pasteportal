@@ -4,13 +4,14 @@ import { fetchWithCsrf } from '@/lib/csrf-client';
 import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
 import { detectSecrets, DetectedSecret, redactSecrets, getSecretTags } from '@/lib/secret-detection';
-import { sanitizePastedText } from '@/lib/utils';
+import { sanitizePastedText, writeToClipboard } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';
 import AuthDialog from './AuthDialog';
+import ClipboardPermissionBanner from './ClipboardPermissionBanner';
 import SecretWarningDialog from './SecretWarningDialog';
 import { useTheme } from './ThemeProvider';
 
@@ -153,16 +154,29 @@ async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncryp
   }
   const data = await response.json();
   console.log('Fetch response data:', { hasResponse: !!data.response, hasPaste: !!data.response?.paste, pasteData: data.response });
-  const pasteData = data.response;
-  if (pasteData && pasteData.paste !== undefined && pasteData.paste !== null) {
-    return {
-      paste: pasteData.paste,
-      isPasswordEncrypted: pasteData.is_password_encrypted || false,
-      name: pasteData.name || null,
-    };
+  
+  // Validate response structure
+  if (!data || !data.response) {
+    console.error('Invalid response structure - missing response field:', data);
+    throw new Error('Invalid response from server');
   }
-  console.error('Paste data missing or invalid:', pasteData);
-  throw new Error('Paste not found or invalid response');
+  
+  const pasteData = data.response;
+  
+  // Validate paste field exists and is a string
+  if (pasteData.paste === undefined || pasteData.paste === null) {
+    console.error('Paste data missing paste field:', pasteData);
+    throw new Error('Paste content not found in response');
+  }
+  
+  // Ensure paste is a string (handle edge cases)
+  const pasteContent = String(pasteData.paste);
+  
+  return {
+    paste: pasteContent,
+    isPasswordEncrypted: pasteData.is_password_encrypted || false,
+    name: pasteData.name || null,
+  };
 }
 
 /**
@@ -282,6 +296,8 @@ export default function PasteViewer() {
   const [pendingPushAction, setPendingPushAction] = useState<{ isEncrypted: boolean; password: string | null } | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [pendingPushAfterAuth, setPendingPushAfterAuth] = useState<{ isEncrypted: boolean; password: string | null } | null>(null);
+  const [showClipboardBanner, setShowClipboardBanner] = useState(false);
+  const [pendingClipboardText, setPendingClipboardText] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -516,9 +532,11 @@ export default function PasteViewer() {
       // Only fetch if not already fetching this ID (prevents duplicate fetches in React Strict Mode)
       if (fetchingPasteIdRef.current !== id) {
         console.log('Starting fetch for paste ID:', id);
-        // Set ref immediately to prevent duplicate fetches
-        fetchingPasteIdRef.current = id;
-        handlePullPaste(id);
+        // Don't set ref here - let handlePullPaste manage it to avoid race conditions
+        // Call handlePullPaste and catch any errors
+        handlePullPaste(id).catch((error) => {
+          console.error('Error in handlePullPaste from useEffect:', error);
+        });
         // When viewing an existing paste, start in view mode
         setIsEditMode(false);
       } else {
@@ -797,14 +815,14 @@ export default function PasteViewer() {
         setPendingPasteData(null);
       
       // Copy to clipboard
-      if (navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(decryptedText);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-          console.error('Failed to copy to clipboard:', err);
-        }
+      const copyResult = await writeToClipboard(decryptedText);
+      if (copyResult.success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        setShowClipboardBanner(false);
+      } else if (copyResult.permissionState === 'denied') {
+        setPendingClipboardText(decryptedText);
+        setShowClipboardBanner(true);
       }
     } catch (error: any) {
       alert(error.message || 'Failed to decrypt paste. Please check your password and try again.');
@@ -816,15 +834,19 @@ export default function PasteViewer() {
    * Pull paste from API by ID
    */
   const handlePullPaste = async (id: string) => {
+    console.log('handlePullPaste called with ID:', id);
     if (!id || !isValidPasteId(id)) {
+      console.log('handlePullPaste: Invalid ID or empty, returning early');
       return;
     }
 
     // Prevent duplicate fetches for the same paste ID
     if (fetchingPasteIdRef.current === id) {
+      console.log('handlePullPaste: Already fetching this ID, returning early');
       return; // Already fetching this paste
     }
 
+    console.log('handlePullPaste: Setting up fetch for ID:', id);
     fetchingPasteIdRef.current = id;
     setIsLoading(true);
     setPushedPasteId(null); // Clear previous push success
@@ -832,7 +854,12 @@ export default function PasteViewer() {
     setText(getRandomLoadingJoke());
 
     try {
+      console.log('handlePullPaste: About to call fetchPaste with ID:', id);
       const result = await fetchPaste(id);
+      console.log('handlePullPaste: fetchPaste completed, result:', { 
+        hasPaste: !!result?.paste, 
+        pasteLength: result?.paste?.length 
+      });
       
       console.log('Fetched paste result:', { 
         hasPaste: !!result.paste, 
@@ -845,8 +872,13 @@ export default function PasteViewer() {
       setPushedPasteName(result.name || null);
       setIsPasteCreated(false); // This is a loaded paste, not a created one
       
-      // Check if paste content is empty
-      if (!result.paste || result.paste.trim().length === 0) {
+      // Check if paste content is empty or invalid
+      if (!result.paste || typeof result.paste !== 'string' || result.paste.trim().length === 0) {
+        console.error('Paste content is empty or invalid:', { 
+          hasPaste: !!result.paste, 
+          type: typeof result.paste,
+          length: result.paste?.length 
+        });
         setText('⚠️ This paste appears to be empty or could not be retrieved.');
         setIsLoading(false);
         return;
@@ -873,20 +905,24 @@ export default function PasteViewer() {
       window.history.pushState({}, '', url);
       
       // Copy to clipboard
-      if (navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(result.paste);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-          console.error('Failed to copy to clipboard:', err);
-        }
+      const copyResult = await writeToClipboard(result.paste);
+      if (copyResult.success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        setShowClipboardBanner(false);
+      } else if (copyResult.permissionState === 'denied') {
+        setPendingClipboardText(result.paste);
+        setShowClipboardBanner(true);
       }
     } catch (error: any) {
       console.error('Error in handlePullPaste:', error);
-      // Check if paste was not found
-      if (error.message?.includes('Failed to fetch paste') || error.message?.includes('not found') || error.message?.includes('no longer available')) {
-        setText('⚠️ This paste is no longer available.\n\nIt may have been deleted.');
+      // Check if paste was not found or invalid response
+      if (error.message?.includes('Failed to fetch paste') || 
+          error.message?.includes('not found') || 
+          error.message?.includes('no longer available') ||
+          error.message?.includes('Invalid response') ||
+          error.message?.includes('Paste content not found')) {
+        setText('⚠️ This paste is no longer available or could not be retrieved.\n\nIt may have been deleted or the response was invalid.');
       } else {
         setText(`Error: Failed to retrieve paste. ${error.message || 'Please check the ID and try again.'}`);
       }
@@ -1184,15 +1220,14 @@ export default function PasteViewer() {
 
     const shareUrl = `${window.location.origin}?id=${pushedPasteId}`;
     
-    if (navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy link:', err);
-        alert('Failed to copy link. Please copy it manually.');
-      }
+    const copyResult = await writeToClipboard(shareUrl);
+    if (copyResult.success) {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+      setShowClipboardBanner(false);
+    } else if (copyResult.permissionState === 'denied') {
+      setPendingClipboardText(shareUrl);
+      setShowClipboardBanner(true);
     }
   };
 
@@ -1212,15 +1247,14 @@ export default function PasteViewer() {
       instructions = `Check out this paste${titleText}:\n\nLink: ${shareUrl}`;
     }
 
-    if (navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(instructions);
-        setInstructionsCopied(true);
-        setTimeout(() => setInstructionsCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy instructions:', err);
-        alert('Failed to copy instructions. Please copy them manually.');
-      }
+    const copyResult = await writeToClipboard(instructions);
+    if (copyResult.success) {
+      setInstructionsCopied(true);
+      setTimeout(() => setInstructionsCopied(false), 2000);
+      setShowClipboardBanner(false);
+    } else if (copyResult.permissionState === 'denied') {
+      setPendingClipboardText(instructions);
+      setShowClipboardBanner(true);
     }
   };
 
@@ -1298,14 +1332,16 @@ export default function PasteViewer() {
   };
 
   const handleCopy = async () => {
-    if (text && navigator.clipboard) {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
+    if (!text) return;
+    
+    const copyResult = await writeToClipboard(text);
+    if (copyResult.success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      setShowClipboardBanner(false);
+    } else if (copyResult.permissionState === 'denied') {
+      setPendingClipboardText(text);
+      setShowClipboardBanner(true);
     }
   };
 
@@ -1444,11 +1480,14 @@ export default function PasteViewer() {
                     </code>
                     <button
                       onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(pushedPasteId);
+                        if (!pushedPasteId) return;
+                        const copyResult = await writeToClipboard(pushedPasteId);
+                        if (copyResult.success) {
                           alert('Paste ID copied to clipboard!');
-                        } catch (err) {
-                          console.error('Failed to copy paste ID:', err);
+                          setShowClipboardBanner(false);
+                        } else if (copyResult.permissionState === 'denied') {
+                          setPendingClipboardText(pushedPasteId);
+                          setShowClipboardBanner(true);
                         }
                       }}
                       className="px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg bg-surface-variant border border-divider text-text hover:bg-surface transition-colors text-sm min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2"
@@ -1514,11 +1553,14 @@ export default function PasteViewer() {
                       </code>
                       <button
                         onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(usedPassword);
+                          if (!usedPassword) return;
+                          const copyResult = await writeToClipboard(usedPassword);
+                          if (copyResult.success) {
                             alert('Password copied to clipboard!');
-                          } catch (err) {
-                            console.error('Failed to copy password:', err);
+                            setShowClipboardBanner(false);
+                          } else if (copyResult.permissionState === 'denied') {
+                            setPendingClipboardText(usedPassword);
+                            setShowClipboardBanner(true);
                           }
                         }}
                         className="px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg bg-neon-magenta text-black hover:bg-neon-magenta-600 transition-colors text-sm min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2"
@@ -2467,6 +2509,19 @@ Join thousands of developers sharing code snippets with style!`}
           </div>
         </div>
       )}
+
+      {/* Clipboard Permission Banner */}
+      <ClipboardPermissionBanner
+        visible={showClipboardBanner}
+        textToCopy={pendingClipboardText || undefined}
+        onPermissionGranted={() => {
+          setShowClipboardBanner(false);
+        }}
+        onCopySuccess={() => {
+          setShowClipboardBanner(false);
+          setPendingClipboardText(null);
+        }}
+      />
     </main>
   );
 }

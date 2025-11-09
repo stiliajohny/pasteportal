@@ -1,8 +1,10 @@
 'use client';
 
 import { getHeadersWithCsrf } from '@/lib/csrf-client';
+import { writeToClipboard } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import ClipboardPermissionBanner from '../components/ClipboardPermissionBanner';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Paste {
@@ -32,6 +34,8 @@ export default function MyPastesPage() {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tagSearch, setTagSearch] = useState<string>('');
+  const [showClipboardBanner, setShowClipboardBanner] = useState(false);
+  const [pendingClipboardText, setPendingClipboardText] = useState<string | null>(null);
 
   /**
    * Fetch user's pastes from API
@@ -84,13 +88,16 @@ export default function MyPastesPage() {
   const copyLink = async (pasteId: string) => {
     const url = `${window.location.origin}/?id=${pasteId}`;
     
-    try {
-      await navigator.clipboard.writeText(url);
+    const copyResult = await writeToClipboard(url);
+    if (copyResult.success) {
       setCopiedId(pasteId);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy link:', err);
-      // Fallback for older browsers
+      setShowClipboardBanner(false);
+    } else if (copyResult.permissionState === 'denied') {
+      setPendingClipboardText(url);
+      setShowClipboardBanner(true);
+    } else {
+      // Fallback for older browsers or other errors
       const textArea = document.createElement('textarea');
       textArea.value = url;
       document.body.appendChild(textArea);
@@ -430,13 +437,15 @@ export default function MyPastesPage() {
                       </button>
                       <button
                         onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(paste.password!);
+                          if (!paste.password) return;
+                          const copyResult = await writeToClipboard(paste.password);
+                          if (copyResult.success) {
                             setCopiedPasswordId(paste.id);
                             setTimeout(() => setCopiedPasswordId(null), 2000);
-                          } catch (err) {
-                            console.error('Failed to copy password:', err);
-                            alert('Failed to copy password. Please copy manually.');
+                            setShowClipboardBanner(false);
+                          } else if (copyResult.permissionState === 'denied') {
+                            setPendingClipboardText(paste.password);
+                            setShowClipboardBanner(true);
                           }
                         }}
                         className="px-4 py-2 bg-yellow-500 text-black rounded hover:opacity-90 transition-opacity text-sm font-semibold whitespace-nowrap flex items-center justify-center gap-1.5"
@@ -462,6 +471,19 @@ export default function MyPastesPage() {
           </div>
         );
       })()}
+
+      {/* Clipboard Permission Banner */}
+      <ClipboardPermissionBanner
+        visible={showClipboardBanner}
+        textToCopy={pendingClipboardText || undefined}
+        onPermissionGranted={() => {
+          setShowClipboardBanner(false);
+        }}
+        onCopySuccess={() => {
+          setShowClipboardBanner(false);
+          setPendingClipboardText(null);
+        }}
+      />
     </div>
   );
 }
