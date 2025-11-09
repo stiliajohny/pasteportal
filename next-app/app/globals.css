@@ -580,3 +580,34 @@ pre[class*="language-"],
 .react-simple-code-editor .token.variable {
   color: #ff8787 !important;
 }
+
+/* Secret highlighting - red background for detected secrets */
+.secret-highlight {
+  background-color: rgba(239, 68, 68, 0.3) !important;
+  border-bottom: 2px solid rgba(239, 68, 68, 0.6) !important;
+  padding: 2px 0 !important;
+  border-radius: 2px !important;
+  position: relative !important;
+}
+
+/* Dark theme secret highlighting */
+.dark .secret-highlight {
+  background-color: rgba(239, 68, 68, 0.25) !important;
+  border-bottom-color: rgba(239, 68, 68, 0.7) !important;
+}
+
+/* Light theme secret highlighting */
+.light .secret-highlight {
+  background-color: rgba(220, 38, 38, 0.2) !important;
+  border-bottom-color: rgba(220, 38, 38, 0.5) !important;
+}
+
+/* Ensure secret highlighting works in both editor and view mode */
+.react-simple-code-editor .secret-highlight,
+pre .secret-highlight,
+code .secret-highlight {
+  background-color: rgba(239, 68, 68, 0.3) !important;
+  border-bottom: 2px solid rgba(239, 68, 68, 0.6) !important;
+  padding: 2px 0 !important;
+  border-radius: 2px !important;
+}

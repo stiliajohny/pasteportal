@@ -1,4 +1,5 @@
 import { encrypt } from '@/lib/encryption';
+import { detectSecrets, redactSecrets } from '@/lib/secret-detection';
 import { supabase } from '@/lib/supabase';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
@@ -303,13 +304,28 @@ export async function POST(request: NextRequest) {
     const id = generatePasteId();
     const timestamp = new Date().toISOString();
 
-    // Detect if content is password-encrypted
-    // Password-encrypted content is hex-encoded (either new format "01" + salt + IV + data, or legacy IV + data)
-    // Both formats are entirely hex-encoded, so we check if the entire string is hex
+    // Server-side secret detection (backup check in case client-side check is bypassed)
+    // Only check if content is not already password-encrypted (encrypted content won't match patterns)
     const isPasswordEncrypted = /^[0-9a-fA-F]{32,}$/.test(pasteContent) && pasteContent.length > 32;
+    let finalPasteContent = pasteContent;
+    
+    if (!isPasswordEncrypted) {
+      const secrets = detectSecrets(pasteContent);
+      if (secrets.length > 0) {
+        // Automatically redact secrets on server side as a security measure
+        // Log warning for security monitoring
+        secureLogError('Secrets detected in paste content - auto-redacting', {
+          pasteId: id,
+          secretCount: secrets.length,
+          secretTypes: secrets.map(s => s.type),
+        });
+        const redacted = redactSecrets(pasteContent);
+        finalPasteContent = redacted.redactedText;
+      }
+    }
 
     // Encrypt the paste content (server-side encryption for storage)
-    const encryptedPaste = encrypt(pasteContent);
+    const encryptedPaste = encrypt(finalPasteContent);
 
     // Insert into Supabase
     const insertData: any = {

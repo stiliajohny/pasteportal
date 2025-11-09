@@ -3,12 +3,14 @@
 import { fetchWithCsrf } from '@/lib/csrf-client';
 import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
+import { detectSecrets, DetectedSecret, redactSecrets } from '@/lib/secret-detection';
 import { sanitizePastedText } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';
+import SecretWarningDialog from './SecretWarningDialog';
 import { useTheme } from './ThemeProvider';
 
 // Dynamically import Editor component with SSR disabled to avoid Prism.js issues during build
@@ -266,6 +268,9 @@ export default function PasteViewer() {
   const [tagPills, setTagPills] = useState<string[]>([]);
   const [prismLoaded, setPrismLoaded] = useState(false);
   const [textWrap, setTextWrap] = useState(true);
+  const [showSecretWarning, setShowSecretWarning] = useState(false);
+  const [detectedSecrets, setDetectedSecrets] = useState<DetectedSecret[]>([]);
+  const [pendingPushAction, setPendingPushAction] = useState<{ isEncrypted: boolean; password: string | null } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -351,6 +356,69 @@ export default function PasteViewer() {
   }, []);
 
   /**
+   * Apply secret highlighting to HTML code
+   * Wraps detected secrets with a red background span
+   * @param htmlCode - The HTML code (from Prism highlighting)
+   * @param originalCode - The original plain text code
+   * @returns HTML with secret highlighting applied
+   */
+  const applySecretHighlighting = (htmlCode: string, originalCode: string): string => {
+    const secrets = detectSecrets(originalCode);
+    if (secrets.length === 0) {
+      return htmlCode;
+    }
+
+    // Sort secrets by position in reverse order to maintain indices when replacing
+    const sortedSecrets = [...secrets].sort((a, b) => b.startIndex - a.startIndex);
+    let result = htmlCode;
+    
+    // For each secret, find and wrap it in the HTML
+    for (const secret of sortedSecrets) {
+      const secretText = originalCode.substring(secret.startIndex, secret.endIndex);
+      
+      // Escape special regex characters
+      const escapedSecret = secretText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Simple pattern: match the secret text, but not if it's already wrapped or inside HTML tags
+      // We'll use a function to check context
+      const pattern = new RegExp(escapedSecret.replace(/\s+/g, '\\s+'), 'gi');
+      
+      // Replace the secret text with a wrapped version
+      let lastIndex = 0;
+      result = result.replace(pattern, (match) => {
+        const offset = result.indexOf(match, lastIndex);
+        lastIndex = offset + match.length;
+        
+        // Skip if already wrapped in a secret-highlight span
+        const beforeMatch = result.substring(Math.max(0, offset - 50), offset);
+        const afterMatch = result.substring(offset + match.length, Math.min(result.length, offset + match.length + 50));
+        
+        if (beforeMatch.includes('<span class="secret-highlight">') || 
+            afterMatch.includes('</span>')) {
+          // Check if this match is part of an already-wrapped secret
+          const fullContext = result.substring(Math.max(0, offset - 100), Math.min(result.length, offset + match.length + 100));
+          if (fullContext.includes(`<span class="secret-highlight">${match}</span>`)) {
+            return match;
+          }
+        }
+        
+        // Check if we're inside an HTML tag
+        const beforeContext = result.substring(0, offset);
+        const lastOpenTag = beforeContext.lastIndexOf('<');
+        const lastCloseTag = beforeContext.lastIndexOf('>');
+        if (lastOpenTag > lastCloseTag) {
+          // We're inside a tag, don't wrap
+          return match;
+        }
+        
+        return `<span class="secret-highlight">${match}</span>`;
+      });
+    }
+    
+    return result;
+  };
+
+  /**
    * Highlight code using Prism (only works after Prism is loaded)
    */
   const highlightCode = (code: string, language: LanguageValue): string => {
@@ -373,7 +441,8 @@ export default function PasteViewer() {
         // Try plaintext as fallback
         const plaintextLang = Prism.languages.plaintext;
         if (plaintextLang && typeof plaintextLang === 'object') {
-          return Prism.highlight(code, plaintextLang, 'plaintext');
+          const highlighted = Prism.highlight(code, plaintextLang, 'plaintext');
+          return applySecretHighlighting(highlighted, code);
         }
         // If even plaintext doesn't work, return unhighlighted code
         return code;
@@ -390,14 +459,16 @@ export default function PasteViewer() {
         // Language grammar is invalid, try plaintext
         const plaintextLang = Prism.languages.plaintext;
         if (plaintextLang && typeof plaintextLang === 'object' && !Array.isArray(plaintextLang)) {
-          return Prism.highlight(code, plaintextLang, 'plaintext');
+          const highlighted = Prism.highlight(code, plaintextLang, 'plaintext');
+          return applySecretHighlighting(highlighted, code);
         }
         return code;
       }
 
       // Use a wrapper to catch any internal Prism errors
       try {
-        return Prism.highlight(code, lang, prismLang);
+        const highlighted = Prism.highlight(code, lang, prismLang);
+        return applySecretHighlighting(highlighted, code);
       } catch (highlightError: any) {
         // If highlighting fails, log and return unhighlighted code
         console.warn(`Prism highlighting failed for language ${prismLang}:`, highlightError);
@@ -405,7 +476,8 @@ export default function PasteViewer() {
         const plaintextLang = Prism.languages.plaintext;
         if (plaintextLang && typeof plaintextLang === 'object' && !Array.isArray(plaintextLang)) {
           try {
-            return Prism.highlight(code, plaintextLang, 'plaintext');
+            const highlighted = Prism.highlight(code, plaintextLang, 'plaintext');
+            return applySecretHighlighting(highlighted, code);
           } catch {
             // If even plaintext fails, return unhighlighted
             return code;
@@ -727,31 +799,22 @@ export default function PasteViewer() {
    * @param isEncrypted - Whether the paste should be encrypted
    * @param password - Password for encryption (if isEncrypted is true)
    */
-  const handlePushPaste = async (isEncrypted: boolean = false, password: string | null = null) => {
-    if (!text || text.trim().length === 0) {
-      alert('Please enter some content before pushing a paste.');
-      return;
-    }
-
-    // Check size (400KB limit)
-    const pasteSize = new Blob([text]).size;
-    if (pasteSize > 400 * 1024) {
-      alert('Paste size exceeds 400KB limit. Please reduce the content size.');
-      return;
-    }
-
+  /**
+   * Internal function to actually push the paste (after secret checks)
+   */
+  const doPushPaste = async (contentToPush: string, isEncrypted: boolean = false, password: string | null = null) => {
     setIsPushing(true);
     setPushedPasteId(null);
     setUsedPassword(null);
     setShowEncryptDialog(false);
 
     try {
-      let contentToStore = text;
+      let contentToStore = contentToPush;
 
       // Encrypt content if requested
       if (isEncrypted && password) {
         try {
-          contentToStore = await encryptWithPassword(password, text);
+          contentToStore = await encryptWithPassword(password, contentToPush);
           setUsedPassword(password);
         } catch (error: any) {
           alert(error.message || 'Failed to encrypt paste. Please try again.');
@@ -805,6 +868,60 @@ export default function PasteViewer() {
       alert(error.message || 'Failed to push paste. Please try again.');
     } finally {
       setIsPushing(false);
+    }
+  };
+
+  const handlePushPaste = async (isEncrypted: boolean = false, password: string | null = null) => {
+    if (!text || text.trim().length === 0) {
+      alert('Please enter some content before pushing a paste.');
+      return;
+    }
+
+    // Check size (400KB limit)
+    const pasteSize = new Blob([text]).size;
+    if (pasteSize > 400 * 1024) {
+      alert('Paste size exceeds 400KB limit. Please reduce the content size.');
+      return;
+    }
+
+    // Check for secrets before pushing
+    const secrets = detectSecrets(text);
+    if (secrets.length > 0) {
+      // Store the push action parameters for later
+      setPendingPushAction({ isEncrypted, password });
+      setDetectedSecrets(secrets);
+      setShowSecretWarning(true);
+      return;
+    }
+
+    // No secrets detected, proceed with push
+    await doPushPaste(text, isEncrypted, password);
+  };
+
+  /**
+   * Handle user choosing to proceed with redaction
+   */
+  const handleProceedWithRedaction = async () => {
+    if (!pendingPushAction) return;
+    
+    const { redactedText } = redactSecrets(text);
+    setText(redactedText); // Update the text with redacted version
+    await doPushPaste(redactedText, pendingPushAction.isEncrypted, pendingPushAction.password);
+    setPendingPushAction(null);
+  };
+
+  /**
+   * Handle user choosing to cancel and edit manually
+   */
+  const handleCancelSecretWarning = () => {
+    setPendingPushAction(null);
+    setDetectedSecrets([]);
+    // Focus the editor so user can edit
+    if (editorContainerRef.current) {
+      const textarea = editorContainerRef.current.querySelector('textarea');
+      if (textarea) {
+        textarea.focus();
+      }
     }
   };
 
@@ -1598,6 +1715,18 @@ export default function PasteViewer() {
         </div>
       )}
 
+      {/* Secret Warning Dialog */}
+      <SecretWarningDialog
+        isOpen={showSecretWarning}
+        onClose={() => {
+          setShowSecretWarning(false);
+          setPendingPushAction(null);
+        }}
+        secrets={detectedSecrets}
+        onProceedWithRedaction={handleProceedWithRedaction}
+        onCancel={handleCancelSecretWarning}
+      />
+
       {/* Toolbar Section - Redesigned with proper spacing and organization */}
       {/* Law of Proximity: Related items grouped together */}
       {/* Law of Common Region: Visual grouping with clear boundaries */}
@@ -2076,45 +2205,28 @@ export default function PasteViewer() {
           // View mode: syntax highlighting
           <div className={`w-full h-full min-h-[60vh] overflow-auto ${textWrap ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
             {text ? (
-              <SyntaxHighlighter
-                language={selectedLanguage === 'text' ? 'plaintext' : selectedLanguage}
-                style={resolvedTheme === 'dark' ? vscDarkPlus : vs}
-                customStyle={{
-                  margin: 0,
-                  padding: '1rem',
-                  background: 'var(--color-background)',
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: applySecretHighlighting(
+                    highlightCode(text, selectedLanguage),
+                    text
+                  ),
+                }}
+                className="p-4 sm:p-6 lg:p-8"
+                style={{
+                  fontFamily: 'var(--font-mono), monospace',
                   fontSize: '0.875rem',
                   lineHeight: '1.75rem',
-                  fontFamily: 'var(--font-mono), monospace',
-                  borderRadius: 0,
-                  maxWidth: '100%',
-                  overflow: 'auto',
-                  overflowX: textWrap ? 'hidden' : 'auto',
-                  wordBreak: textWrap ? 'break-word' : 'normal',
+                  background: 'var(--color-background)',
+                  color: 'var(--color-text)',
                   whiteSpace: textWrap ? 'pre-wrap' : 'pre',
+                  wordBreak: textWrap ? 'break-word' : 'normal',
+                  overflowX: textWrap ? 'hidden' : 'auto',
                 }}
-                codeTagProps={{
-                  style: {
-                    fontFamily: 'var(--font-mono), monospace',
-                    wordBreak: textWrap ? 'break-word' : 'normal',
-                    whiteSpace: textWrap ? 'pre-wrap' : 'pre',
-                  }
-                }}
-                showLineNumbers={text.split('\n').length > 1}
-                lineNumberStyle={{
-                  minWidth: '2.5em',
-                  paddingRight: '1em',
-                  color: 'var(--color-text-secondary)',
-                  userSelect: 'none',
-                }}
-                wrapLines={textWrap}
-                wrapLongLines={textWrap}
-              >
-                {text}
-              </SyntaxHighlighter>
+              />
             ) : (
-              <div className="w-full h-full min-h-[60vh] flex items-center justify-center p-8">
-                <p className="text-text-secondary text-sm">Paste content will appear here...</p>
+              <div className="p-4 sm:p-6 lg:p-8 text-text-secondary text-sm">
+                No content to display
               </div>
             )}
           </div>
