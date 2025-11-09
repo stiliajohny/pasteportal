@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     // Query pastes for this user
     const { data, error } = await supabase
       .from('pastes')
-      .select('id, name, timestamp, created_at, is_password_encrypted, password')
+      .select('id, name, timestamp, created_at, is_password_encrypted, password, tags')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -136,6 +136,17 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      let decryptedTags: string | null = null;
+      if (paste.tags) {
+        try {
+          decryptedTags = decrypt(paste.tags);
+        } catch (error) {
+          secureLogError('Failed to decrypt paste tags in list-pastes', error);
+          // If decryption fails, tags remain null
+          decryptedTags = null;
+        }
+      }
+
       return {
         id: paste.id,
         name: decryptedName,
@@ -143,6 +154,7 @@ export async function GET(request: NextRequest) {
         created_at: paste.created_at,
         is_password_encrypted: paste.is_password_encrypted || false,
         password: decryptedPassword, // Decrypted password (only for user's own pastes)
+        tags: decryptedTags, // Decrypted tags (comma-separated)
         // Generate display name: use custom name or formatted timestamp
         display_name: decryptedName || new Date(paste.created_at).toLocaleString(),
       };

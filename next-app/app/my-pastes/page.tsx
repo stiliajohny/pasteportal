@@ -12,6 +12,7 @@ interface Paste {
   created_at: string;
   is_password_encrypted: boolean;
   password: string | null; // Decrypted password (only available for user's own pastes)
+  tags: string | null; // Comma-separated tags
   display_name: string;
 }
 
@@ -30,6 +31,7 @@ export default function MyPastesPage() {
   const [copiedPasswordId, setCopiedPasswordId] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [tagSearch, setTagSearch] = useState<string>('');
 
   /**
    * Fetch user's pastes from API
@@ -210,6 +212,34 @@ export default function MyPastesPage() {
         </div>
       )}
 
+      {/* Tag Search */}
+      {pastes.length > 0 && (
+        <div className="mb-6">
+          <label htmlFor="tag-search" className="sr-only">Search by tags</label>
+          <div className="relative">
+            <input
+              id="tag-search"
+              type="text"
+              value={tagSearch}
+              onChange={(e) => setTagSearch(e.target.value)}
+              placeholder="Search by tags..."
+              className="w-full px-4 py-2.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+            />
+            {tagSearch && (
+              <button
+                onClick={() => setTagSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text transition-colors"
+                aria-label="Clear search"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {pastes.length === 0 ? (
         <div className="bg-surface border border-divider rounded-lg p-12 text-center">
           <p className="text-text-secondary text-lg mb-4">
@@ -222,9 +252,36 @@ export default function MyPastesPage() {
             Create Your First Paste
           </button>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {pastes.map((paste) => (
+      ) : (() => {
+        const filteredPastes = pastes.filter((paste) => {
+          if (!tagSearch.trim()) return true;
+          if (!paste.tags) return false;
+          const searchLower = tagSearch.toLowerCase();
+          const pasteTags = paste.tags.toLowerCase().split(',').map(t => t.trim());
+          return pasteTags.some(tag => tag.includes(searchLower));
+        });
+
+        if (filteredPastes.length === 0 && tagSearch.trim()) {
+          return (
+            <div className="bg-surface border border-divider rounded-lg p-12 text-center">
+              <p className="text-text-secondary text-lg mb-4">
+                No pastes found matching &quot;{tagSearch}&quot;
+              </p>
+              <button
+                onClick={() => setTagSearch('')}
+                className="px-6 py-2 bg-positive-highlight text-black font-semibold rounded hover:opacity-90 transition-opacity"
+              >
+                Clear Search
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-3">
+            {filteredPastes.map((paste) => {
+              const pasteTags = paste.tags ? paste.tags.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+              return (
             <div
               key={paste.id}
               className={`bg-surface border rounded-lg p-3 sm:p-4 transition-all duration-200 ${
@@ -266,6 +323,19 @@ export default function MyPastesPage() {
                       </svg>
                       <span className="break-all">ID: {paste.id}</span>
                     </div>
+                    {/* Tags Display */}
+                    {pasteTags.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {pasteTags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2 py-0.5 bg-positive-highlight/20 text-positive-highlight border border-positive-highlight/40 rounded-md text-xs font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -387,9 +457,11 @@ export default function MyPastesPage() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+          })}
+          </div>
+        );
+      })()}
     </div>
   );
 }

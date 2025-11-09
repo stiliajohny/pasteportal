@@ -258,6 +258,32 @@ export function sanitizePasteName(name: string): string {
 }
 
 /**
+ * Sanitize tags string (comma-separated values)
+ * @param tags - Comma-separated tags string
+ * @returns Sanitized tags string
+ */
+export function sanitizeTags(tags: string): string {
+  // Split by comma, trim each tag, filter empty tags, and limit length
+  const tagArray = tags
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0)
+    .slice(0, 20) // Limit to 20 tags max
+    .map(tag => {
+      // Sanitize each tag: remove special characters except hyphens and underscores
+      // Limit each tag to 50 characters
+      return sanitizeInput(tag.substring(0, 50), {
+        maxLength: 50,
+        allowNewlines: false,
+        allowSpecialChars: false,
+      }).replace(/[^a-zA-Z0-9\s\-_]/g, '').trim();
+    })
+    .filter(tag => tag.length > 0);
+  
+  return tagArray.join(',');
+}
+
+/**
  * Validate and sanitize input length
  * @param input - Input string to validate
  * @param maxLength - Maximum allowed length

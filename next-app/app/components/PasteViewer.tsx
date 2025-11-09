@@ -169,7 +169,8 @@ async function storePaste(
   name: string | null = null,
   userId: string | null = null,
   password: string | null = null,
-  accessToken: string | null = null
+  accessToken: string | null = null,
+  tags: string | null = null
 ): Promise<{ id: string; message: string }> {
   const body: any = {
     paste: pasteContent,
@@ -187,6 +188,10 @@ async function storePaste(
   // Don't require userId on frontend since server validates auth anyway
   if (password) {
     body.password = password;
+  }
+  // Include tags if provided
+  if (tags && tags.trim()) {
+    body.tags = tags.trim();
   }
 
   const response = await fetchWithCsrf(
@@ -257,6 +262,8 @@ export default function PasteViewer() {
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [isManualLanguageSelection, setIsManualLanguageSelection] = useState(false);
   const [pasteName, setPasteName] = useState<string>('');
+  const [tags, setTags] = useState<string>('');
+  const [tagPills, setTagPills] = useState<string[]>([]);
   const [prismLoaded, setPrismLoaded] = useState(false);
   const [textWrap, setTextWrap] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -758,6 +765,7 @@ export default function PasteViewer() {
       const userId = user?.id || null;
 
       const nameToStore = pasteName.trim() || null;
+      const tagsToStore = tagPills.length > 0 ? tagPills.join(',') : null;
       // Pass access token to authenticate the request
       // This is needed because the client uses localStorage for sessions,
       // but the server expects cookies or Bearer tokens
@@ -768,7 +776,8 @@ export default function PasteViewer() {
         nameToStore,
         userId,
         isEncrypted && password ? password : null,
-        accessToken
+        accessToken,
+        tagsToStore
       );
       setPushedPasteId(result.id);
       setPushedPasteName(nameToStore);
@@ -777,8 +786,10 @@ export default function PasteViewer() {
       // Mark this paste as just pushed for portal animation
       sessionStorage.setItem('just-pushed-paste-id', result.id);
       
-      // Clear paste name after successful push
+      // Clear paste name and tags after successful push
       setPasteName('');
+      setTags('');
+      setTagPills([]);
 
       // Update URL with new paste ID
       const url = new URL(window.location.href);
@@ -1587,61 +1598,60 @@ export default function PasteViewer() {
         </div>
       )}
 
-      {/* Pull/Push Section - Apple-inspired design */}
-      <div className="border-b border-divider/50 w-full overflow-x-hidden">
-        <div className="mx-auto px-4 sm:px-6 py-2 sm:py-1.5 max-w-4xl">
-          {/* Single Row Layout: Logical grouping - Enter Paste ID + Pull | Spacer | Name Paste + Push | Spacer | Formatting buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:flex-nowrap flex-wrap">
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="text/*,.txt,.json,.js,.ts,.jsx,.tsx,.css,.html,.md,.py,.java,.cpp,.c,.go,.rs,.php,.rb,.swift,.kt,.scala,.sh,.yaml,.yml,.xml,.sql"
-              onChange={handleFileChange}
-              className="hidden"
-              aria-label="File upload input"
-            />
+      {/* Toolbar Section - Redesigned with proper spacing and organization */}
+      {/* Law of Proximity: Related items grouped together */}
+      {/* Law of Common Region: Visual grouping with clear boundaries */}
+      {/* Law of Alignment: Consistent alignment throughout */}
+      {/* Law of Symmetry: Balanced layout */}
+      <div className="border-b border-divider/50 w-full">
+        <div className="mx-auto px-3 sm:px-4 lg:px-6 py-3 max-w-7xl">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="text/*,.txt,.json,.js,.ts,.jsx,.tsx,.css,.html,.md,.py,.java,.cpp,.c,.go,.rs,.php,.rb,.swift,.kt,.scala,.sh,.yaml,.yml,.xml,.sql"
+            onChange={handleFileChange}
+            className="hidden"
+            aria-label="File upload input"
+          />
 
-            {/* GROUP 1: Enter Paste ID + Pull Button */}
-            <div className="flex gap-2 sm:gap-1.5 w-full sm:w-auto shrink-0">
-              {/* Paste ID Input */}
-              <div className="flex-1 w-full sm:flex-none sm:w-auto sm:shrink-0 min-w-0 sm:min-w-[180px] sm:max-w-[220px]">
+          {/* Main Toolbar Row */}
+          <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+            {/* GROUP 1: Pull Section */}
+            <div className="flex gap-2 items-center w-full lg:w-auto lg:min-w-[240px]">
+              <div className="relative flex-1 lg:flex-initial lg:min-w-[180px]">
                 <label htmlFor="paste-id-input" className="sr-only">Enter paste ID</label>
-                <div className="relative w-full">
-                  <input
-                    id="paste-id-input"
-                    data-tour="paste-id-input"
-                    type="text"
-                    value={pasteIdInput}
-                    onChange={(e) => setPasteIdInput(e.target.value)}
-                    placeholder="Enter paste ID"
-                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-200 font-mono text-sm min-h-[44px] sm:min-h-0"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && isValidPasteId(pasteIdInput)) {
-                        handlePasteIdSubmit();
-                      }
-                    }}
-                  />
-                  {pasteIdInput.length > 0 && (
-                    <button
-                      onClick={() => setPasteIdInput('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary/60 hover:text-text transition-colors p-1"
-                      aria-label="Clear input"
-                    >
-                      <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                <input
+                  id="paste-id-input"
+                  data-tour="paste-id-input"
+                  type="text"
+                  value={pasteIdInput}
+                  onChange={(e) => setPasteIdInput(e.target.value)}
+                  placeholder="Enter paste ID"
+                  className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan transition-all duration-200 font-mono text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && isValidPasteId(pasteIdInput)) {
+                      handlePasteIdSubmit();
+                    }
+                  }}
+                />
+                {pasteIdInput.length > 0 && (
+                  <button
+                    onClick={() => setPasteIdInput('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary/60 hover:text-text transition-colors p-1"
+                    aria-label="Clear input"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
-
-              {/* Pull Button */}
               <button
                 data-tour="pull-button"
                 onClick={handlePasteIdSubmit}
                 disabled={!isValidPasteId(pasteIdInput) || isLoading}
-                className={`flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${
                   isValidPasteId(pasteIdInput) && !isLoading
                     ? 'bg-neon-cyan text-black hover:opacity-90 active:scale-[0.98]'
                     : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
@@ -1649,7 +1659,7 @@ export default function PasteViewer() {
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-1.5">
-                    <svg className="animate-spin h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
@@ -1661,229 +1671,330 @@ export default function PasteViewer() {
               </button>
             </div>
 
-            {/* Spacer */}
-            <div className="hidden sm:block w-px h-6 bg-divider/40 mx-1"></div>
+            {/* Visual Separator */}
+            <div className="hidden lg:block w-px h-8 bg-divider/30"></div>
 
-            {/* GROUP 2: Name Paste + Push Button */}
-            <div className="flex gap-2 sm:gap-1.5 w-full sm:w-auto shrink-0">
-              {/* Paste Name Input (optional, only for authenticated users) */}
-              {user && (
-                <div className="w-full sm:w-36 sm:shrink-0 min-w-0 sm:max-w-[160px]">
-                  <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
-                  <input
-                    id="paste-name-input"
-                    data-tour="paste-name-input"
-                    type="text"
-                    value={pasteName}
-                    onChange={(e) => setPasteName(e.target.value)}
-                    placeholder="Name your paste"
-                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm min-h-[44px] sm:min-h-0"
-                  />
+            {/* GROUP 2: Push Section - Name, Tags, Push */}
+            {user && (
+              <>
+                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center flex-1 lg:flex-initial lg:min-w-0 w-full lg:w-auto">
+                  {/* Name Input */}
+                  <div className="w-full sm:w-auto sm:min-w-[180px] sm:max-w-[200px]">
+                    <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
+                    <input
+                      id="paste-name-input"
+                      data-tour="paste-name-input"
+                      type="text"
+                      value={pasteName}
+                      onChange={(e) => setPasteName(e.target.value)}
+                      placeholder="Name your paste"
+                      className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+                    />
+                  </div>
+
+                  {/* Tags Input */}
+                  <div className="w-full sm:w-auto sm:min-w-[140px] sm:max-w-[180px]">
+                    <label htmlFor="paste-tags-input" className="sr-only">Optional: Add tags</label>
+                    <input
+                      id="paste-tags-input"
+                      type="text"
+                      value={tags}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setTags(value);
+                        if (value.includes(',')) {
+                          const newTagsFromInput = value
+                            .split(',')
+                            .map(tag => tag.trim())
+                            .filter(tag => tag.length > 0);
+                          const mergedTags = [...tagPills];
+                          newTagsFromInput.forEach(tag => {
+                            if (!mergedTags.includes(tag) && mergedTags.length < 20) {
+                              mergedTags.push(tag);
+                            }
+                          });
+                          setTagPills(mergedTags.slice(0, 20));
+                          setTags('');
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && tags.trim()) {
+                          e.preventDefault();
+                          const trimmedTag = tags.trim();
+                          if (trimmedTag && !tagPills.includes(trimmedTag) && tagPills.length < 20) {
+                            setTagPills([...tagPills, trimmedTag]);
+                            setTags('');
+                          }
+                        } else if (e.key === 'Backspace' && tags === '' && tagPills.length > 0) {
+                          setTagPills(tagPills.slice(0, -1));
+                        }
+                      }}
+                      placeholder={tagPills.length > 0 ? `${tagPills.length} tag${tagPills.length > 1 ? 's' : ''}` : "Tags"}
+                      className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+                    />
+                  </div>
+
+                  {/* Push Button */}
+                  <div ref={pushButtonRef} data-tour="push-button" className="relative flex shrink-0 w-full sm:w-auto">
+                    <button
+                      onClick={handlePushButtonClick}
+                      disabled={!text || text.trim().length === 0 || isPushing}
+                      className={`w-full sm:w-auto px-4 py-2 rounded-l-lg font-medium text-sm transition-all duration-200 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
+                        text && text.trim().length > 0 && !isPushing
+                          ? 'bg-neon-magenta text-white hover:opacity-90 active:scale-[0.98]'
+                          : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
+                      }`}
+                    >
+                      {isPushing ? (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Pushing
+                        </span>
+                      ) : (
+                        'Push'
+                      )}
+                    </button>
+                    {text && text.trim().length > 0 && !isPushing && (
+                      <button
+                        data-tour="push-encrypt"
+                        onClick={() => setShowEncryptDialog(true)}
+                        className="px-2.5 py-2 rounded-r-lg border-l border-white/20 transition-all duration-200 bg-neon-magenta text-white hover:opacity-90 flex items-center justify-center"
+                        aria-label="Encryption options"
+                        title="Encryption options"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              {/* Push Button with Dropdown */}
-              <div ref={pushButtonRef} data-tour="push-button" className="relative flex flex-1 sm:flex-none">
-                <button
-                  onClick={handlePushButtonClick}
-                  disabled={!text || text.trim().length === 0 || isPushing}
-                  className={`flex-1 sm:flex-none px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-l-lg sm:rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap min-h-[44px] sm:min-h-0 disabled:opacity-40 disabled:cursor-not-allowed ${
-                    text && text.trim().length > 0 && !isPushing
-                      ? 'bg-neon-magenta text-white hover:opacity-90 active:scale-[0.98]'
-                      : 'bg-surface-variant/50 text-text-secondary/70 border border-divider/60'
-                  }`}
-                >
-                  {isPushing ? (
-                    <span className="flex items-center justify-center gap-1.5">
-                      <svg className="animate-spin h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Pushing
-                    </span>
-                  ) : (
-                    'Push'
-                  )}
-                </button>
-                {text && text.trim().length > 0 && !isPushing && (
-                  <button
-                    data-tour="push-encrypt"
-                    onClick={() => setShowEncryptDialog(true)}
-                    className="px-2.5 py-2.5 sm:px-1.5 sm:py-1.5 rounded-r-lg border-l border-white/20 transition-all duration-200 push-dropdown-arrow bg-neon-magenta text-white hover:opacity-90 min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                    aria-label="Encryption options"
-                    title="Encryption options"
-                  >
-                    <svg className="w-4 h-4 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Visual Separator */}
+                <div className="hidden lg:block w-px h-8 bg-divider/30"></div>
+              </>
+            )}
+
+            {/* GROUP 3: Toolbox - Language, File Ops, View Options */}
+            <div className="flex gap-2 items-center flex-wrap lg:flex-nowrap w-full lg:w-auto">
+              {/* Language Selection */}
+              {!isLoading && text && (
+                <>
+                  <div className="relative flex-1 sm:flex-initial sm:w-[110px] sm:min-w-[110px]">
+                    <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
+                    <select
+                      id="language-select"
+                      data-tour="language-selector"
+                      value={selectedLanguage}
+                      onChange={(e) => {
+                        setSelectedLanguage(e.target.value as LanguageValue);
+                        setIsManualLanguageSelection(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text"
+                      style={{
+                        backgroundColor: 'var(--color-surface-variant)',
+                        color: 'var(--color-text)',
+                      }}
+                      aria-label="Select syntax highlighting language"
+                      title="Language"
+                    >
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <option 
+                          key={lang.value} 
+                          value={lang.value}
+                          style={{
+                            backgroundColor: 'var(--color-surface)',
+                            color: 'var(--color-text)',
+                          }}
+                        >
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                    <svg 
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary/60 pointer-events-none" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
+                  </div>
+                  <div className="hidden lg:block w-px h-6 bg-divider/30"></div>
+                </>
+              )}
+
+              {/* File Operations */}
+              <div className="flex gap-1 items-center">
+                <button
+                  data-tour="upload-button"
+                  onClick={handleFileUpload}
+                  className="px-2.5 py-2 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] flex items-center justify-center shrink-0"
+                  aria-label="Upload file"
+                  title="Upload file"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </button>
+                {text && (
+                  <button
+                    data-tour="download-button"
+                    onClick={handleDownload}
+                    className="px-2.5 py-2 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] flex items-center justify-center shrink-0"
+                    aria-label={downloaded ? 'Downloaded!' : 'Download paste'}
+                    title="Download"
+                  >
+                    {downloaded ? (
+                      <svg className="w-4 h-4 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    )}
                   </button>
                 )}
               </div>
-            </div>
 
-            {/* Spacer */}
-            <div className="hidden sm:block w-px h-6 bg-divider/40 mx-1"></div>
-
-            {/* GROUP 3: Formatting Buttons (Language, Upload, Download, Copy, Text Wrap, Edit/View) */}
-            <div className="flex gap-2 sm:gap-1 w-full sm:w-auto shrink-0 flex-wrap">
-              {/* Language Selector - only shown when text exists and not loading */}
-              {!isLoading && text && (
-                <div className="relative w-full sm:flex-none sm:shrink-0 sm:w-[110px] sm:min-w-[110px] sm:max-w-[110px]">
-                  <label htmlFor="language-select" className="sr-only">Select syntax highlighting language</label>
-                  <select
-                    id="language-select"
-                    data-tour="language-selector"
-                    value={selectedLanguage}
-                    onChange={(e) => {
-                      setSelectedLanguage(e.target.value as LanguageValue);
-                      setIsManualLanguageSelection(true);
-                    }}
-                    className="w-full px-3 py-2.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-surface-variant border border-divider/60 text-text hover:bg-surface transition-all duration-200 text-sm font-medium cursor-pointer appearance-none pr-8 sm:pr-7 focus:outline-none focus:ring-1 focus:ring-neon-cyan focus:border-neon-cyan [&>option]:bg-surface [&>option]:text-text [&>option:checked]:bg-positive-highlight [&>option:checked]:text-black min-h-[44px] sm:min-h-0"
-                    style={{
-                      backgroundColor: 'var(--color-surface-variant)',
-                      color: 'var(--color-text)',
-                    }}
-                    aria-label="Select syntax highlighting language"
-                    title="Language"
+              {/* Copy Button */}
+              {text && (
+                <>
+                  <div className="hidden lg:block w-px h-6 bg-divider/30"></div>
+                  <button
+                    data-tour="copy-button"
+                    onClick={handleCopy}
+                    className="px-2.5 py-2 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] flex items-center justify-center shrink-0"
+                    aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
+                    title="Copy"
                   >
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <option 
-                        key={lang.value} 
-                        value={lang.value}
-                        style={{
-                          backgroundColor: 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                        }}
-                      >
-                        {lang.label}
-                      </option>
-                    ))}
-                  </select>
-                  <svg 
-                    className="absolute right-2 sm:right-2 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-3.5 sm:h-3.5 text-text-secondary/60 pointer-events-none" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
+                    {copied ? (
+                      <svg className="w-4 h-4 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Text Wrap Toggle */}
+              {text && (
+                <>
+                  <div className="hidden lg:block w-px h-6 bg-divider/30"></div>
+                  <button
+                    onClick={() => setTextWrap(!textWrap)}
+                    className={`px-2.5 py-2 rounded-lg border transition-all duration-200 active:scale-[0.98] flex items-center justify-center shrink-0 ${
+                      textWrap
+                        ? 'bg-positive-highlight/20 border-positive-highlight/40 text-positive-highlight hover:bg-positive-highlight/30'
+                        : 'bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant'
+                    }`}
+                    aria-label={textWrap ? 'Disable text wrap' : 'Enable text wrap'}
+                    title={textWrap ? 'Text wrap: ON' : 'Text wrap: OFF'}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+                    {textWrap ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                    )}
+                  </button>
+                </>
               )}
 
-              {/* Upload Button */}
-              <button
-                data-tour="upload-button"
-                onClick={handleFileUpload}
-                className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                aria-label="Upload file"
-                title="Upload file"
-              >
-                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-              </button>
-
-              {/* Download Button - only shown when text exists */}
-              {text && (
-                <button
-                  data-tour="download-button"
-                  onClick={handleDownload}
-                  className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                  aria-label={downloaded ? 'Downloaded!' : 'Download paste'}
-                  title="Download"
-                >
-                  {downloaded ? (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                  )}
-                </button>
-              )}
-
-              {/* Copy Button - only shown when text exists */}
-              {text && (
-                <button
-                  data-tour="copy-button"
-                  onClick={handleCopy}
-                  className="flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                  aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
-                  title="Copy"
-                >
-                  {copied ? (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4 text-positive-highlight" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-
-              {/* Text Wrap Toggle Button - only shown when text exists */}
-              {text && (
-                <button
-                  onClick={() => setTextWrap(!textWrap)}
-                  className={`flex-1 sm:flex-none px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg border transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center ${
-                    textWrap
-                      ? 'bg-positive-highlight/20 border-positive-highlight/40 text-positive-highlight hover:bg-positive-highlight/30'
-                      : 'bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant'
-                  }`}
-                  aria-label={textWrap ? 'Disable text wrap' : 'Enable text wrap'}
-                  title={textWrap ? 'Text wrap: ON' : 'Text wrap: OFF'}
-                >
-                  {textWrap ? (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  )}
-                </button>
-              )}
-
-              {/* Edit/View Mode Toggle - always visible when not loading */}
+              {/* Edit/View Toggle */}
               {!isLoading && (
-                <button
-                  data-tour="edit-view-toggle"
-                  onClick={() => {
-                    setIsEditMode(!isEditMode);
-                    // Auto-focus editor when switching to edit mode
-                    if (!isEditMode) {
-                      setTimeout(() => {
-                        const editorContainer = editorContainerRef.current;
-                        if (editorContainer) {
-                          const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
-                          textarea?.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                  className="w-full sm:w-auto sm:shrink-0 px-3 py-2.5 sm:px-2 sm:py-1.5 rounded-lg bg-surface-variant/50 border border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant transition-all duration-200 active:scale-[0.98] min-h-[44px] sm:min-h-0 flex items-center justify-center"
-                  aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
-                  title={isEditMode ? 'View mode' : 'Edit mode'}
-                >
-                  {isEditMode ? (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  )}
-                </button>
+                <>
+                  {text && <div className="hidden lg:block w-px h-6 bg-divider/30"></div>}
+                  <button
+                    data-tour="edit-view-toggle"
+                    onClick={() => {
+                      setIsEditMode(!isEditMode);
+                      if (!isEditMode) {
+                        setTimeout(() => {
+                          const editorContainer = editorContainerRef.current;
+                          if (editorContainer) {
+                            const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+                            textarea?.focus();
+                          }
+                        }, 100);
+                      }
+                    }}
+                    className={`px-2.5 py-2 rounded-lg border transition-all duration-200 active:scale-[0.98] flex items-center justify-center shrink-0 ${
+                      isEditMode
+                        ? 'bg-positive-highlight/20 border-positive-highlight/40 text-positive-highlight hover:bg-positive-highlight/30'
+                        : 'bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant'
+                    }`}
+                    aria-label={isEditMode ? 'Switch to view mode' : 'Switch to edit mode'}
+                    title={isEditMode ? 'View mode' : 'Edit mode'}
+                  >
+                    {isEditMode ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    )}
+                  </button>
+                </>
               )}
             </div>
           </div>
+
+          {/* Tags Display Row - Separate row below main toolbar to prevent overlap */}
+          {user && tagPills.length > 0 && (
+            <div className="w-full mt-3 pt-3 border-t border-divider/30 flex flex-wrap gap-1.5 items-center justify-center">
+              {tagPills.map((tag, index) => {
+                // Calculate order for center-outwards pattern:
+                // Index 0: center (order 0)
+                // Index 1: left (order -1)
+                // Index 2: right (order 1)
+                // Index 3: further left (order -2)
+                // Index 4: further right (order 2)
+                const order = index === 0 
+                  ? 0 
+                  : index % 2 === 1 
+                    ? -(index + 1) / 2 
+                    : index / 2;
+                
+                return (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-positive-highlight/20 text-positive-highlight border border-positive-highlight/40 rounded-md text-xs font-medium"
+                    style={{ order }}
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTagPills(tagPills.filter((_, i) => i !== index));
+                      }}
+                      className="hover:text-text focus:outline-none rounded transition-colors"
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

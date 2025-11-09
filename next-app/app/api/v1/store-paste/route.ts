@@ -8,6 +8,7 @@ import {
   sanitizeError,
   sanitizeGitHubUsername,
   sanitizePasteName,
+  sanitizeTags,
   secureLogError,
   validateInputLength,
   validateRequestSize,
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
     let pasteName: string | null = null;
     let userId: string | null = null;
     let password: string | null = null;
+    let tags: string | null = null;
 
     // Handle multipart/form-data (file upload)
     if (contentType.includes('multipart/form-data')) {
@@ -133,12 +135,14 @@ export async function POST(request: NextRequest) {
       const rawPasteName = (formData.get('name') as string) || null;
       const rawUserId = (formData.get('user_id') as string) || null;
       const rawPassword = (formData.get('password') as string) || null;
+      const rawTags = (formData.get('tags') as string) || null;
       
       // Sanitize and validate inputs
       recipientGhUsername = sanitizeGitHubUsername(rawRecipientGhUsername) || 'unknown';
       pasteName = rawPasteName ? sanitizePasteName(rawPasteName) : null;
       userId = rawUserId ? validateInputLength(rawUserId, 100).sanitized : null;
       password = rawPassword ? validateInputLength(rawPassword, 30, 8).sanitized : null;
+      tags = rawTags ? sanitizeTags(rawTags) : null;
     } else {
       // Handle JSON request
       // Validate request size before parsing
@@ -161,6 +165,7 @@ export async function POST(request: NextRequest) {
       const rawPasteName = body.name;
       const rawUserId = body.user_id;
       const rawPassword = body.password;
+      const rawTags = body.tags;
       
       // Sanitize and validate inputs
       recipientGhUsername = rawRecipientGhUsername
@@ -169,6 +174,7 @@ export async function POST(request: NextRequest) {
       pasteName = rawPasteName ? sanitizePasteName(rawPasteName) : null;
       userId = rawUserId ? validateInputLength(rawUserId, 100).sanitized : null;
       password = rawPassword ? validateInputLength(rawPassword, 30, 8).sanitized : null;
+      tags = rawTags ? sanitizeTags(rawTags) : null;
     }
 
     // Validate required fields
@@ -321,6 +327,11 @@ export async function POST(request: NextRequest) {
     // Encrypt the name field if provided (following @db.mdc rule: all content must be encrypted)
     if (pasteName) {
       insertData.name = encrypt(pasteName.trim());
+    }
+    
+    // Encrypt tags if provided (following @db.mdc rule: all content must be encrypted)
+    if (tags) {
+      insertData.tags = encrypt(tags.trim());
     }
     
     // Store password (encrypted) if provided and user is authenticated
