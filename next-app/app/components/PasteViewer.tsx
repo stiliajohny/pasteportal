@@ -1855,7 +1855,15 @@ export default function PasteViewer() {
         }}
         initialMode="signin"
         customTitle="🚀 Unlock the Full Power of PastePortal!"
-        customDescription="Sign in now to push your paste and unlock amazing features! ✨\n\n• 📝 Name your pastes for easy identification\n• 🏷️ Add tags to organize and find pastes quickly\n• 🔒 Encrypt sensitive content with password protection\n• 📚 Access your complete paste history\n• ⚡ Faster workflow with saved preferences\n\nJoin thousands of developers sharing code snippets with style!"
+        customDescription={`Sign in now to push your paste and unlock amazing features! ✨
+
+• 📝 Name your pastes for easy identification
+• 🏷️ Add tags to organize and find pastes quickly
+• 🔒 Encrypt sensitive content with password protection
+• 📚 Access your complete paste history
+• ⚡ Faster workflow with saved preferences
+
+Join thousands of developers sharing code snippets with style!`}
       />
 
       {/* Toolbar Section - Redesigned with proper spacing and organization */}

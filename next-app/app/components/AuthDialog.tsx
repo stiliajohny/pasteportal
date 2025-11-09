@@ -780,9 +780,29 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
               </h2>
               {customDescription && (
                 <div className="mt-3 p-4 bg-positive-highlight/10 border border-positive-highlight/30 rounded-lg">
-                  <p className="text-sm text-text leading-relaxed whitespace-pre-line">
-                    {customDescription}
-                  </p>
+                  <div className="text-sm text-text leading-relaxed space-y-2">
+                    {customDescription.split('\n').map((line, index) => {
+                      // Check if line is a bullet point
+                      if (line.trim().startsWith('•')) {
+                        return (
+                          <div key={index} className="flex items-start gap-2">
+                            <span className="text-positive-highlight mt-0.5">•</span>
+                            <span>{line.trim().substring(1).trim()}</span>
+                          </div>
+                        );
+                      }
+                      // Regular line
+                      if (line.trim()) {
+                        return (
+                          <p key={index} className={index === 0 ? 'font-medium' : ''}>
+                            {line.trim()}
+                          </p>
+                        );
+                      }
+                      // Empty line (spacing)
+                      return <br key={index} />;
+                    })}
+                  </div>
                 </div>
               )}
             </div>
