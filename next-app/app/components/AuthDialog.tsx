@@ -14,13 +14,15 @@ interface AuthDialogProps {
   initialMode?: AuthMode;
   onUserInteraction?: () => void;
   isVSCodeAuth?: boolean;
+  customTitle?: string;
+  customDescription?: string;
 }
 
 /**
  * Authentication dialog component
  * Supports email/password, magic link, password reset, OTP, Web3, and GitHub
  */
-export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', onUserInteraction, isVSCodeAuth = false }: AuthDialogProps) {
+export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', onUserInteraction, isVSCodeAuth = false, customTitle, customDescription }: AuthDialogProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,6 +59,16 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
   if (!isOpen) return null;
 
   const supabase = createClient();
+
+  // Get default title based on mode
+  const getDefaultTitle = () => {
+    if (mode === 'signup') return 'Sign Up';
+    if (mode === 'signin') return 'Sign In';
+    if (mode === 'magic-link') return 'Magic Link';
+    if (mode === 'reset-password') return 'Reset Password';
+    if (mode === 'otp') return 'Enter OTP';
+    return 'Sign In';
+  };
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -762,13 +774,18 @@ export default function AuthDialog({ isOpen, onClose, initialMode = 'signin', on
               </div>
             </div>
           ) : (
-            <h2 className="text-2xl font-bold mb-6 text-text">
-              {mode === 'signup' && 'Sign Up'}
-              {mode === 'signin' && 'Sign In'}
-              {mode === 'magic-link' && 'Magic Link'}
-              {mode === 'reset-password' && 'Reset Password'}
-              {mode === 'otp' && 'Enter OTP'}
-            </h2>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-text">
+                {customTitle || getDefaultTitle()}
+              </h2>
+              {customDescription && (
+                <div className="mt-3 p-4 bg-positive-highlight/10 border border-positive-highlight/30 rounded-lg">
+                  <p className="text-sm text-text leading-relaxed whitespace-pre-line">
+                    {customDescription}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Error Message */}
