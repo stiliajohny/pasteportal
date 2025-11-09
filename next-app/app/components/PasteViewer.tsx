@@ -836,7 +836,7 @@ export default function PasteViewer() {
       // Add security tag if secrets were redacted
       let tagsToStore = tagPills.length > 0 ? tagPills.join(',') : null;
       if (secretsWereRedacted) {
-        const securityTag = '[retracted-secret-for-security]';
+        const securityTag = 'contains-secrets';
         if (tagsToStore) {
           // Check if tag already exists to avoid duplicates
           if (!tagsToStore.includes(securityTag)) {

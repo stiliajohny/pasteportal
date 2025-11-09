@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
     // Add security tag if secrets were redacted on server side
     let finalTags = tags;
     if (secretsWereRedacted) {
-      const securityTag = '[retracted-secret-for-security]';
+      const securityTag = 'contains-secrets';
       if (finalTags) {
         // Check if tag already exists to avoid duplicates
         if (!finalTags.includes(securityTag)) {

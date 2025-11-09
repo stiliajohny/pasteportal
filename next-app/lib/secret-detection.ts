@@ -457,7 +457,7 @@ export function redactSecrets(text: string): { redactedText: string; redactedSec
   
   for (const secret of sortedSecrets) {
     const originalMatch = text.substring(secret.startIndex, secret.endIndex);
-    const redacted = '*'.repeat(originalMatch.length);
+    const redacted = '[retracted]';
     redactedText = 
       redactedText.substring(0, secret.startIndex) + 
       redacted + 
