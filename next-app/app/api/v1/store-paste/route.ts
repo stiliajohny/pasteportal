@@ -308,6 +308,7 @@ export async function POST(request: NextRequest) {
     // Only check if content is not already password-encrypted (encrypted content won't match patterns)
     const isPasswordEncrypted = /^[0-9a-fA-F]{32,}$/.test(pasteContent) && pasteContent.length > 32;
     let finalPasteContent = pasteContent;
+    let secretsWereRedacted = false;
     
     if (!isPasswordEncrypted) {
       const secrets = detectSecrets(pasteContent);
@@ -321,6 +322,7 @@ export async function POST(request: NextRequest) {
         });
         const redacted = redactSecrets(pasteContent);
         finalPasteContent = redacted.redactedText;
+        secretsWereRedacted = true;
       }
     }
 
@@ -346,8 +348,21 @@ export async function POST(request: NextRequest) {
     }
     
     // Encrypt tags if provided (following @db.mdc rule: all content must be encrypted)
-    if (tags) {
-      insertData.tags = encrypt(tags.trim());
+    // Add security tag if secrets were redacted on server side
+    let finalTags = tags;
+    if (secretsWereRedacted) {
+      const securityTag = '[retracted-secret-for-security]';
+      if (finalTags) {
+        // Check if tag already exists to avoid duplicates
+        if (!finalTags.includes(securityTag)) {
+          finalTags = `${finalTags.trim()},${securityTag}`;
+        }
+      } else {
+        finalTags = securityTag;
+      }
+    }
+    if (finalTags) {
+      insertData.tags = encrypt(finalTags.trim());
     }
     
     // Store password (encrypted) if provided and user is authenticated

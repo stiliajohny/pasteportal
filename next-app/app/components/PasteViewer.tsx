@@ -801,8 +801,12 @@ export default function PasteViewer() {
    */
   /**
    * Internal function to actually push the paste (after secret checks)
+   * @param contentToPush - The content to push
+   * @param isEncrypted - Whether the paste should be encrypted
+   * @param password - Password for encryption (if isEncrypted is true)
+   * @param secretsWereRedacted - Whether secrets were redacted from this paste
    */
-  const doPushPaste = async (contentToPush: string, isEncrypted: boolean = false, password: string | null = null) => {
+  const doPushPaste = async (contentToPush: string, isEncrypted: boolean = false, password: string | null = null, secretsWereRedacted: boolean = false) => {
     setIsPushing(true);
     setPushedPasteId(null);
     setUsedPassword(null);
@@ -828,7 +832,20 @@ export default function PasteViewer() {
       const userId = user?.id || null;
 
       const nameToStore = pasteName.trim() || null;
-      const tagsToStore = tagPills.length > 0 ? tagPills.join(',') : null;
+      
+      // Add security tag if secrets were redacted
+      let tagsToStore = tagPills.length > 0 ? tagPills.join(',') : null;
+      if (secretsWereRedacted) {
+        const securityTag = '[retracted-secret-for-security]';
+        if (tagsToStore) {
+          // Check if tag already exists to avoid duplicates
+          if (!tagsToStore.includes(securityTag)) {
+            tagsToStore = `${tagsToStore},${securityTag}`;
+          }
+        } else {
+          tagsToStore = securityTag;
+        }
+      }
       // Pass access token to authenticate the request
       // This is needed because the client uses localStorage for sessions,
       // but the server expects cookies or Bearer tokens
@@ -895,7 +912,7 @@ export default function PasteViewer() {
     }
 
     // No secrets detected, proceed with push
-    await doPushPaste(text, isEncrypted, password);
+    await doPushPaste(text, isEncrypted, password, false);
   };
 
   /**
@@ -906,7 +923,7 @@ export default function PasteViewer() {
     
     const { redactedText } = redactSecrets(text);
     setText(redactedText); // Update the text with redacted version
-    await doPushPaste(redactedText, pendingPushAction.isEncrypted, pendingPushAction.password);
+    await doPushPaste(redactedText, pendingPushAction.isEncrypted, pendingPushAction.password, true);
     setPendingPushAction(null);
   };
 
