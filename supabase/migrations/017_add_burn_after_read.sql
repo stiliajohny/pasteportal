@@ -1,0 +1,1 @@
+-- Migration 017: No changes (reverted burn after read feature)

@@ -129,6 +129,7 @@ export default function Header() {
                   className="flex items-center transition-opacity duration-200 hover:opacity-80"
                   aria-label="Buy Me a Coffee at ko-fi.com"
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     height={38}
                     style={{ border: 0, height: '38px' }}
@@ -273,6 +274,7 @@ export default function Header() {
                     className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-variant transition-colors duration-200"
                     aria-label="Buy Me a Coffee at ko-fi.com"
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       height={38}
                       style={{ border: 0, height: '38px' }}

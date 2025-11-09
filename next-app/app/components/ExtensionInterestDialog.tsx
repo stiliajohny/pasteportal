@@ -172,7 +172,7 @@ export default function ExtensionInterestDialog({
               Thank You!
             </h2>
             <p className="text-text-secondary">
-              We'll notify you when the extension{selectedIDEs.size > 1 ? 's are' : ' is'} ready.
+              We&apos;ll notify you when the extension{selectedIDEs.size > 1 ? 's are' : ' is'} ready.
             </p>
           </div>
         ) : (
@@ -212,8 +212,8 @@ export default function ExtensionInterestDialog({
               {/* Message */}
               <div className="space-y-2">
                 <p className="text-text-secondary text-sm">
-                  We're working hard to bring PastePortal to your favorite IDE! 
-                  Register your interest below and we'll notify you when it's ready.
+                  We&apos;re working hard to bring PastePortal to your favorite IDE! 
+                  Register your interest below and we&apos;ll notify you when it&apos;s ready.
                 </p>
               </div>
 

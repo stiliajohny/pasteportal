@@ -140,20 +140,28 @@ async function fetchRandomJoke(): Promise<string> {
  * Returns paste data with encryption metadata
  */
 async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncrypted: boolean; name?: string | null }> {
+  console.log('Fetching paste with ID:', id);
   const response = await fetch(`${API_BASE}/get-paste?id=${id}`);
+  console.log('Fetch response status:', response.status, response.ok);
   if (!response.ok) {
-    throw new Error('Failed to fetch paste');
+    // Check if paste was not found (might be burned or deleted)
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.response?.message || 'Failed to fetch paste';
+    console.error('Fetch error:', errorMessage, errorData);
+    throw new Error(errorMessage);
   }
   const data = await response.json();
+  console.log('Fetch response data:', { hasResponse: !!data.response, hasPaste: !!data.response?.paste });
   const pasteData = data.response;
-  if (pasteData.paste) {
+  if (pasteData && pasteData.paste) {
     return {
       paste: pasteData.paste,
       isPasswordEncrypted: pasteData.is_password_encrypted || false,
       name: pasteData.name || null,
     };
   }
-  throw new Error('Paste not found');
+  console.error('Paste data missing or invalid:', pasteData);
+  throw new Error('Paste not found or invalid response');
 }
 
 /**
@@ -275,6 +283,7 @@ export default function PasteViewer() {
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pushButtonRef = useRef<HTMLDivElement>(null);
+  const fetchingPasteIdRef = useRef<string | null>(null); // Track in-flight fetch to prevent duplicates
 
   /**
    * Load Prism.js and its components dynamically on client side
@@ -498,10 +507,20 @@ export default function PasteViewer() {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
 
-    if (id) {
-      handlePullPaste(id);
-      // When viewing an existing paste, start in view mode
-      setIsEditMode(false);
+    console.log('useEffect - URL ID:', id, 'Current fetching ID:', fetchingPasteIdRef.current);
+
+    if (id && isValidPasteId(id)) {
+      // Only fetch if not already fetching this ID (prevents duplicate fetches in React Strict Mode)
+      if (fetchingPasteIdRef.current !== id) {
+        console.log('Starting fetch for paste ID:', id);
+        // Set ref immediately to prevent duplicate fetches
+        fetchingPasteIdRef.current = id;
+        handlePullPaste(id);
+        // When viewing an existing paste, start in view mode
+        setIsEditMode(false);
+      } else {
+        console.log('Skipping fetch - already fetching this ID');
+      }
     } else {
       // Show intro paragraph and start in edit mode for new pastes
       setText(introParagraph);
@@ -624,10 +643,11 @@ export default function PasteViewer() {
     return () => {
       clearTimeout(timeoutId);
       observer.disconnect();
-      // Cleanup: remove handler
-      const editorContainer = editorContainerRef.current;
-      if (editorContainer) {
-        const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+      // Cleanup: remove handler - capture ref value at cleanup time
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const editorContainerForCleanup = editorContainerRef.current;
+      if (editorContainerForCleanup) {
+        const textarea = editorContainerForCleanup.querySelector('textarea') as HTMLTextAreaElement;
         if (textarea) {
           textarea.removeAttribute('data-paste-handler-attached');
           textarea.removeEventListener('paste', handleEditorPaste);
@@ -730,6 +750,12 @@ export default function PasteViewer() {
       return;
     }
 
+    // Prevent duplicate fetches for the same paste ID
+    if (fetchingPasteIdRef.current === id) {
+      return; // Already fetching this paste
+    }
+
+    fetchingPasteIdRef.current = id;
     setIsLoading(true);
     setPushedPasteId(null); // Clear previous push success
     setIsPasteCreated(false); // Clear paste created flag when loading
@@ -738,10 +764,23 @@ export default function PasteViewer() {
     try {
       const result = await fetchPaste(id);
       
+      console.log('Fetched paste result:', { 
+        hasPaste: !!result.paste, 
+        pasteLength: result.paste?.length,
+        isPasswordEncrypted: result.isPasswordEncrypted 
+      });
+      
       // Store paste ID and name for document title (but don't mark as created)
       setPushedPasteId(id);
       setPushedPasteName(result.name || null);
       setIsPasteCreated(false); // This is a loaded paste, not a created one
+      
+      // Check if paste content is empty
+      if (!result.paste || result.paste.trim().length === 0) {
+        setText('⚠️ This paste appears to be empty or could not be retrieved.');
+        setIsLoading(false);
+        return;
+      }
       
       // Check if paste is password-encrypted
       if (result.isPasswordEncrypted) {
@@ -772,11 +811,19 @@ export default function PasteViewer() {
           console.error('Failed to copy to clipboard:', err);
         }
       }
-    } catch (error) {
-      setText('Error: Failed to retrieve paste. Please check the ID and try again.');
-      console.error('Error fetching paste:', error);
+    } catch (error: any) {
+      console.error('Error in handlePullPaste:', error);
+      // Check if paste was not found
+      if (error.message?.includes('Failed to fetch paste') || error.message?.includes('not found') || error.message?.includes('no longer available')) {
+        setText('⚠️ This paste is no longer available.\n\nIt may have been deleted.');
+      } else {
+        setText(`Error: Failed to retrieve paste. ${error.message || 'Please check the ID and try again.'}`);
+      }
+      setIsLoading(false);
+      setIsEditMode(false);
     } finally {
       setIsLoading(false);
+      fetchingPasteIdRef.current = null; // Clear fetching flag
     }
   };
 
@@ -1273,7 +1320,7 @@ export default function PasteViewer() {
                   </svg>
                   <span className="flex-1 min-w-0">Paste Created Successfully!</span>
                   {usedPassword && (
-                    <span className="text-xs bg-neon-magenta/20 text-neon-magenta px-2 py-0.5 rounded whitespace-nowrap">
+                    <span className="text-xs bg-neon-magenta/20 text-neon-magenta px-2 py-0.5 sm:px-2.5 rounded whitespace-nowrap">
                       🔒 Encrypted
                     </span>
                   )}
@@ -1393,6 +1440,7 @@ export default function PasteViewer() {
                     </div>
                   </div>
                 )}
+
 
                 {/* Share Options */}
                 <div className="pt-4 border-t border-divider">
@@ -1713,6 +1761,7 @@ export default function PasteViewer() {
                     </div>
                   </label>
                 </div>
+
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
@@ -1890,6 +1939,7 @@ export default function PasteViewer() {
                       className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
                     />
                   </div>
+
 
                   {/* Push Button */}
                   <div ref={pushButtonRef} data-tour="push-button" className="relative flex shrink-0 w-full sm:w-auto">
