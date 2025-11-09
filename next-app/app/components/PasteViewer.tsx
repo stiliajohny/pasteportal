@@ -3,7 +3,7 @@
 import { fetchWithCsrf } from '@/lib/csrf-client';
 import { autoDetectLanguage, LanguageValue, SUPPORTED_LANGUAGES } from '@/lib/language-detection';
 import { decryptWithPassword, encryptWithPassword, generateRandomPassword } from '@/lib/password-encryption';
-import { detectSecrets, DetectedSecret, redactSecrets } from '@/lib/secret-detection';
+import { detectSecrets, DetectedSecret, redactSecrets, getSecretTags } from '@/lib/secret-detection';
 import { sanitizePastedText } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -805,8 +805,9 @@ export default function PasteViewer() {
    * @param isEncrypted - Whether the paste should be encrypted
    * @param password - Password for encryption (if isEncrypted is true)
    * @param secretsWereRedacted - Whether secrets were redacted from this paste
+   * @param originalSecrets - Optional array of secrets detected in original text (before redaction)
    */
-  const doPushPaste = async (contentToPush: string, isEncrypted: boolean = false, password: string | null = null, secretsWereRedacted: boolean = false) => {
+  const doPushPaste = async (contentToPush: string, isEncrypted: boolean = false, password: string | null = null, secretsWereRedacted: boolean = false, originalSecrets?: DetectedSecret[]) => {
     setIsPushing(true);
     setPushedPasteId(null);
     setUsedPassword(null);
@@ -833,17 +834,25 @@ export default function PasteViewer() {
 
       const nameToStore = pasteName.trim() || null;
       
-      // Add security tag if secrets were redacted
+      // Add security tags if secrets were redacted
       let tagsToStore = tagPills.length > 0 ? tagPills.join(',') : null;
-      if (secretsWereRedacted) {
+      if (secretsWereRedacted && originalSecrets) {
+        // Use the original secrets to determine which tags to add
+        const secretTags = getSecretTags(originalSecrets);
+        
+        // Add contains-secrets tag
         const securityTag = 'contains-secrets';
+        const tagsToAdd = [securityTag, ...secretTags];
+        
         if (tagsToStore) {
-          // Check if tag already exists to avoid duplicates
-          if (!tagsToStore.includes(securityTag)) {
-            tagsToStore = `${tagsToStore},${securityTag}`;
+          // Add tags that don't already exist
+          const existingTags = tagsToStore.split(',').map(t => t.trim());
+          const newTags = tagsToAdd.filter(tag => !existingTags.includes(tag));
+          if (newTags.length > 0) {
+            tagsToStore = `${tagsToStore},${newTags.join(',')}`;
           }
         } else {
-          tagsToStore = securityTag;
+          tagsToStore = tagsToAdd.join(',');
         }
       }
       // Pass access token to authenticate the request
@@ -921,9 +930,11 @@ export default function PasteViewer() {
   const handleProceedWithRedaction = async () => {
     if (!pendingPushAction) return;
     
+    // Get secrets before redaction to determine tags
+    const secrets = detectSecrets(text);
     const { redactedText } = redactSecrets(text);
     setText(redactedText); // Update the text with redacted version
-    await doPushPaste(redactedText, pendingPushAction.isEncrypted, pendingPushAction.password, true);
+    await doPushPaste(redactedText, pendingPushAction.isEncrypted, pendingPushAction.password, true, secrets);
     setPendingPushAction(null);
   };
 

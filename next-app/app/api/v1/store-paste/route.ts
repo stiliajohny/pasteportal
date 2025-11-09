@@ -1,5 +1,5 @@
 import { encrypt } from '@/lib/encryption';
-import { detectSecrets, redactSecrets } from '@/lib/secret-detection';
+import { detectSecrets, redactSecrets, getSecretTags } from '@/lib/secret-detection';
 import { supabase } from '@/lib/supabase';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
@@ -348,17 +348,26 @@ export async function POST(request: NextRequest) {
     }
     
     // Encrypt tags if provided (following @db.mdc rule: all content must be encrypted)
-    // Add security tag if secrets were redacted on server side
+    // Add security tags if secrets were redacted on server side
     let finalTags = tags;
     if (secretsWereRedacted) {
+      // Get the detected secrets to determine which tags to add
+      const secrets = detectSecrets(pasteContent);
+      const secretTags = getSecretTags(secrets);
+      
+      // Add contains-secrets tag and specific secret type tags
       const securityTag = 'contains-secrets';
+      const tagsToAdd = [securityTag, ...secretTags];
+      
       if (finalTags) {
-        // Check if tag already exists to avoid duplicates
-        if (!finalTags.includes(securityTag)) {
-          finalTags = `${finalTags.trim()},${securityTag}`;
+        // Add tags that don't already exist
+        const existingTags = finalTags.split(',').map(t => t.trim());
+        const newTags = tagsToAdd.filter(tag => !existingTags.includes(tag));
+        if (newTags.length > 0) {
+          finalTags = `${finalTags.trim()},${newTags.join(',')}`;
         }
       } else {
-        finalTags = securityTag;
+        finalTags = tagsToAdd.join(',');
       }
     }
     if (finalTags) {

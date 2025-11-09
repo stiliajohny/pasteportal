@@ -444,6 +444,68 @@ export function hasSecrets(text: string): boolean {
 }
 
 /**
+ * Map secret type to readable tag name
+ * @param secretType - The secret type identifier
+ * @returns Readable tag name (e.g., 'AWS', 'SSH', 'GitHub')
+ */
+function getSecretTagName(secretType: string): string {
+  const tagMap: Record<string, string> = {
+    'aws-access-key': 'AWS',
+    'aws-secret-key': 'AWS',
+    'aws-session-token': 'AWS',
+    'github-token': 'GitHub',
+    'github-oauth': 'GitHub',
+    'github-user-token': 'GitHub',
+    'github-server-token': 'GitHub',
+    'github-refresh-token': 'GitHub',
+    'slack-token': 'Slack',
+    'slack-webhook': 'Slack',
+    'google-api-key': 'Google',
+    'google-oauth-token': 'Google',
+    'stripe-key': 'Stripe',
+    'twilio-key': 'Twilio',
+    'sendgrid-key': 'SendGrid',
+    'mailgun-key': 'Mailgun',
+    'azure-sas-token': 'Azure',
+    'facebook-token': 'Facebook',
+    'paypal-token': 'PayPal',
+    'square-token': 'Square',
+    'heroku-key': 'Heroku',
+    'discord-token': 'Discord',
+    'telegram-token': 'Telegram',
+    'firebase-key': 'Firebase',
+    'private-key': 'SSH',
+    'ssh-private-key': 'SSH',
+    'database-connection': 'Database',
+    'mongodb-connection': 'MongoDB',
+    'postgres-connection': 'PostgreSQL',
+    'jwt-token': 'JWT',
+    'generic-api-key': 'API-Key',
+    'oauth-token': 'OAuth',
+    'digitalocean-token': 'DigitalOcean',
+    'cloudflare-token': 'Cloudflare',
+    'openai-key': 'OpenAI',
+    'generic-secret': 'Secret',
+  };
+  
+  return tagMap[secretType] || 'Secret';
+}
+
+/**
+ * Get unique secret tag names from detected secrets
+ * @param secrets - Array of detected secrets
+ * @returns Array of unique tag names
+ */
+export function getSecretTags(secrets: DetectedSecret[]): string[] {
+  const tagSet = new Set<string>();
+  for (const secret of secrets) {
+    const tagName = getSecretTagName(secret.type);
+    tagSet.add(tagName);
+  }
+  return Array.from(tagSet).sort();
+}
+
+/**
  * Redact secrets from text content
  * @param text - The text content to redact
  * @returns Object with redacted text and list of redacted secrets
@@ -457,7 +519,8 @@ export function redactSecrets(text: string): { redactedText: string; redactedSec
   
   for (const secret of sortedSecrets) {
     const originalMatch = text.substring(secret.startIndex, secret.endIndex);
-    const redacted = '[retracted]';
+    const tagName = getSecretTagName(secret.type);
+    const redacted = `[retracted-${tagName}]`;
     redactedText = 
       redactedText.substring(0, secret.startIndex) + 
       redacted + 
