@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';
+import AuthDialog from './AuthDialog';
 import SecretWarningDialog from './SecretWarningDialog';
 import { useTheme } from './ThemeProvider';
 
@@ -279,6 +280,8 @@ export default function PasteViewer() {
   const [showSecretWarning, setShowSecretWarning] = useState(false);
   const [detectedSecrets, setDetectedSecrets] = useState<DetectedSecret[]>([]);
   const [pendingPushAction, setPendingPushAction] = useState<{ isEncrypted: boolean; password: string | null } | null>(null);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [pendingPushAfterAuth, setPendingPushAfterAuth] = useState<{ isEncrypted: boolean; password: string | null } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -699,6 +702,29 @@ export default function PasteViewer() {
   }, [pushedPasteId, pushedPasteName, isClient]);
 
   /**
+   * Handle push after authentication
+   * When user becomes authenticated and there's a pending push action, execute it
+   */
+  useEffect(() => {
+    if (user && pendingPushAfterAuth && !showAuthDialog) {
+      // User just authenticated and auth dialog is closed
+      const action = pendingPushAfterAuth;
+      // Clear pending action first to prevent re-triggering
+      setPendingPushAfterAuth(null);
+      
+      // Execute the pending push action
+      if (action.isEncrypted) {
+        // Show encryption dialog
+        setShowEncryptDialog(true);
+      } else {
+        // Push directly without encryption
+        handlePushPaste(false, null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, pendingPushAfterAuth, showAuthDialog]);
+
+  /**
    * Validate UUID v4 or legacy 6-character hex format
    */
   const isValidPasteId = (id: string): boolean => {
@@ -828,10 +854,23 @@ export default function PasteViewer() {
   };
 
   /**
-   * Handle push button click - show encryption dialog or push directly
+   * Handle push button click - check authentication first, then show encryption dialog or push directly
    */
   const handlePushButtonClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    
+    // Check if user is authenticated
+    if (!user) {
+      // Store the push action to execute after authentication
+      const isEncryptClick = target.closest('.push-dropdown-arrow');
+      setPendingPushAfterAuth({ 
+        isEncrypted: isEncryptClick ? true : false, 
+        password: null 
+      });
+      setShowAuthDialog(true);
+      return;
+    }
+    
     // Check if dropdown arrow was clicked
     if (target.closest('.push-dropdown-arrow')) {
       setShowEncryptDialog(true);
@@ -1804,6 +1843,19 @@ export default function PasteViewer() {
         onCancel={handleCancelSecretWarning}
       />
 
+      {/* Auth Dialog - Show when user tries to push without being authenticated */}
+      <AuthDialog
+        isOpen={showAuthDialog}
+        onClose={() => {
+          setShowAuthDialog(false);
+          // Clear pending push action if user closes dialog without authenticating
+          if (!user) {
+            setPendingPushAfterAuth(null);
+          }
+        }}
+        initialMode="signin"
+      />
+
       {/* Toolbar Section - Redesigned with proper spacing and organization */}
       {/* Law of Proximity: Related items grouped together */}
       {/* Law of Common Region: Visual grouping with clear boundaries */}
@@ -1968,7 +2020,14 @@ export default function PasteViewer() {
                 {text && text.trim().length > 0 && !isPushing && (
                   <button
                     data-tour="push-encrypt"
-                    onClick={() => setShowEncryptDialog(true)}
+                    onClick={() => {
+                      if (!user) {
+                        setPendingPushAfterAuth({ isEncrypted: true, password: null });
+                        setShowAuthDialog(true);
+                      } else {
+                        setShowEncryptDialog(true);
+                      }
+                    }}
                     className="px-2.5 py-2 rounded-r-lg border-l border-white/20 transition-all duration-200 bg-neon-magenta text-white hover:opacity-90 flex items-center justify-center"
                     aria-label="Encryption options"
                     title="Encryption options"
