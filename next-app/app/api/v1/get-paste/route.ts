@@ -152,6 +152,7 @@ export async function GET(request: NextRequest) {
         joke: generateBanterComment(),
         recipient_gh_username: data.recipient_gh_username,
         is_password_encrypted: data.is_password_encrypted || false,
+        name: data.name || null,
       },
       undefined,
       request

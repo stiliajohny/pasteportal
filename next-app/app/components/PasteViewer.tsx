@@ -152,9 +152,9 @@ async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncryp
     throw new Error(errorMessage);
   }
   const data = await response.json();
-  console.log('Fetch response data:', { hasResponse: !!data.response, hasPaste: !!data.response?.paste });
+  console.log('Fetch response data:', { hasResponse: !!data.response, hasPaste: !!data.response?.paste, pasteData: data.response });
   const pasteData = data.response;
-  if (pasteData && pasteData.paste) {
+  if (pasteData && pasteData.paste !== undefined && pasteData.paste !== null) {
     return {
       paste: pasteData.paste,
       isPasswordEncrypted: pasteData.is_password_encrypted || false,
@@ -865,6 +865,7 @@ export default function PasteViewer() {
       setText(result.paste);
       setIsManualLanguageSelection(false); // Allow auto-detection for new content
       setIsEditMode(false); // Start in view mode when loading existing paste
+      setIsLoading(false); // Explicitly clear loading state
       
       // Update URL with paste ID
       const url = new URL(window.location.href);
