@@ -1,13 +1,18 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import TourTrigger from './Tour/TourTrigger';
 
 /**
  * Footer component with links and branding
  * Follows Law of Common Region: groups related content
  * Mobile responsive with collapsible sections
  */
+const TourTrigger = dynamic(() => import('./Tour/TourTrigger'), {
+  ssr: false,
+  loading: () => null,
+});
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
