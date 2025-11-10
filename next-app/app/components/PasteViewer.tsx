@@ -7,8 +7,6 @@ import { detectSecrets, DetectedSecret, redactSecrets, getSecretTags } from '@/l
 import { sanitizePastedText, writeToClipboard } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';
 import AuthDialog from './AuthDialog';
 import ClipboardPermissionBanner from './ClipboardPermissionBanner';
@@ -142,9 +140,7 @@ async function fetchRandomJoke(): Promise<string> {
  * Returns paste data with encryption metadata
  */
 async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncrypted: boolean; name?: string | null }> {
-  console.log('Fetching paste with ID:', id);
   const response = await fetch(`${API_BASE}/get-paste?id=${id}`);
-  console.log('Fetch response status:', response.status, response.ok);
   if (!response.ok) {
     // Check if paste was not found (might be burned or deleted)
     const errorData = await response.json().catch(() => ({}));
@@ -153,7 +149,6 @@ async function fetchPaste(id: string): Promise<{ paste: string; isPasswordEncryp
     throw new Error(errorMessage);
   }
   const data = await response.json();
-  console.log('Fetch response data:', { hasResponse: !!data.response, hasPaste: !!data.response?.paste, pasteData: data.response });
   
   // Validate response structure
   if (!data || !data.response) {
@@ -526,12 +521,9 @@ export default function PasteViewer() {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
 
-    console.log('useEffect - URL ID:', id, 'Current fetching ID:', fetchingPasteIdRef.current);
-
     if (id && isValidPasteId(id)) {
       // Only fetch if not already fetching this ID (prevents duplicate fetches in React Strict Mode)
       if (fetchingPasteIdRef.current !== id) {
-        console.log('Starting fetch for paste ID:', id);
         // Don't set ref here - let handlePullPaste manage it to avoid race conditions
         // Call handlePullPaste and catch any errors
         handlePullPaste(id).catch((error) => {
@@ -539,8 +531,6 @@ export default function PasteViewer() {
         });
         // When viewing an existing paste, start in view mode
         setIsEditMode(false);
-      } else {
-        console.log('Skipping fetch - already fetching this ID');
       }
     } else {
       // Show intro paragraph and start in edit mode for new pastes
@@ -834,19 +824,15 @@ export default function PasteViewer() {
    * Pull paste from API by ID
    */
   const handlePullPaste = async (id: string) => {
-    console.log('handlePullPaste called with ID:', id);
     if (!id || !isValidPasteId(id)) {
-      console.log('handlePullPaste: Invalid ID or empty, returning early');
       return;
     }
 
     // Prevent duplicate fetches for the same paste ID
     if (fetchingPasteIdRef.current === id) {
-      console.log('handlePullPaste: Already fetching this ID, returning early');
       return; // Already fetching this paste
     }
 
-    console.log('handlePullPaste: Setting up fetch for ID:', id);
     fetchingPasteIdRef.current = id;
     setIsLoading(true);
     setPushedPasteId(null); // Clear previous push success
@@ -854,18 +840,7 @@ export default function PasteViewer() {
     setText(getRandomLoadingJoke());
 
     try {
-      console.log('handlePullPaste: About to call fetchPaste with ID:', id);
       const result = await fetchPaste(id);
-      console.log('handlePullPaste: fetchPaste completed, result:', { 
-        hasPaste: !!result?.paste, 
-        pasteLength: result?.paste?.length 
-      });
-      
-      console.log('Fetched paste result:', { 
-        hasPaste: !!result.paste, 
-        pasteLength: result.paste?.length,
-        isPasswordEncrypted: result.isPasswordEncrypted 
-      });
       
       // Store paste ID and name for document title (but don't mark as created)
       setPushedPasteId(id);

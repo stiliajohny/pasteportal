@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import dynamic from 'next/dynamic';
 import { Source_Code_Pro } from 'next/font/google';
 import 'prismjs/themes/prism-tomorrow.css';
 import { Suspense } from 'react';
@@ -7,7 +8,6 @@ import GoogleAnalytics from './components/GoogleAnalytics';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
 import { ThemeProvider } from './components/ThemeProvider';
-import Tour from './components/Tour/Tour';
 import { AuthProvider } from './contexts/AuthContext';
 import './globals.css';
 
@@ -21,6 +21,11 @@ if (typeof window === 'undefined') {
     throw error;
   }
 }
+
+const Tour = dynamic(() => import('./components/Tour/Tour'), {
+  ssr: false,
+  loading: () => null,
+});
 
 const sourceCodePro = Source_Code_Pro({
   subsets: ['latin'],

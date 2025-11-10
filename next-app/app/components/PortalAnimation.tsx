@@ -1,7 +1,43 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+type StarParticle = {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+  duration: number;
+};
+
+type SpiralParticle = {
+  id: number;
+  angle: number;
+  radius: number;
+  delay: number;
+};
+
+type OrbitingParticle = {
+  id: number;
+  angle: number;
+  radius: number;
+  delay: number;
+  duration: number;
+};
+
+type ParticleSets = {
+  stars: StarParticle[];
+  spiralParticles: SpiralParticle[];
+  orbitingParticles: OrbitingParticle[];
+};
+
+const EMPTY_PARTICLES: ParticleSets = {
+  stars: [] as StarParticle[],
+  spiralParticles: [] as SpiralParticle[],
+  orbitingParticles: [] as OrbitingParticle[],
+};
 
 /**
  * PortalAnimation component that creates a portal-opening effect on page load
@@ -16,6 +52,7 @@ export default function PortalAnimation() {
   const [showPortal, setShowPortal] = useState(false);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [isPush, setIsPush] = useState(false);
+  const particleDataRef = useRef<ParticleSets | null>(null);
 
   useEffect(() => {
     let fadeOutTimer: NodeJS.Timeout | null = null;
@@ -118,32 +155,40 @@ export default function PortalAnimation() {
 
   const fadeOutDuration = isFadingOut ? (isPush ? 300 : 500) : 0;
 
-  // Generate random star positions for galaxy effect
-  const stars = Array.from({ length: 150 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2 + 0.5,
-    delay: Math.random() * 2,
-    duration: Math.random() * 3 + 2,
-  }));
+  const { stars, spiralParticles, orbitingParticles } = useMemo<ParticleSets>(() => {
+    if (!showPortal) {
+      particleDataRef.current = null;
+      return EMPTY_PARTICLES;
+    }
 
-  // Generate spiral particles
-  const spiralParticles = Array.from({ length: 12 }, (_, i) => ({
-    id: i,
-    angle: (i * 30) % 360,
-    radius: 150 + (i % 3) * 100,
-    delay: i * 0.1,
-  }));
+    if (!particleDataRef.current) {
+      particleDataRef.current = {
+        stars: Array.from({ length: 150 }, (_, i) => ({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 2 + 0.5,
+          delay: Math.random() * 2,
+          duration: Math.random() * 3 + 2,
+        })),
+        spiralParticles: Array.from({ length: 12 }, (_, i) => ({
+          id: i,
+          angle: (i * 30) % 360,
+          radius: 150 + (i % 3) * 100,
+          delay: i * 0.1,
+        })),
+        orbitingParticles: Array.from({ length: 8 }, (_, i) => ({
+          id: i,
+          angle: (i * 45) % 360,
+          radius: 200 + (i % 2) * 150,
+          delay: i * 0.2,
+          duration: 8 + (i % 3) * 2,
+        })),
+      };
+    }
 
-  // Generate orbiting particles
-  const orbitingParticles = Array.from({ length: 8 }, (_, i) => ({
-    id: i,
-    angle: (i * 45) % 360,
-    radius: 200 + (i % 2) * 150,
-    delay: i * 0.2,
-    duration: 8 + (i % 3) * 2,
-  }));
+    return particleDataRef.current;
+  }, [showPortal]);
 
   return (
     <div
