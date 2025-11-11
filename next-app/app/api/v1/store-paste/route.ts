@@ -450,17 +450,37 @@ export async function POST(request: NextRequest) {
       insertData.password = encrypt(password);
     }
 
-    // Use authenticated client if user is authenticated, otherwise use service role
-    // RLS policies will enforce security at database level
+    // Use authenticated client if user is authenticated, otherwise use anon key client
+    // RLS policies will enforce security at database level:
+    // - Anonymous users (anon key): can insert with user_id = NULL (auth.uid() IS NULL)
+    // - Authenticated users: can insert with user_id = auth.uid() (must match authenticated user)
     const dbClient = authenticatedUserId ? createServerSupabaseClient(request) : supabase;
-    const { error } = await dbClient.from('pastes').insert(insertData);
+    const { error, data } = await dbClient.from('pastes').insert(insertData);
 
     if (error) {
-      secureLogError('Database error in store-paste', error);
+      // Log detailed error information for debugging
+      secureLogError('Database error in store-paste', {
+        error: error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        insertDataKeys: Object.keys(insertData),
+        authenticatedUserId: authenticatedUserId,
+        userId: userId,
+        pasteId: id,
+      });
+      
+      // In development, return more detailed error information
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const errorMessage = isDevelopment 
+        ? `Failed to insert paste into database: ${error.message}${error.hint ? ` (${error.hint})` : ''}`
+        : 'Failed to insert paste into database';
+      
       return generateResponse(
         500,
         {
-          message: 'Failed to insert paste into database',
+          message: errorMessage,
           joke: generateBanterComment(),
         },
         undefined,

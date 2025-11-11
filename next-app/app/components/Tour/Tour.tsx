@@ -400,6 +400,9 @@ export default function Tour() {
         isCompleted: isTourCompleted,
         isActive: () => isTourActive,
       };
+      
+      // Dispatch custom event to notify that tour is ready
+      window.dispatchEvent(new CustomEvent('pasteportal-tour-ready'));
     }
 
     return () => {
@@ -415,26 +418,76 @@ export default function Tour() {
 
 /**
  * Hook to access tour controls
+ * Reactively waits for tour to be available
  */
 export const useTour = () => {
-  if (typeof window === 'undefined') {
-    return {
-      startTour: () => {},
-      stopTour: () => {},
-      resetTour: () => {},
-      isTourCompleted: () => false,
-      isTourActive: () => false,
-    };
-  }
+  const [tourReady, setTourReady] = useState(false);
 
-  const tour = (window as any).__pasteportalTour;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Check if tour is already available
+    if ((window as any).__pasteportalTour) {
+      setTourReady(true);
+    }
+
+    // Listen for tour ready event
+    const handleTourReady = () => {
+      setTourReady(true);
+    };
+
+    window.addEventListener('pasteportal-tour-ready', handleTourReady);
+
+    // Fallback: Poll for tour availability (with timeout) in case event is missed
+    const maxAttempts = 50; // 5 seconds max wait
+    let attempts = 0;
+    
+    const checkTour = () => {
+      if ((window as any).__pasteportalTour) {
+        setTourReady(true);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(checkTour, 100);
+      }
+    };
+
+    checkTour();
+
+    return () => {
+      window.removeEventListener('pasteportal-tour-ready', handleTourReady);
+    };
+  }, []);
+
+  // Get tour functions dynamically to ensure we always have the latest reference
+  const getTourFunctions = () => {
+    if (typeof window === 'undefined') {
+      return {
+        startTour: () => {},
+        stopTour: () => {},
+        resetTour: () => {},
+        isTourCompleted: () => false,
+        isTourActive: () => false,
+      };
+    }
+
+    const tour = (window as any).__pasteportalTour;
+    
+    return {
+      startTour: tour?.start || (() => {
+        console.warn('Tour not ready yet. Please wait a moment and try again.');
+      }),
+      stopTour: tour?.stop || (() => {}),
+      resetTour: tour?.reset || (() => {}),
+      isTourCompleted: tour?.isCompleted || (() => false),
+      isTourActive: tour?.isActive || (() => false),
+    };
+  };
+
+  const tourFunctions = getTourFunctions();
   
   return {
-    startTour: tour?.start || (() => {}),
-    stopTour: tour?.stop || (() => {}),
-    resetTour: tour?.reset || (() => {}),
-    isTourCompleted: tour?.isCompleted || (() => false),
-    isTourActive: tour?.isActive || (() => false),
+    ...tourFunctions,
+    tourReady: tourReady && typeof window !== 'undefined' && !!(window as any).__pasteportalTour,
   };
 };
 

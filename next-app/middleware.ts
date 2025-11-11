@@ -122,30 +122,34 @@ export async function middleware(request: NextRequest) {
   // Content-Security-Policy: Strict CSP to prevent XSS and injection attacks
   // Note: 'unsafe-inline' and 'unsafe-eval' are required for Next.js to function
   // but we restrict other directives as much as possible
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://supabase.com https://www.googletagmanager.com https://*.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://avatars.githubusercontent.com https://*.supabase.co https://storage.ko-fi.com https://ko-fi.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://icanhazdadjoke.com https://fonts.googleapis.com https://fonts.gstatic.com https://ko-fi.com https://storage.ko-fi.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com",
-    "frame-src 'self' https://*.supabase.co https://*.googlesyndication.com https://googleads.g.doubleclick.net",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    'upgrade-insecure-requests',
-  ].join('; ');
-
-  response.headers.set('Content-Security-Policy', csp);
-
-  // Generate CSRF token for browser requests to HTML pages
-  // Only set for HTML pages (not API routes or static assets)
+  // Only apply CSP to HTML pages (not API routes or static assets)
   const pathname = request.nextUrl.pathname;
   const isApiRoute = pathname.startsWith('/api');
   const isStaticAsset = /\.(jpg|jpeg|png|gif|svg|ico|css|js|woff|woff2|ttf|eot|map|json)$/i.test(pathname);
   const isNextInternal = pathname.startsWith('/_next');
   
+  if (!isApiRoute && !isStaticAsset && !isNextInternal) {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://supabase.com https://www.googletagmanager.com https://*.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https://avatars.githubusercontent.com https://*.supabase.co https://storage.ko-fi.com https://ko-fi.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://icanhazdadjoke.com https://fonts.googleapis.com https://fonts.gstatic.com https://ko-fi.com https://storage.ko-fi.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com",
+      "frame-src 'self' https://*.supabase.co https://*.googlesyndication.com https://googleads.g.doubleclick.net",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      'upgrade-insecure-requests',
+    ].join('; ');
+
+    response.headers.set('Content-Security-Policy', csp);
+  }
+
+  // Generate CSRF token for browser requests to HTML pages
+  // Only set for HTML pages (not API routes or static assets)
+  // Note: pathname, isApiRoute, isStaticAsset, isNextInternal are already defined above in CSP section
   // Only generate tokens for HTML pages (browser requests)
   if (!isApiRoute && !isStaticAsset && !isNextInternal) {
     const cookies = request.cookies;

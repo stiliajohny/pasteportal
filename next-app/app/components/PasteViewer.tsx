@@ -7,8 +7,6 @@ import { detectSecrets, DetectedSecret, redactSecrets, getSecretTags } from '@/l
 import { sanitizePastedText, writeToClipboard } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vs, vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useAuth } from '../contexts/AuthContext';
 import AuthDialog from './AuthDialog';
 import ClipboardPermissionBanner from './ClipboardPermissionBanner';
@@ -458,8 +456,10 @@ export default function PasteViewer() {
 
   /**
    * Highlight code using Prism (only works after Prism is loaded)
+   * Returns raw HTML with token spans (for editor use)
+   * @param applySecrets - Whether to apply secret highlighting (default: true)
    */
-  const highlightCode = (code: string, language: LanguageValue): string => {
+  const highlightCode = (code: string, language: LanguageValue, applySecrets: boolean = true): string => {
     if (!prismLoaded || typeof window === 'undefined') {
       return code; // Return plain text if Prism not loaded
     }
@@ -480,7 +480,7 @@ export default function PasteViewer() {
         const plaintextLang = Prism.languages.plaintext;
         if (plaintextLang && typeof plaintextLang === 'object') {
           const highlighted = Prism.highlight(code, plaintextLang, 'plaintext');
-          return applySecretHighlighting(highlighted, code);
+          return applySecrets ? applySecretHighlighting(highlighted, code) : highlighted;
         }
         // If even plaintext doesn't work, return unhighlighted code
         return code;
@@ -498,7 +498,7 @@ export default function PasteViewer() {
         const plaintextLang = Prism.languages.plaintext;
         if (plaintextLang && typeof plaintextLang === 'object' && !Array.isArray(plaintextLang)) {
           const highlighted = Prism.highlight(code, plaintextLang, 'plaintext');
-          return applySecretHighlighting(highlighted, code);
+          return applySecrets ? applySecretHighlighting(highlighted, code) : highlighted;
         }
         return code;
       }
@@ -506,7 +506,7 @@ export default function PasteViewer() {
       // Use a wrapper to catch any internal Prism errors
       try {
         const highlighted = Prism.highlight(code, lang, prismLang);
-        return applySecretHighlighting(highlighted, code);
+        return applySecrets ? applySecretHighlighting(highlighted, code) : highlighted;
       } catch (highlightError: any) {
         // If highlighting fails, log and return unhighlighted code
         console.warn(`Prism highlighting failed for language ${prismLang}:`, highlightError);
@@ -515,7 +515,7 @@ export default function PasteViewer() {
         if (plaintextLang && typeof plaintextLang === 'object' && !Array.isArray(plaintextLang)) {
           try {
             const highlighted = Prism.highlight(code, plaintextLang, 'plaintext');
-            return applySecretHighlighting(highlighted, code);
+            return applySecrets ? applySecretHighlighting(highlighted, code) : highlighted;
           } catch {
             // If even plaintext fails, return unhighlighted
             return code;
@@ -528,6 +528,25 @@ export default function PasteViewer() {
       // Return unhighlighted code on any error
       return code;
     }
+  };
+
+  /**
+   * Get highlighted code wrapped in proper HTML structure for view mode
+   * Returns HTML with <pre><code class="language-xxx"> wrapper
+   */
+  const getHighlightedCodeForView = (code: string, language: LanguageValue): string => {
+    if (!code) return '';
+    
+    const prismLang = getPrismLanguage(language);
+    const highlighted = highlightCode(code, language, true); // Apply secret highlighting
+    
+    // Apply text wrapping styles to the pre element
+    const wrapStyle = textWrap 
+      ? 'white-space: pre-wrap; word-break: break-word; overflow-x: hidden;'
+      : 'white-space: pre; overflow-x: auto;';
+    
+    // Wrap in proper Prism HTML structure for view mode
+    return `<pre class="language-${prismLang}" style="${wrapStyle}"><code class="language-${prismLang}">${highlighted}</code></pre>`;
   };
 
   useEffect(() => {
@@ -2358,6 +2377,50 @@ Join thousands of developers sharing code snippets with style!`}
                   </button>
                 </>
               )}
+
+              {/* Clear/New Paste Button */}
+              {!isLoading && text && (
+                <>
+                  <div className="hidden lg:block w-px h-6 bg-divider/30"></div>
+                  <button
+                    onClick={() => {
+                      // Clear all paste-related state
+                      setText('');
+                      setIsEditMode(true);
+                      setPushedPasteId(null);
+                      setPushedPasteName(null);
+                      setPasteName('');
+                      setTags('');
+                      setTagPills([]);
+                      setUploadedFileName(null);
+                      setIsManualLanguageSelection(false);
+                      setSelectedLanguage('text');
+                      
+                      // Clear URL parameter
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('id');
+                      window.history.pushState({}, '', url);
+                      
+                      // Focus editor after clearing
+                      setTimeout(() => {
+                        const editorContainer = editorContainerRef.current;
+                        if (editorContainer) {
+                          const textarea = editorContainer.querySelector('textarea') as HTMLTextAreaElement;
+                          textarea?.focus();
+                        }
+                      }, 100);
+                    }}
+                    className="px-2.5 py-2 rounded-lg border transition-all duration-200 active:scale-[0.98] flex items-center justify-center shrink-0 bg-surface-variant/50 border-divider/60 text-text-secondary hover:text-text hover:bg-surface-variant"
+                    aria-label="New paste"
+                    title="New paste"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -2485,22 +2548,9 @@ Join thousands of developers sharing code snippets with style!`}
             {text ? (
               <div
                 dangerouslySetInnerHTML={{
-                  __html: applySecretHighlighting(
-                    highlightCode(text, selectedLanguage),
-                    text
-                  ),
+                  __html: getHighlightedCodeForView(text, selectedLanguage),
                 }}
                 className="p-4 sm:p-6 lg:p-8"
-                style={{
-                  fontFamily: 'var(--font-mono), monospace',
-                  fontSize: '0.875rem',
-                  lineHeight: '1.75rem',
-                  background: 'var(--color-background)',
-                  color: 'var(--color-text)',
-                  whiteSpace: textWrap ? 'pre-wrap' : 'pre',
-                  wordBreak: textWrap ? 'break-word' : 'normal',
-                  overflowX: textWrap ? 'hidden' : 'auto',
-                }}
               />
             ) : (
               <div className="p-4 sm:p-6 lg:p-8 text-text-secondary text-sm">

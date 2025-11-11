@@ -339,6 +339,21 @@ pre[class*="language-"],
   font-family: var(--font-mono), monospace;
   font-size: inherit;
   line-height: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure pre elements in view mode have proper styling */
+pre[class*="language-"] {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+pre[class*="language-"] code[class*="language-"] {
+  display: block;
+  padding: 0;
+  margin: 0;
 }
 
 /* Prism token colors - Dark theme (apply to editor and all contexts) */
