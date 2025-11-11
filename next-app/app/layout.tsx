@@ -7,7 +7,7 @@ import GoogleAnalytics from './components/GoogleAnalytics';
 import Header from './components/Header';
 import PWARegister from './components/PWARegister';
 import { ThemeProvider } from './components/ThemeProvider';
-import Tour from './components/Tour/Tour';
+import Tour from './components/Tour/TourWrapper';
 import { AuthProvider } from './contexts/AuthContext';
 import './globals.css';
 

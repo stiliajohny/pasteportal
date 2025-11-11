@@ -125,10 +125,46 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate that paste field exists and is not null/undefined
+    if (!data.paste || typeof data.paste !== 'string') {
+      secureLogError('Paste field is missing or invalid in database', { 
+        pasteId: id, 
+        hasPaste: !!data.paste, 
+        pasteType: typeof data.paste 
+      });
+      return generateResponse(
+        500,
+        {
+          message: 'Paste content is missing or invalid in database',
+          joke: generateBanterComment(),
+        },
+        undefined,
+        request
+      );
+    }
+
     // Decrypt the paste content
     let decryptedPaste: string;
     try {
       decryptedPaste = decrypt(data.paste);
+      
+      // Validate decrypted content is not empty
+      if (!decryptedPaste || typeof decryptedPaste !== 'string') {
+        secureLogError('Decrypted paste is empty or invalid', { 
+          pasteId: id, 
+          hasDecryptedPaste: !!decryptedPaste, 
+          decryptedPasteType: typeof decryptedPaste 
+        });
+        return generateResponse(
+          500,
+          {
+            message: 'Paste content is empty after decryption',
+            joke: generateBanterComment(),
+          },
+          undefined,
+          request
+        );
+      }
     } catch (decryptError) {
       secureLogError('Decryption error in get-paste', decryptError);
       return generateResponse(

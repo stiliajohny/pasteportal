@@ -166,6 +166,7 @@ class ApiClient {
         const status = error.response.status
         const errorData = error.response.data
         const message = (errorData && errorData.response && errorData.response.message) || error.message
+        const existingId = errorData && errorData.response && errorData.response.existing_id
         
         if (status === 400) {
           throw new Error(`Invalid request: ${message}`)
@@ -175,6 +176,13 @@ class ApiClient {
         }
         if (status === 403) {
           throw new Error(`Forbidden: ${message}`)
+        }
+        if (status === 409) {
+          // Duplicate paste detected - include existing ID in error
+          const duplicateError = new Error(message)
+          duplicateError.existingId = existingId
+          duplicateError.status = 409
+          throw duplicateError
         }
         throw new Error(`API error: ${message}`)
       }
@@ -197,7 +205,29 @@ class ApiClient {
       const headers = await this._getHeaders()
       const url = `${this.apiEndpoint}/v1/list-pastes`
       
-      const response = await axios.get(url, { headers })
+      const response = await axios.get(url, {
+        headers,
+        timeout: 30000, // 30 second timeout
+        validateStatus: (status) => status < 500, // Don't throw on 4xx errors
+        decompress: false,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      })
+      
+      // Check for error status codes
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please sign in.')
+      }
+      if (response.status === 403) {
+        const errorData = response.data
+        const message = (errorData && errorData.error) || 'Forbidden'
+        throw new Error(`Forbidden: ${message}`)
+      }
+      if (response.status >= 400) {
+        const errorData = response.data
+        const message = (errorData && errorData.error) || `HTTP ${response.status} error`
+        throw new Error(`API error: ${message}`)
+      }
       
       if (!response.data) {
         throw new Error('Invalid response format from server')
@@ -205,6 +235,7 @@ class ApiClient {
 
       return response.data
     } catch (error) {
+      // Handle axios errors
       if (error.response) {
         const status = error.response.status
         const errorData = error.response.data
@@ -220,10 +251,22 @@ class ApiClient {
       }
       
       if (error.request) {
-        throw new Error('Network error. Please check your internet connection.')
+        // Network error - provide more helpful message
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout. Please check your internet connection and try again.')
+        }
+        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+          throw new Error(`Cannot connect to server. Please check your API endpoint configuration: ${this.apiEndpoint}`)
+        }
+        throw new Error(`Network error: ${error.message || 'Please check your internet connection.'}`)
       }
       
-      throw error
+      // Re-throw if it's already a formatted error
+      if (error.message && (error.message.includes('Authentication') || error.message.includes('Forbidden') || error.message.includes('API error'))) {
+        throw error
+      }
+      
+      throw new Error(`Failed to retrieve pastes: ${error.message || 'Unknown error'}`)
     }
   }
 

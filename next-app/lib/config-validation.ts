@@ -53,12 +53,35 @@ function validateSupabaseUrl(url: string): boolean {
 }
 
 /**
+ * Check if a value appears to be a placeholder
+ * @param value - Value to check
+ * @returns True if value looks like a placeholder
+ */
+function isPlaceholderValue(value: string): boolean {
+  const placeholderPatterns = [
+    /^your-.*-here$/i,
+    /^placeholder/i,
+    /^change-this/i,
+    /^example/i,
+    /^your-project/i,
+    /^your-supabase/i,
+  ];
+  
+  return placeholderPatterns.some(pattern => pattern.test(value));
+}
+
+/**
  * Validate Supabase anon key format (JWT-like structure)
  * @param key - Supabase anon key from environment
  * @returns True if key appears valid
  */
 function validateSupabaseKey(key: string): boolean {
   if (!key || typeof key !== 'string') {
+    return false;
+  }
+  
+  // Check for placeholder values
+  if (isPlaceholderValue(key)) {
     return false;
   }
   
@@ -113,6 +136,8 @@ export function getConfig(): Config {
   // Validate encryption key
   if (!encryptionKey) {
     errors.push('ENCRYPTION_KEY environment variable is required');
+  } else if (isPlaceholderValue(encryptionKey)) {
+    errors.push('ENCRYPTION_KEY appears to be a placeholder value. Please set a secure encryption key (64-character hex string or any non-empty string).');
   } else if (!validateEncryptionKey(encryptionKey)) {
     errors.push('ENCRYPTION_KEY must be a valid 64-character hex string or a non-empty string for key derivation');
   }
@@ -120,6 +145,8 @@ export function getConfig(): Config {
   // Validate Supabase URL
   if (!supabaseUrl) {
     errors.push('NEXT_PUBLIC_SUPABASE_URL environment variable is required');
+  } else if (isPlaceholderValue(supabaseUrl)) {
+    errors.push('NEXT_PUBLIC_SUPABASE_URL appears to be a placeholder value. Please set a real Supabase URL from your Supabase project settings.');
   } else if (!validateSupabaseUrl(supabaseUrl)) {
     errors.push('NEXT_PUBLIC_SUPABASE_URL must be a valid HTTPS URL');
   }
@@ -127,8 +154,10 @@ export function getConfig(): Config {
   // Validate Supabase anon key
   if (!supabaseAnonKey) {
     errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable is required');
+  } else if (isPlaceholderValue(supabaseAnonKey)) {
+    errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY appears to be a placeholder value. Please set a real Supabase anon key from your Supabase project settings.');
   } else if (!validateSupabaseKey(supabaseAnonKey)) {
-    errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY appears to be invalid (too short)');
+    errors.push('NEXT_PUBLIC_SUPABASE_ANON_KEY appears to be invalid (too short). Supabase keys are typically 100+ characters long.');
   }
   
   // Validate NODE_ENV
@@ -191,7 +220,8 @@ if (typeof window === 'undefined') {
     // In development, log the error clearly
     if (process.env.NODE_ENV === 'development') {
       console.error('\n❌ Configuration Error:\n', error);
-      console.error('\nPlease ensure all required environment variables are set in .env.local\n');
+      console.error('\n💡 Tip: Copy .env.example to .env.local and update with your actual values.');
+      console.error('   Get your Supabase credentials from: https://app.supabase.com/project/_/settings/api\n');
     }
     // Re-throw to prevent app from starting with invalid config
     throw error;

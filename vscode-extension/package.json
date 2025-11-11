@@ -32,34 +32,18 @@
   "contributes": {
     "commands": [
       {
-        "command": "pasteportal.shareSelection",
-        "title": "Share Selection to PastePortal",
-        "category": "PastePortal",
-        "icon": "$(share)"
-      },
-      {
-        "command": "pasteportal.shareFile",
-        "title": "Share File to PastePortal",
+        "command": "pasteportal.sign-in",
+        "title": "Sign In",
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.getPaste",
-        "title": "Get Paste from PastePortal",
+        "command": "pasteportal.get-paste",
+        "title": "Retrieve Paste",
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.getEncryptedPaste",
-        "title": "Get Encrypted Paste from PastePortal",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.createPaste",
-        "title": "Create New Paste",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.openInBrowser",
-        "title": "Open PastePortal in Browser",
+        "command": "pasteportal.get-encrypted-paste",
+        "title": "Retrieve Encrypted Paste",
         "category": "PastePortal"
       },
       {
@@ -68,58 +52,13 @@
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.get-paste",
-        "title": "Get Paste",
-        "category": "PastePortal"
-      },
-      {
         "command": "pasteportal.store-encrypted-paste",
         "title": "Store Encrypted Paste",
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.get-encrypted-paste",
-        "title": "Get Encrypted Paste",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.copyPasteId",
-        "title": "Copy Paste ID",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.sign-in",
-        "title": "Sign In",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.sign-up",
-        "title": "Sign Up",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.sign-in-magic-link",
-        "title": "Sign In with Magic Link",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.sign-in-otp",
-        "title": "Sign In with OTP",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.sign-in-github",
-        "title": "Sign In with GitHub",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.reset-password",
-        "title": "Reset Password",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.sign-out",
-        "title": "Sign Out",
+        "command": "pasteportal.view-paste",
+        "title": "View Paste",
         "category": "PastePortal"
       },
       {
@@ -133,37 +72,49 @@
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.view-paste",
-        "title": "View Paste",
+        "command": "pasteportal.openInBrowser",
+        "title": "Open PastePortal in Browser",
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.sign-in-with-token",
-        "title": "Sign In with Token",
+        "command": "pasteportal.shareFile",
+        "title": "Share File to PastePortal",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.share-paste",
+        "title": "Share Paste",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.retrieve-password",
+        "title": "Retrieve Password",
         "category": "PastePortal"
       },
       {
         "command": "pasteportal.delete-paste",
         "title": "Delete Paste",
-        "category": "PastePortal",
-        "icon": "$(trash)"
+        "category": "PastePortal"
       },
       {
-        "command": "pasteportal.retrieve-password",
-        "title": "Retrieve Password",
-        "category": "PastePortal",
-        "icon": "$(key)"
+        "command": "pasteportal.copyPasteId",
+        "title": "Copy Paste ID",
+        "category": "PastePortal"
       },
       {
-        "command": "pasteportal.share-paste",
-        "title": "Share Paste",
-        "category": "PastePortal",
-        "icon": "$(share)"
+        "command": "pasteportal.sign-up",
+        "title": "Sign Up",
+        "category": "PastePortal"
+      },
+      {
+        "command": "pasteportal.sign-out",
+        "title": "Sign Out",
+        "category": "PastePortal"
       }
     ],
     "keybindings": [
       {
-        "command": "pasteportal.shareSelection",
+        "command": "pasteportal.store-paste",
         "key": "ctrl+shift+p",
         "when": "editorHasSelection"
       }
@@ -199,7 +150,7 @@
     "menus": {
       "editor/context": [
         {
-          "command": "pasteportal.shareSelection",
+          "command": "pasteportal.store-paste",
           "when": "editorHasSelection",
           "group": "pasteportal"
         },
@@ -213,11 +164,11 @@
           "group": "pasteportal"
         },
         {
-          "command": "pasteportal.getPaste",
+          "command": "pasteportal.get-paste",
           "group": "pasteportal"
         },
         {
-          "command": "pasteportal.getEncryptedPaste",
+          "command": "pasteportal.get-encrypted-paste",
           "group": "pasteportal"
         }
       ],

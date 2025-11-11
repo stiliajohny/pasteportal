@@ -29,6 +29,29 @@ export function generatePasteId(): string {
 }
 
 /**
+ * Hash paste content using SHA-256 for duplicate detection
+ * Content is normalized (trimmed) before hashing to catch near-duplicates
+ * @param content - Paste content to hash
+ * @returns SHA-256 hash as hex string (64 characters)
+ */
+export function hashPasteContent(content: string): string {
+  if (typeof content !== 'string') {
+    throw new TypeError('Content must be a string');
+  }
+  
+  // Normalize content: trim leading/trailing whitespace
+  // This catches accidental whitespace differences that would otherwise create different hashes
+  const normalized = content.trim();
+  
+  // Generate SHA-256 hash
+  const hash = crypto.createHash('sha256');
+  hash.update(normalized, 'utf8');
+  
+  // Return hex string (64 characters)
+  return hash.digest('hex');
+}
+
+/**
  * Generate a random banter comment/joke
  * @returns A random programming joke
  */

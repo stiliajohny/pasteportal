@@ -6,6 +6,7 @@ import {
   generateBanterComment,
   generatePasteId,
   generateResponse,
+  hashPasteContent,
   sanitizeError,
   sanitizeGitHubUsername,
   sanitizePasteName,
@@ -81,6 +82,12 @@ import { NextRequest } from 'next/server';
  *               $ref: '#/components/schemas/StorePasteResponse'
  *       403:
  *         description: Forbidden - user_id does not match authenticated user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/StorePasteResponse'
+ *       409:
+ *         description: Conflict - duplicate paste content detected
  *         content:
  *           application/json:
  *             schema:
@@ -205,6 +212,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Hash paste content for duplicate detection
+    // Hash is computed on original content before any modifications (secret redaction, encryption)
+    const contentHash = hashPasteContent(pasteContent);
+
     // Security: Validate user authentication
     // Only require authentication if password is provided (for password-protected pastes)
     // For userId, try to authenticate but allow anonymous pastes if auth fails
@@ -300,6 +311,64 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check for duplicate paste content
+    // For authenticated users: check per-user duplicates
+    // For anonymous users: check global duplicates (optional - can be skipped for privacy)
+    // Use authenticated client if available, otherwise use service role
+    const dbClientForCheck = authenticatedUserId ? createServerSupabaseClient(request) : supabase;
+    
+    let duplicatePaste: { id: string } | null = null;
+    
+    if (userId) {
+      // Check for duplicate for authenticated user
+      const { data: duplicateData, error: duplicateError } = await dbClientForCheck
+        .from('pastes')
+        .select('id')
+        .eq('content_hash', contentHash)
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+      
+      if (duplicateError) {
+        secureLogError('Error checking for duplicate paste', duplicateError);
+        // Don't fail the request if duplicate check fails - log and continue
+      } else if (duplicateData) {
+        duplicatePaste = duplicateData;
+      }
+    } else {
+      // For anonymous users, optionally check for global duplicates
+      // This can be enabled/disabled based on privacy requirements
+      // For now, we'll check for anonymous duplicates to prevent spam
+      const { data: duplicateData, error: duplicateError } = await dbClientForCheck
+        .from('pastes')
+        .select('id')
+        .eq('content_hash', contentHash)
+        .is('user_id', null)
+        .limit(1)
+        .maybeSingle();
+      
+      if (duplicateError) {
+        secureLogError('Error checking for duplicate paste', duplicateError);
+        // Don't fail the request if duplicate check fails - log and continue
+      } else if (duplicateData) {
+        duplicatePaste = duplicateData;
+      }
+    }
+    
+    // If duplicate found, return 409 Conflict with existing paste ID
+    if (duplicatePaste) {
+      return generateResponse(
+        409,
+        {
+          message: `This paste content has already been submitted. You can view it using the paste ID: ${duplicatePaste.id}`,
+          existing_id: duplicatePaste.id,
+          joke: generateBanterComment(),
+        },
+        undefined,
+        request
+      );
+    }
+
     // Generate ID and timestamp
     const id = generatePasteId();
     const timestamp = new Date().toISOString();
@@ -336,6 +405,7 @@ export async function POST(request: NextRequest) {
       recipient_gh_username: recipientGhUsername,
       timestamp,
       is_password_encrypted: isPasswordEncrypted,
+      content_hash: contentHash,
     };
 
     // Add optional fields if provided

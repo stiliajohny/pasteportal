@@ -59,24 +59,34 @@ export async function GET(request: NextRequest) {
     // CSRF Protection: Validate request origin
     // Note: For GET requests, origin validation is sufficient since they don't modify state
     // Authentication is still required separately, which prevents unauthorized access
-    const originValid = validateOrigin(request);
-    if (!originValid) {
-      return NextResponse.json(
-        { error: 'Invalid origin. Request rejected for security reasons.' },
-        { status: 403 }
-      );
+    // For GET requests from VS Code extension (no origin header), allow if Bearer token is present
+    const authHeader = request.headers.get('authorization');
+    const hasBearerToken = authHeader && authHeader.startsWith('Bearer ');
+    
+    // For GET requests with Bearer token (VS Code extension), skip origin validation
+    // Bearer tokens provide their own authentication, so CSRF is less of a concern
+    if (request.method === 'GET' && hasBearerToken) {
+      // Allow GET requests with Bearer token without origin validation
+    } else {
+      const originValid = validateOrigin(request);
+      if (!originValid) {
+        return NextResponse.json(
+          { error: 'Invalid origin. Request rejected for security reasons.' },
+          { status: 403 }
+        );
+      }
     }
 
     const supabase = createServerSupabaseClient(request);
 
     // Get current user session
     // Check for Authorization header first (VS Code extension, etc.)
-    const authHeader = request.headers.get('authorization');
     let user = null;
     let authError = null;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      // For Bearer token auth, use getUser with the token directly
+      // For Bearer token auth, the client is already created with the token in headers
+      // But we need to pass the token explicitly to getUser() for it to work correctly
       const accessToken = authHeader.substring(7);
       const result = await supabase.auth.getUser(accessToken);
       user = result.data.user;

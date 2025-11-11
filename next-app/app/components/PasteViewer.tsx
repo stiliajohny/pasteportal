@@ -233,7 +233,17 @@ async function storePaste(
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.response?.message || 'Failed to store paste');
+    const errorMessage = errorData.response?.message || 'Failed to store paste';
+    const existingId = errorData.response?.existing_id;
+    
+    // Create error object with additional information for 409 conflicts
+    const error: any = new Error(errorMessage);
+    if (response.status === 409 && existingId) {
+      error.status = 409;
+      error.existingId = existingId;
+    }
+    
+    throw error;
   }
 
   const data = await response.json();
@@ -1066,7 +1076,25 @@ export default function PasteViewer() {
       // Success popup will be shown automatically via pushedPasteId state
     } catch (error: any) {
       console.error('Error pushing paste:', error);
-      alert(error.message || 'Failed to push paste. Please try again.');
+      
+      // Handle duplicate paste error (409 Conflict)
+      if (error.status === 409 && error.existingId) {
+        const existingId = error.existingId;
+        const message = `This paste was already submitted. View existing paste: ${existingId}`;
+        
+        // Update URL to show the existing paste
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', existingId);
+        window.history.pushState({}, '', url);
+        
+        // Show user-friendly message with option to view existing paste
+        alert(message);
+        
+        // Optionally trigger a paste fetch to show the existing paste
+        // This could be enhanced with a better UI (toast notification, etc.)
+      } else {
+        alert(error.message || 'Failed to push paste. Please try again.');
+      }
     } finally {
       setIsPushing(false);
     }

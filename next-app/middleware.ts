@@ -128,7 +128,7 @@ export async function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https://avatars.githubusercontent.com https://*.supabase.co https://storage.ko-fi.com https://ko-fi.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://icanhazdadjoke.com https://fonts.googleapis.com https://fonts.gstatic.com https://ko-fi.com https://storage.ko-fi.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://icanhazdadjoke.com https://fonts.googleapis.com https://fonts.gstatic.com https://ko-fi.com https://storage.ko-fi.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com",
     "frame-src 'self' https://*.supabase.co https://*.googlesyndication.com https://googleads.g.doubleclick.net",
     "object-src 'none'",
     "base-uri 'self'",

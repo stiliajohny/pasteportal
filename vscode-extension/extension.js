@@ -1977,15 +1977,10 @@ function activate(context) {
     // Register authentication commands
     const signInCommand = vscode.commands.registerCommand('pasteportal.sign-in', handleEmailSignIn)
     const signUpCommand = vscode.commands.registerCommand('pasteportal.sign-up', handleEmailSignUp)
-    const magicLinkCommand = vscode.commands.registerCommand('pasteportal.sign-in-magic-link', handleMagicLinkSignIn)
-    const otpCommand = vscode.commands.registerCommand('pasteportal.sign-in-otp', handleOTPSignIn)
-    const githubCommand = vscode.commands.registerCommand('pasteportal.sign-in-github', handleGitHubSignIn)
-    const resetPasswordCommand = vscode.commands.registerCommand('pasteportal.reset-password', handlePasswordReset)
     const signOutCommand = vscode.commands.registerCommand('pasteportal.sign-out', handleSignOut)
     const refreshPastesCommand = vscode.commands.registerCommand('pasteportal.refresh-pastes', handleRefreshPastes)
     const toggleSortCommand = vscode.commands.registerCommand('pasteportal.toggle-pastes-sort', handleTogglePastesSort)
     const viewPasteCommand = vscode.commands.registerCommand('pasteportal.view-paste', handleViewPaste)
-    const signInWithTokenCommand = vscode.commands.registerCommand('pasteportal.sign-in-with-token', handleSignInWithToken)
     const deletePasteCommand = vscode.commands.registerCommand('pasteportal.delete-paste', handleDeletePaste)
     const retrievePasswordCommand = vscode.commands.registerCommand('pasteportal.retrieve-password', handleRetrievePassword)
     const sharePasteCommand = vscode.commands.registerCommand('pasteportal.share-paste', handleSharePaste)
@@ -1993,15 +1988,10 @@ function activate(context) {
     context.subscriptions.push(
       signInCommand,
       signUpCommand,
-      magicLinkCommand,
-      otpCommand,
-      githubCommand,
-      resetPasswordCommand,
       signOutCommand,
       refreshPastesCommand,
       toggleSortCommand,
       viewPasteCommand,
-      signInWithTokenCommand,
       deletePasteCommand,
       retrievePasswordCommand,
       sharePasteCommand
@@ -2324,6 +2314,30 @@ function activate(context) {
         console.error('Error storing paste:', error)
         
         let errorMessage = 'Failed to store paste'
+        
+        // Handle duplicate paste error (409 Conflict)
+        if (error.status === 409 && error.existingId) {
+          const existingId = error.existingId
+          errorMessage = `This paste was already submitted. Existing paste ID: ${existingId}`
+          
+          // Show informative message with option to copy the existing paste ID
+          vscode.window.showWarningMessage(
+            errorMessage,
+            'Copy Paste ID',
+            'Open Paste'
+          ).then(selection => {
+            if (selection === 'Copy Paste ID') {
+              vscode.env.clipboard.writeText(existingId)
+              vscode.window.showInformationMessage(`Paste ID ${existingId} copied to clipboard`)
+            } else if (selection === 'Open Paste') {
+              // Open the paste URL in browser
+              const pasteUrl = `https://pasteportal.app/?id=${existingId}`
+              vscode.env.openExternal(vscode.Uri.parse(pasteUrl))
+            }
+          })
+          return
+        }
+        
         if (error.response) {
           const status = error.response.status
           const errorData = error.response.data
@@ -2731,12 +2745,6 @@ function activate(context) {
     await vscode.env.openExternal(vscode.Uri.parse(domain))
   })
 
-  // Alias commands for menu compatibility
-  const shareSelectionCommand = vscode.commands.registerCommand('pasteportal.shareSelection', async () => {
-    // Execute the store-paste command (which handles selected text)
-    return vscode.commands.executeCommand('pasteportal.store-paste')
-  })
-
   const shareFileCommand = vscode.commands.registerCommand('pasteportal.shareFile', async () => {
     try {
       if (!(await checkServiceAgreement())) {
@@ -2882,35 +2890,6 @@ function activate(context) {
     }
   })
 
-  const getPasteCommand = vscode.commands.registerCommand('pasteportal.getPaste', async () => {
-    // Execute the get-paste command
-    return vscode.commands.executeCommand('pasteportal.get-paste')
-  })
-
-  const getEncryptedPasteCommand = vscode.commands.registerCommand('pasteportal.getEncryptedPaste', async () => {
-    // Execute the get-encrypted-paste command
-    return vscode.commands.executeCommand('pasteportal.get-encrypted-paste')
-  })
-
-  const createPasteCommand = vscode.commands.registerCommand('pasteportal.createPaste', async () => {
-    try {
-      if (!(await checkServiceAgreement())) {
-        return
-      }
-
-      // Open a new document for creating a paste
-      const document = await vscode.workspace.openTextDocument({
-        content: '',
-        language: 'plaintext'
-      })
-      await vscode.window.showTextDocument(document)
-      
-      vscode.window.showInformationMessage('New document opened. Write your content and use "Store Paste" to share it.')
-    } catch (error) {
-      vscode.window.showErrorMessage(`Failed to create new paste: ${error.message}`)
-    }
-  })
-
   const copyPasteIdCommand = vscode.commands.registerCommand('pasteportal.copyPasteId', async (arg) => {
     // Handle different argument types: string (pasteId), object (tree item), or undefined
     let pasteId = null
@@ -2934,22 +2913,13 @@ function activate(context) {
     }
   })
 
-  const openPastePortalPanelCommand = vscode.commands.registerCommand('pasteportal.openPanel', () => {
-    createPastePortalWebview(context)
-  })
-
   context.subscriptions.push(get_paste)
   context.subscriptions.push(store_paste)
   context.subscriptions.push(get_encrypted_paste)
   context.subscriptions.push(store_encrypted_paste)
   context.subscriptions.push(openInBrowserCommand)
-  context.subscriptions.push(shareSelectionCommand)
   context.subscriptions.push(shareFileCommand)
-  context.subscriptions.push(getPasteCommand)
-  context.subscriptions.push(getEncryptedPasteCommand)
-  context.subscriptions.push(createPasteCommand)
   context.subscriptions.push(copyPasteIdCommand)
-  context.subscriptions.push(openPastePortalPanelCommand)
 }
 
 
