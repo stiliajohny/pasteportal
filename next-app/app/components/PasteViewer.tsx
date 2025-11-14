@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import AuthDialog from './AuthDialog';
 import ClipboardPermissionBanner from './ClipboardPermissionBanner';
+import DuplicatePasteDialog from './DuplicatePasteDialog';
 import SecretWarningDialog from './SecretWarningDialog';
 import { useTheme } from './ThemeProvider';
 
@@ -306,6 +307,7 @@ export default function PasteViewer() {
   const [pendingPushAfterAuth, setPendingPushAfterAuth] = useState<{ isEncrypted: boolean; password: string | null } | null>(null);
   const [showClipboardBanner, setShowClipboardBanner] = useState(false);
   const [pendingClipboardText, setPendingClipboardText] = useState<string | null>(null);
+  const [showDuplicatePasteDialog, setShowDuplicatePasteDialog] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1099,18 +1101,17 @@ export default function PasteViewer() {
       // Handle duplicate paste error (409 Conflict)
       if (error.status === 409 && error.existingId) {
         const existingId = error.existingId;
-        const message = `This paste was already submitted. View existing paste: ${existingId}`;
         
         // Update URL to show the existing paste
         const url = new URL(window.location.href);
         url.searchParams.set('id', existingId);
         window.history.pushState({}, '', url);
         
-        // Show user-friendly message with option to view existing paste
-        alert(message);
+        // Show duplicate paste dialog
+        setShowDuplicatePasteDialog(true);
         
-        // Optionally trigger a paste fetch to show the existing paste
-        // This could be enhanced with a better UI (toast notification, etc.)
+        // Automatically load the existing paste
+        handlePullPaste(existingId);
       } else {
         alert(error.message || 'Failed to push paste. Please try again.');
       }
@@ -2008,6 +2009,12 @@ export default function PasteViewer() {
 • ⚡ Faster workflow with saved preferences
 
 Join thousands of developers sharing code snippets with style!`}
+      />
+
+      {/* Duplicate Paste Dialog - Show when user tries to submit a paste that already exists */}
+      <DuplicatePasteDialog
+        isOpen={showDuplicatePasteDialog}
+        onClose={() => setShowDuplicatePasteDialog(false)}
       />
 
       {/* Toolbar Section - Redesigned with proper spacing and organization */}
