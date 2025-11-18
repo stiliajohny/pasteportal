@@ -218,13 +218,22 @@ async function storePaste(
     body.tags = tags.trim();
   }
 
+  // Prepare headers with platform and hostname information
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'X-Platform': 'web',
+  };
+
+  // Try to get hostname (browser security may prevent this, so it's optional)
+  // Note: In browsers, we can't directly access the machine hostname for security reasons
+  // This would require additional permissions or APIs that aren't widely available
+  // For now, we'll skip hostname for web requests
+
   const response = await fetchWithCsrf(
     `${API_BASE}/store-paste`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     },
     accessToken
@@ -2093,67 +2102,63 @@ Join thousands of developers sharing code snippets with style!`}
             {/* Visual Separator */}
             <div className="hidden lg:block w-px h-8 bg-divider/30"></div>
 
-            {/* GROUP 2: Push Section - Name, Tags (for authenticated users), Push (for everyone) */}
+            {/* GROUP 2: Push Section - Name, Tags, Push (for everyone) */}
             <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center flex-1 lg:flex-initial lg:min-w-0 w-full lg:w-auto">
-              {/* Name Input - Only for authenticated users */}
-              {user && (
-                <div className="w-full sm:w-auto sm:min-w-[180px] sm:max-w-[200px]">
-                  <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
-                  <input
-                    id="paste-name-input"
-                    data-tour="paste-name-input"
-                    type="text"
-                    value={pasteName}
-                    onChange={(e) => setPasteName(e.target.value)}
-                    placeholder="Name your paste"
-                    className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
-                  />
-                </div>
-              )}
+              {/* Name Input - Available to everyone */}
+              <div className="w-full sm:w-auto sm:min-w-[180px] sm:max-w-[200px]">
+                <label htmlFor="paste-name-input" className="sr-only">Optional: Name your paste</label>
+                <input
+                  id="paste-name-input"
+                  data-tour="paste-name-input"
+                  type="text"
+                  value={pasteName}
+                  onChange={(e) => setPasteName(e.target.value)}
+                  placeholder="Name your paste"
+                  className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+                />
+              </div>
 
-              {/* Tags Input - Only for authenticated users */}
-              {user && (
-                <div className="w-full sm:w-auto sm:min-w-[140px] sm:max-w-[180px]">
-                  <label htmlFor="paste-tags-input" className="sr-only">Optional: Add tags</label>
-                  <input
-                    id="paste-tags-input"
-                    type="text"
-                    value={tags}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setTags(value);
-                      if (value.includes(',')) {
-                        const newTagsFromInput = value
-                          .split(',')
-                          .map(tag => tag.trim())
-                          .filter(tag => tag.length > 0);
-                        const mergedTags = [...tagPills];
-                        newTagsFromInput.forEach(tag => {
-                          if (!mergedTags.includes(tag) && mergedTags.length < 20) {
-                            mergedTags.push(tag);
-                          }
-                        });
-                        setTagPills(mergedTags.slice(0, 20));
+              {/* Tags Input - Available to everyone */}
+              <div className="w-full sm:w-auto sm:min-w-[140px] sm:max-w-[180px]">
+                <label htmlFor="paste-tags-input" className="sr-only">Optional: Add tags</label>
+                <input
+                  id="paste-tags-input"
+                  type="text"
+                  value={tags}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTags(value);
+                    if (value.includes(',')) {
+                      const newTagsFromInput = value
+                        .split(',')
+                        .map(tag => tag.trim())
+                        .filter(tag => tag.length > 0);
+                      const mergedTags = [...tagPills];
+                      newTagsFromInput.forEach(tag => {
+                        if (!mergedTags.includes(tag) && mergedTags.length < 20) {
+                          mergedTags.push(tag);
+                        }
+                      });
+                      setTagPills(mergedTags.slice(0, 20));
+                      setTags('');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && tags.trim()) {
+                      e.preventDefault();
+                      const trimmedTag = tags.trim();
+                      if (trimmedTag && !tagPills.includes(trimmedTag) && tagPills.length < 20) {
+                        setTagPills([...tagPills, trimmedTag]);
                         setTags('');
                       }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && tags.trim()) {
-                        e.preventDefault();
-                        const trimmedTag = tags.trim();
-                        if (trimmedTag && !tagPills.includes(trimmedTag) && tagPills.length < 20) {
-                          setTagPills([...tagPills, trimmedTag]);
-                          setTags('');
-                        }
-                      } else if (e.key === 'Backspace' && tags === '' && tagPills.length > 0) {
-                        setTagPills(tagPills.slice(0, -1));
-                      }
-                    }}
-                    placeholder={tagPills.length > 0 ? `${tagPills.length} tag${tagPills.length > 1 ? 's' : ''}` : "Tags"}
-                    className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
-                  />
-                </div>
-              )}
+                    } else if (e.key === 'Backspace' && tags === '' && tagPills.length > 0) {
+                      setTagPills(tagPills.slice(0, -1));
+                    }
+                  }}
+                  placeholder={tagPills.length > 0 ? `${tagPills.length} tag${tagPills.length > 1 ? 's' : ''}` : "Tags"}
+                  className="w-full px-3 py-2 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+                />
+              </div>
 
               {/* Push Button - Available to everyone */}
               <div ref={pushButtonRef} data-tour="push-button" className="relative flex shrink-0 w-full sm:w-auto">
@@ -2432,7 +2437,7 @@ Join thousands of developers sharing code snippets with style!`}
           </div>
 
           {/* Tags Display Row - Separate row below main toolbar to prevent overlap */}
-          {user && tagPills.length > 0 && (
+          {tagPills.length > 0 && (
             <div className="w-full mt-3 pt-3 border-t border-divider/30 flex flex-wrap gap-1.5 items-center justify-center">
               {tagPills.map((tag, index) => {
                 // Calculate order for center-outwards pattern:

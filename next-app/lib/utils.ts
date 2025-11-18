@@ -574,7 +574,10 @@ export function generateResponse(
   data?: any,
   request?: NextRequest
 ): Response {
-  const corsHeaders = request ? getCorsHeaders(request) : {};
+  // Allow custom headers in CORS: X-Platform, X-Hostname, X-CSRF-Token, Authorization
+  const corsHeaders = request 
+    ? getCorsHeaders(request, 'GET, POST, PUT, DELETE, OPTIONS', 'Content-Type, X-Platform, X-Hostname, X-CSRF-Token, Authorization')
+    : {};
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
