@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
+import { buildVSCodeCallbackUri } from '@/lib/vscode-config';
 import AuthDialog from '@/app/components/AuthDialog';
 import { useAuth } from '@/app/contexts/AuthContext';
 
@@ -52,7 +53,7 @@ function VSCodeAuthPageContent() {
       token_type: session.token_type || 'bearer',
     });
 
-    const vscodeUri = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+    const vscodeUri = buildVSCodeCallbackUri(params);
     console.log('[VS Code Auth Page] Redirecting to VS Code URI:', vscodeUri);
     
     // Redirect to VS Code

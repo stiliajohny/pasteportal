@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase-client';
+import { buildVSCodeCallbackUri } from '@/lib/vscode-config';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect } from 'react';
 
@@ -30,7 +31,7 @@ function AuthCallbackContent() {
         if (isVSCodeAuth) {
           // Redirect to VS Code with error
           localStorage.removeItem('vscode_auth_pending');
-          window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+          window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent(errorMessage)}`);
           return;
         } else {
           router.push(`/?error=${encodeURIComponent(errorMessage)}`);
@@ -111,11 +112,11 @@ function AuthCallbackContent() {
                 }
               }
               localStorage.removeItem('vscode_auth_pending');
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`;
+              window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`);
             } else {
               // Other error
               localStorage.removeItem('vscode_auth_pending');
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+              window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent(errorMessage)}`);
             }
             return;
           }
@@ -132,7 +133,7 @@ function AuthCallbackContent() {
               token_type: data.session.token_type || 'bearer',
             });
             
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+            window.location.href = buildVSCodeCallbackUri(params);
             return;
           }
         } else {
@@ -151,7 +152,7 @@ function AuthCallbackContent() {
             
             if (error) {
               // Redirect to VS Code with error
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorDescription || error)}`;
+              window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent(errorDescription || error)}`);
               return;
             }
             
@@ -165,7 +166,7 @@ function AuthCallbackContent() {
               if (expiresIn) vscodeParams.set('expires_in', expiresIn);
               if (tokenType) vscodeParams.set('token_type', tokenType);
               
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${vscodeParams.toString()}`;
+              window.location.href = buildVSCodeCallbackUri(vscodeParams);
               return;
             }
           }
@@ -173,7 +174,7 @@ function AuthCallbackContent() {
         
         // Fallback: redirect to VS Code with error if no tokens found
         localStorage.removeItem('vscode_auth_pending');
-        window.location.href = 'vscode://JohnStilia.pasteportal/auth-callback?error=No authentication tokens found';
+        window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent('No authentication tokens found')}`);
         return;
       }
 
@@ -191,11 +192,11 @@ function AuthCallbackContent() {
         const accessToken = hashParams.get('access_token');
         
         // Check for errors in hash first
-        if (hashError) {
-          const errorMessage = hashErrorDescription || hashError;
-          if (isVSCodeAuth) {
-            localStorage.removeItem('vscode_auth_pending');
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+          if (hashError) {
+            const errorMessage = hashErrorDescription || hashError;
+            if (isVSCodeAuth) {
+              localStorage.removeItem('vscode_auth_pending');
+              window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent(errorMessage)}`);
             return;
           } else {
             router.push(`/?error=${encodeURIComponent(errorMessage)}`);
@@ -218,7 +219,7 @@ function AuthCallbackContent() {
             if (expiresIn) vscodeParams.set('expires_in', expiresIn);
             if (tokenType) vscodeParams.set('token_type', tokenType);
             
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${vscodeParams.toString()}`;
+            window.location.href = buildVSCodeCallbackUri(vscodeParams);
             return;
           } else {
             // Normal web flow - exchange tokens for session and redirect to home
@@ -269,7 +270,7 @@ function AuthCallbackContent() {
             if (isVSCodeAuth) {
               // PKCE error - redirect to VS Code with a helpful error message
               localStorage.removeItem('vscode_auth_pending');
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`;
+              window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`);
             } else {
               router.push(`/?error=${encodeURIComponent('PKCE verification failed. Please try signing in again.')}`);
             }
@@ -277,7 +278,7 @@ function AuthCallbackContent() {
             if (isVSCodeAuth) {
               // Redirect to VS Code with error
               localStorage.removeItem('vscode_auth_pending');
-              window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?error=${encodeURIComponent(errorMessage)}`;
+              window.location.href = buildVSCodeCallbackUri(`error=${encodeURIComponent(errorMessage)}`);
             } else {
               router.push(`/?error=${encodeURIComponent(errorMessage)}`);
             }
@@ -296,7 +297,7 @@ function AuthCallbackContent() {
             expires_in: data.session.expires_in?.toString() || '3600',
             token_type: data.session.token_type || 'bearer',
           });
-          window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+          window.location.href = buildVSCodeCallbackUri(params);
           return;
         }
 
@@ -345,7 +346,7 @@ function AuthCallbackContent() {
               expires_in: session.expires_in?.toString() || '3600',
               token_type: session.token_type || 'bearer',
             });
-            window.location.href = `vscode://JohnStilia.pasteportal/auth-callback?${params.toString()}`;
+            window.location.href = buildVSCodeCallbackUri(params);
             return;
           }
         }

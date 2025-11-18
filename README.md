@@ -127,12 +127,14 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ENCRYPTION_KEY=your-32-byte-encryption-key-here
 NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-your-adsense-client-id
+NEXT_PUBLIC_VSCODE_CALLBACK_URI=vscode://your.extension.id/auth-callback
 ```
 
 **Important Notes:**
 
 - `ENCRYPTION_KEY`: Must be a secure random 32-byte key (64 hex characters) or any string that will be used to derive a 32-byte key using scrypt
 - `NEXT_PUBLIC_ADSENSE_CLIENT_ID`: Optional. Your Google AdSense client ID (format: `ca-pub-xxxxxxxxxxxxxxx`). If not set, AdSense ads will not be displayed.
+- `NEXT_PUBLIC_VSCODE_CALLBACK_URI`: Optional. Custom VS Code callback URI (e.g., `vscode://publisher.extension/auth-callback`). Defaults to `vscode://JohnStilia.pasteportal/auth-callback` when not set.
 - Keep your encryption key secure and never commit it to version control
 - For production, use a secure method to generate and store the encryption key
 
