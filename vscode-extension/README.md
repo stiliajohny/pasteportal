@@ -26,13 +26,15 @@ A Visual Studio Code extension for sharing and retrieving text snippets with Pas
 
 ## Configuration
 
-Configure the extension in VS Code settings:
+The extension works out-of-the-box with production PastePortal. Configure the extension in VS Code settings only if you need to customize:
 
 - `pasteportal.serverUrl`: Server URL (base URL). API endpoint will be derived as `${serverUrl}/api` (default: http://localhost:3000)
 - `pasteportal.apiEndpoint`: API endpoint URL (overrides serverUrl if explicitly set, default: https://pasteportal.app/api)
 - `pasteportal.domain`: Domain URL (default: https://pasteportal.app)
-- `pasteportal.supabase.url`: Supabase project URL (required for authentication)
-- `pasteportal.supabase.anonKey`: Supabase anonymous key (required for authentication)
+- `pasteportal.supabase.url`: Supabase project URL (defaults to production PastePortal instance, override for self-hosting)
+- `pasteportal.supabase.anonKey`: Supabase anonymous key (defaults to production PastePortal instance, override for self-hosting)
+
+**Note:** Supabase settings are pre-configured with production defaults. You only need to change these if you're self-hosting PastePortal.
 
 ## Usage
 

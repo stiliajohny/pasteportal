@@ -111,7 +111,7 @@ export default function PrivacyPage() {
               href="https://www.google.com/settings/ads"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-positive-highlight hover:underline"
             >
               Google&apos;s Ad Settings
             </a>
@@ -120,7 +120,7 @@ export default function PrivacyPage() {
               href="https://www.aboutads.info/choices/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="text-positive-highlight hover:underline"
             >
               aboutads.info
             </a>
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
                 href="https://policies.google.com/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-positive-highlight hover:underline"
               >
                 Google&apos;s Privacy Policy
               </a>
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
                 href="https://policies.google.com/technologies/ads"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-positive-highlight hover:underline"
               >
                 How Google uses data
               </a>
