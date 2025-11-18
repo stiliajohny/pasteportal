@@ -40,11 +40,11 @@ function validateEmail(email) {
 }
 
 /**
- * Validate password against requirements
+ * Validate password against requirements for UI validation
  * @param {string} password - Password to validate
  * @returns {{isValid: boolean, errors: string[]}} Validation result with errors
  */
-function validatePassword(password) {
+function validatePasswordForUI(password) {
   const errors = []
 
   if (password.length < passwordLengthMin) {
@@ -177,7 +177,6 @@ async function checkApiConnectivity() {
       })
       return true
     } catch (fallbackError) {
-      console.log('API connectivity check failed:', fallbackError.message)
       return false
     }
   }
@@ -252,7 +251,6 @@ function getConnectivityCheckInterval() {
 function initializeStatusBar(context) {
   // Check if connectivity check is enabled
   if (!isConnectivityCheckEnabled()) {
-    console.log('Status bar connectivity check is disabled')
     return
   }
 
@@ -525,11 +523,12 @@ function getPasteId(text) {
  * Create a multiline string to be copied to clipboard
  * @param {string} id
  * @param {string} [password] Optional password for encrypted pastes
+ * @param {string} [name] Optional paste name
  * @returns {string}
  * @throws {TypeError}
  * @throws {Error}
  */
-function multiLineClipboard(id, password) {
+function multiLineClipboard(id, password, name) {
   try {
     if (typeof id !== 'string') {
       throw new TypeError('ID must be a string')
@@ -541,6 +540,15 @@ function multiLineClipboard(id, password) {
     const domain = getDomain()
     const url = `${domain}/?id=${id}`
 
+    let clipText = 'PastePortal Paste\n\n'
+    
+    // Add name if provided
+    if (name && typeof name === 'string' && name.trim()) {
+      clipText += `Name: ${name.trim()}\n`
+    }
+    
+    clipText += `URL: ${url}\n`
+
     if (password) {
       if (typeof password !== 'string') {
         throw new TypeError('Password must be a string')
@@ -548,12 +556,22 @@ function multiLineClipboard(id, password) {
       if (password.length < passwordLengthMin) {
         throw new Error('Password cannot be empty')
       }
-      const clipText = `PastePortal Paste\n\nURL: ${url}\nPassword: ${password}\n\nYou can also use the VSCode command "PastePortal: Retrieve Encrypted Paste" to get the paste.`
-      return clipText
-    } else {
-      const clipText = `PastePortal Paste\n\nURL: ${url}\n\nYou can also use the VSCode command "PastePortal: Retrieve Paste" to get the paste.`
-      return clipText
+      clipText += `Password: ${password}\n`
     }
+    
+    clipText += '\n--- Instructions ---\n'
+    clipText += 'To retrieve this paste:\n'
+    clipText += '1. Open the URL above in your browser, or\n'
+    
+    if (password) {
+      clipText += '2. Use the VSCode command "PastePortal: Get Encrypted Paste" and enter the paste ID and password above\n'
+    } else {
+      clipText += '2. Use the VSCode command "PastePortal: Get Paste" and enter the paste ID above\n'
+    }
+    
+    clipText += '\nPaste ID: ' + id
+    
+    return clipText
   } catch (error) {
     console.error('Error creating clipboard text:', error)
     throw error
@@ -573,13 +591,8 @@ async function checkServiceAgreement() {
     .getConfiguration()
     .get('pasteportal.serviceAgreementAccepted')
   if (serviceAgreementAccepted === true) {
-    console.log('Service agreement accepted already')
     return true
   } else if (serviceAgreementAccepted === false) {
-    console.log(
-      'Service agreement was not accepted. Asking user to accept the terms of service'
-    )
-
     const acceptTerms = await vscode.window.showInformationMessage(
       `Please accept the ${tos_link} before using the extension.`,
       'Agree',
@@ -593,7 +606,6 @@ async function checkServiceAgreement() {
           true,
           vscode.ConfigurationTarget.Global
         )
-      console.log('Service agreement accepted')
       return true
     } else if (acceptTerms === 'Disagree') {
       vscode.workspace
@@ -606,7 +618,6 @@ async function checkServiceAgreement() {
       vscode.window.showErrorMessage(
         'You must accept the terms of service to use this extension.'
       )
-      console.log('Service agreement not accepted')
       return false
     }
   }
@@ -894,7 +905,6 @@ function updatePastesRefreshInterval() {
       }
     } catch (error) {
       // Silently fail - don't spam user with errors for background refresh
-      console.log('Background paste refresh failed:', error.message)
     }
   }, actualInterval)
 }
@@ -1135,10 +1145,9 @@ async function handleViewPaste(pasteId) {
       }
 
       const apiEndpoint = getApiEndpoint()
-      const baseURL = `${apiEndpoint}/get-paste?id=${pasteIdStr}`
+      const baseURL = `${apiEndpoint}/v1/get-paste?id=${pasteIdStr}`
       
       const response = await axios.get(baseURL, {
-        decompress: false,
         responseType: 'json',
         timeout: 10000,
         headers: {
@@ -1149,11 +1158,18 @@ async function handleViewPaste(pasteId) {
       })
 
       const responseData = response.data
-      if (!responseData || !responseData.response) {
-        throw new Error('Invalid response format from server')
+      
+      // Handle both direct response and wrapped response formats
+      let pasteData = responseData
+      if (responseData && responseData.response) {
+        pasteData = responseData.response
+      }
+      
+      if (!pasteData || typeof pasteData !== 'object') {
+        throw new Error(`Invalid response format from server. Expected object, got ${typeof pasteData}`)
       }
 
-      const { paste, is_password_encrypted } = responseData.response
+      const { paste, is_password_encrypted } = pasteData
 
       if (is_password_encrypted) {
         // Use stored password if available, otherwise prompt
@@ -1163,7 +1179,8 @@ async function handleViewPaste(pasteId) {
           // Ask for password
           password = await vscode.window.showInputBox({
             prompt: 'Enter the password to decrypt the paste',
-            password: true
+            password: true,
+            ignoreFocusOut: true
           })
 
           if (!password) {
@@ -1246,7 +1263,6 @@ async function handleDeletePaste(pasteItem) {
     // Confirm deletion
     const confirm = await vscode.window.showWarningMessage(
       `Are you sure you want to delete "${pasteLabel}"?`,
-      { modal: true },
       'Delete',
       'Cancel'
     )
@@ -1355,10 +1371,9 @@ async function handleViewPasteWithPassword(pasteId, password) {
     }
 
     const apiEndpoint = getApiEndpoint()
-    const baseURL = `${apiEndpoint}/get-paste?id=${pasteId}`
+    const baseURL = `${apiEndpoint}/v1/get-paste?id=${pasteId}`
     
     const response = await axios.get(baseURL, {
-      decompress: false,
       responseType: 'json',
       timeout: 10000,
       headers: {
@@ -1369,11 +1384,18 @@ async function handleViewPasteWithPassword(pasteId, password) {
     })
 
     const responseData = response.data
-    if (!responseData || !responseData.response) {
-      throw new Error('Invalid response format from server')
+    
+    // Handle both direct response and wrapped response formats
+    let pasteData = responseData
+    if (responseData && responseData.response) {
+      pasteData = responseData.response
+    }
+    
+    if (!pasteData || typeof pasteData !== 'object') {
+      throw new Error(`Invalid response format from server. Expected object, got ${typeof pasteData}`)
     }
 
-    const { paste } = responseData.response
+    const { paste } = pasteData
 
     // Decrypt with provided password
     const decryptedText = decrypt(password, paste)
@@ -1710,13 +1732,15 @@ function createPastePortalWebview(context) {
           vscode.commands.executeCommand('pasteportal.store-paste');
           break;
         case 'upload':
-          vscode.commands.executeCommand('pasteportal.shareFile');
+          // Removed: pasteportal.shareFile command
+          vscode.window.showWarningMessage('Share File command has been removed');
           break;
         case 'download':
           vscode.commands.executeCommand('pasteportal.get-paste');
           break;
         case 'copy':
-          vscode.commands.executeCommand('pasteportal.copyPasteId');
+          // Removed: pasteportal.copyPasteId command
+          vscode.window.showWarningMessage('Copy Paste ID command has been removed');
           break;
         case 'menu':
           // Show context menu or options
@@ -1783,8 +1807,11 @@ async function handleSharePaste(pasteItem) {
       }
     }
 
+    // Get paste name if available
+    const pasteName = paste?.display_name || paste?.name || null
+
     // Create clipboard text with or without password
-    const clipboardText = multiLineClipboard(pasteId, password || undefined)
+    const clipboardText = multiLineClipboard(pasteId, password || undefined, pasteName)
     
     // Copy to clipboard
     await vscode.env.clipboard.writeText(clipboardText)
@@ -1810,19 +1837,59 @@ function activate(context) {
    * @param {vscode.ExtensionContext} context
    *
    */
-  console.log('Congratulations, your extension "pasteportal" is now active!')
+  // Initialize status bar for API connectivity (non-critical, don't fail activation if this fails)
+  try {
+    initializeStatusBar(context)
+  } catch (error) {
+    console.error('Error initializing status bar (non-critical):', error)
+    // Continue with activation even if status bar fails
+  }
 
-  // Initialize status bar for API connectivity
-  initializeStatusBar(context)
+  // Initialize tree view providers
+  // First, create providers with null values to ensure they always exist
+  // This prevents "no data provider" errors
+  try {
+    loginTreeProvider = new LoginTreeProvider(null)
+    authTreeProvider = new AuthTreeProvider(null, null)
+    operationsTreeProvider = new OperationsTreeProvider()
+  } catch (error) {
+    console.error('Critical error: Failed to create tree providers:', error)
+    console.error('Error stack:', error.stack)
+    vscode.window.showErrorMessage(`Critical error: Failed to initialize tree views: ${error.message}`)
+    // If we can't even create the providers, we can't continue
+    return
+  }
 
-  // Initialize auth system
+  // Now try to initialize the auth system and update the providers
   try {
     secureStorage = new SecureStorage(context.secrets)
     auth = new Auth(secureStorage)
     apiClient = new ApiClient(auth)
-    authTreeProvider = new AuthTreeProvider(auth, apiClient)
-    loginTreeProvider = new LoginTreeProvider(auth)
     
+    // Update existing providers with actual auth instances (don't create new ones)
+    // This ensures the tree views keep their references to the providers
+    if (loginTreeProvider) {
+      loginTreeProvider.auth = auth
+    }
+    if (authTreeProvider) {
+      authTreeProvider.auth = auth
+      authTreeProvider.apiClient = apiClient
+    }
+  } catch (error) {
+    console.error('Error initializing auth system components:', error)
+    // Don't show error message here - let the tree views show the error
+    // The providers already exist with null auth, so they'll show appropriate messages
+  }
+
+  // Always register tree views - providers are guaranteed to exist at this point
+  // This MUST happen synchronously during activation
+  if (!loginTreeProvider || !authTreeProvider || !operationsTreeProvider) {
+    console.error('ERROR: Providers are null! Cannot register tree views.')
+    vscode.window.showErrorMessage('Critical: Tree view providers are null. Check console for details.')
+    return
+  }
+
+  try {
     // Register "Authentication" tree view
     const loginTreeView = vscode.window.createTreeView('pasteportal-auth', {
       treeDataProvider: loginTreeProvider
@@ -1834,12 +1901,32 @@ function activate(context) {
       treeDataProvider: authTreeProvider
     })
     context.subscriptions.push(authTreeView)
+    
+    // Register "Operations" tree view
+    const operationsTreeView = vscode.window.createTreeView('pasteportal-operations', {
+      treeDataProvider: operationsTreeProvider
+    })
+    context.subscriptions.push(operationsTreeView)
+    
+    // Refresh tree views after registration and auth initialization
+    // This ensures they show the correct content based on auth state
+    try {
+      loginTreeProvider.refresh()
+      authTreeProvider.refresh()
+    } catch (refreshError) {
+      console.error('Error refreshing tree views (non-critical):', refreshError)
+      console.error('Refresh error stack:', refreshError.stack)
+    }
+  } catch (error) {
+    console.error('CRITICAL ERROR registering tree views:', error)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    vscode.window.showErrorMessage(`Failed to register tree views: ${error.message}. Check Developer Console for details.`)
+    // Don't return here - continue with rest of activation
+  }
 
-    // Refresh tree views after initialization
-    loginTreeProvider.refresh()
-    authTreeProvider.refresh()
-
-    // Load pastes if user is already authenticated
+  // Load pastes if user is already authenticated (only if auth system initialized successfully)
+  if (auth && authTreeProvider) {
     ;(async () => {
       try {
         const isAuthenticated = await auth.isAuthenticated()
@@ -1847,16 +1934,15 @@ function activate(context) {
           await authTreeProvider.loadPastes()
         }
       } catch (error) {
-        // Non-critical error - just log it
-        console.log('Failed to load pastes on startup:', error.message)
+        // Non-critical error - silently fail
       }
     })()
+  }
 
-    // Register URI handler for OAuth/magic link callbacks
+  // Register URI handler for OAuth/magic link callbacks (only if auth initialized)
+  if (auth) {
     const uriHandler = vscode.window.registerUriHandler({
       handleUri: async (uri) => {
-        console.log('Received URI:', uri.toString())
-        
         // The URI will be like: vscode://JohnStilia.pasteportal/auth-callback?code=abc123&session_id=xyz
         if (uri.path === '/auth-callback') {
           const queryParams = new URLSearchParams(uri.query)
@@ -1973,44 +2059,26 @@ function activate(context) {
     })
 
     context.subscriptions.push(uriHandler)
-
-    // Register authentication commands
-    const signInCommand = vscode.commands.registerCommand('pasteportal.sign-in', handleEmailSignIn)
-    const signUpCommand = vscode.commands.registerCommand('pasteportal.sign-up', handleEmailSignUp)
-    const signOutCommand = vscode.commands.registerCommand('pasteportal.sign-out', handleSignOut)
-    const refreshPastesCommand = vscode.commands.registerCommand('pasteportal.refresh-pastes', handleRefreshPastes)
-    const toggleSortCommand = vscode.commands.registerCommand('pasteportal.toggle-pastes-sort', handleTogglePastesSort)
-    const viewPasteCommand = vscode.commands.registerCommand('pasteportal.view-paste', handleViewPaste)
-    const deletePasteCommand = vscode.commands.registerCommand('pasteportal.delete-paste', handleDeletePaste)
-    const retrievePasswordCommand = vscode.commands.registerCommand('pasteportal.retrieve-password', handleRetrievePassword)
-    const sharePasteCommand = vscode.commands.registerCommand('pasteportal.share-paste', handleSharePaste)
-
-    context.subscriptions.push(
-      signInCommand,
-      signUpCommand,
-      signOutCommand,
-      refreshPastesCommand,
-      toggleSortCommand,
-      viewPasteCommand,
-      deletePasteCommand,
-      retrievePasswordCommand,
-      sharePasteCommand
-    )
-
-    // Initialize automatic pastes refresh interval
-    updatePastesRefreshInterval()
-  } catch (error) {
-    console.error('Error initializing auth system:', error)
-    vscode.window.showErrorMessage(`Failed to initialize authentication: ${error.message}`)
   }
 
-  // Initialize operations tree provider
-  operationsTreeProvider = new OperationsTreeProvider()
+  // Register authentication commands
+  const signInCommand = vscode.commands.registerCommand('pasteportal.sign-in', handleEmailSignIn)
+  const signUpCommand = vscode.commands.registerCommand('pasteportal.sign-up', handleEmailSignUp)
+  const signOutCommand = vscode.commands.registerCommand('pasteportal.sign-out', handleSignOut)
+  const refreshPastesCommand = vscode.commands.registerCommand('pasteportal.refresh-pastes', handleRefreshPastes)
+  const toggleSortCommand = vscode.commands.registerCommand('pasteportal.toggle-pastes-sort', handleTogglePastesSort)
   context.subscriptions.push(
-    vscode.window.createTreeView('pasteportal-operations', {
-      treeDataProvider: operationsTreeProvider
-    })
+    signInCommand,
+    signUpCommand,
+    signOutCommand,
+    refreshPastesCommand,
+    toggleSortCommand
   )
+
+  // Initialize automatic pastes refresh interval (only if auth system initialized)
+  if (auth && authTreeProvider) {
+    updatePastesRefreshInterval()
+  }
 
   // Listen for configuration changes
   const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
@@ -2044,17 +2112,14 @@ function activate(context) {
           return
         }
 
-        console.log('Command: pasteportal.get-paste - started')
         // get the active text editor
         const editor = vscode.window.activeTextEditor
         // check if there is an active text editor
         if (!editor) throw new Error('No active text editor.')
-        console.log('Active text editor found')
 
         const prompt = await vscode.window.showInputBox({
           prompt: 'Enter the paste ID or URL (e.g., abc123 or https://pasteportal.app/?id=abc123)'
         })
-        console.log('Prompt: ', prompt)
 
         if (!prompt) {
           vscode.window.showErrorMessage('Paste ID/URL is required')
@@ -2063,7 +2128,6 @@ function activate(context) {
 
         // get the paste ID from the user
         const pasteId = getPasteId(prompt)
-        console.log('Paste ID: ', pasteId)
 
         if (!pasteId) {
           vscode.window.showErrorMessage('Invalid paste ID or URL format. Please provide a valid ID (6-character hex or UUID) or URL.')
@@ -2071,10 +2135,9 @@ function activate(context) {
         }
 
         const apiEndpoint = getApiEndpoint()
-        const baseURL = `${apiEndpoint}/get-paste?id=${pasteId}`
+        const baseURL = `${apiEndpoint}/v1/get-paste?id=${pasteId}`
         try {
           const response = await axios.get(baseURL, {
-            decompress: false,
             responseType: 'json',
             timeout: 10000,
             headers: {
@@ -2083,20 +2146,36 @@ function activate(context) {
             maxContentLength: Infinity,
             maxBodyLength: Infinity
           })
-          const responseData = response.data
+          let responseData = response.data
 
-          if (!responseData || !responseData.response) {
-            throw new Error('Invalid response format from server')
+          // Handle case where response might be a string that needs parsing
+          if (typeof responseData === 'string') {
+            try {
+              responseData = JSON.parse(responseData)
+            } catch (parseError) {
+              throw new Error(`Failed to parse response as JSON: ${parseError.message}`)
+            }
           }
 
-          const { paste, id, message, joke, is_password_encrypted } = responseData.response
+          if (!responseData) {
+            throw new Error('Empty response from server')
+          }
+
+          // Handle both direct response and wrapped response formats
+          let pasteData = responseData
+          if (responseData.response) {
+            pasteData = responseData.response
+          }
+
+          if (!pasteData || typeof pasteData !== 'object') {
+            throw new Error(`Invalid response format from server. Expected object, got ${typeof pasteData}. Response: ${JSON.stringify(responseData).substring(0, 200)}`)
+          }
+
+          const { paste, id, message, joke, is_password_encrypted } = pasteData
           
           if (!paste) {
             throw new Error('Paste content not found in response')
           }
-
-          console.log('Paste retrieved - ID:', id)
-          console.log('Is password encrypted:', is_password_encrypted)
 
           // Update status bar to reflect successful connection
           updateStatusBar(true)
@@ -2106,7 +2185,8 @@ function activate(context) {
             // Prompt for password to decrypt
             const password = await vscode.window.showInputBox({
               prompt: 'Enter the password to decrypt the paste',
-              password: true
+              password: true,
+              ignoreFocusOut: true
             })
 
             if (!password) {
@@ -2189,16 +2269,13 @@ function activate(context) {
         if (!(await checkServiceAgreement())) {
           return
         }
-        console.log('Command: pasteportal.store-paste - started')
         // get the active text editor
         const editor = vscode.window.activeTextEditor
         //  check if there is an active text editor and if there isnt thwor an error using the catch
         if (!editor) throw new Error('No active text editor.')
-        console.log('Active text editor found')
         // Get the selected text
         const selectedText = editor.document.getText(editor.selection)
         if (!selectedText) throw new Error('No text selected.')
-        console.log('Selected text found')
 
         // check if the selected text is more than 400kb
         if (selectedText.length > 400000) {
@@ -2206,18 +2283,41 @@ function activate(context) {
             'The selected text is more than 400kb. Please select a smaller text.'
           )
         }
-        console.log(
-          'Selected text is less than 400kb. Text length: ',
-          selectedText.length,
-          'bytes'
-        )
+
+        // Prompt for optional name
+        const pasteName = await vscode.window.showInputBox({
+          prompt: 'Optional: Enter a name for this paste',
+          placeHolder: 'Leave empty to skip',
+          ignoreFocusOut: true
+        })
+        
+        // If user cancelled, return early
+        if (pasteName === undefined) {
+          return
+        }
+        
+        // Prompt for optional tags
+        const pasteTags = await vscode.window.showInputBox({
+          prompt: 'Optional: Enter tags (comma-separated)',
+          placeHolder: 'e.g., code, snippet, example',
+          ignoreFocusOut: true
+        })
+        
+        // If user cancelled, return early
+        if (pasteTags === undefined) {
+          return
+        }
+
+        // Normalize name and tags (trim and use null if empty)
+        const nameToUse = pasteName && pasteName.trim() ? pasteName.trim() : null
+        const tagsToUse = pasteTags && pasteTags.trim() ? pasteTags.trim() : null
 
         // Check if apiClient is available and use it if authenticated, otherwise fallback to direct axios
         let response
         if (apiClient) {
           try {
             // Use ApiClient which handles authentication automatically
-            response = await apiClient.storePaste(selectedText, 'unknown', null, null)
+            response = await apiClient.storePaste(selectedText, 'unknown', nameToUse, null, tagsToUse)
             
             // Wrap response to match expected format
             response = {
@@ -2228,10 +2328,74 @@ function activate(context) {
               }
             }
           } catch (apiError) {
-            // If ApiClient fails (e.g., not authenticated), fallback to direct axios
-            console.log('ApiClient failed, falling back to direct axios:', apiError.message)
+            // Don't fallback for 409 conflicts - let outer catch handle it
+            if (apiError.status === 409) {
+              throw apiError
+            }
             
-            // Fallback to direct axios
+            // If ApiClient fails (e.g., not authenticated), fallback to direct axios
+            try {
+              // Fallback to direct axios
+              const apiEndpoint = getApiEndpoint()
+              const baseURL = `${apiEndpoint}/v1/store-paste`
+              
+              const requestBody = {
+                paste: selectedText,
+                recipient_gh_username: 'unknown'
+              }
+              
+              // Add optional fields
+              if (nameToUse) {
+                requestBody.name = nameToUse
+              }
+              if (tagsToUse) {
+                requestBody.tags = tagsToUse
+              }
+              
+              // Prepare headers with platform and hostname
+              const os = require('os')
+              const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Platform': 'vscode'
+              }
+              
+              // Add hostname if available
+              try {
+                const hostname = os.hostname()
+                if (hostname) {
+                  headers['X-Hostname'] = hostname
+                }
+              } catch (hostnameError) {
+                console.debug('Could not retrieve hostname:', hostnameError.message)
+              }
+              
+              const axiosResponse = await axios.post(baseURL, requestBody, {
+                decompress: false,
+                responseType: 'json',
+                timeout: 30000,
+                headers,
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity
+              })
+              
+              response = axiosResponse.data
+            } catch (axiosError) {
+              // If axios also fails, check for 409 and structure the error properly
+              if (axiosError.response && axiosError.response.status === 409) {
+                const errorData = axiosError.response.data
+                const duplicateError = new Error(errorData?.response?.message || 'Duplicate paste detected')
+                duplicateError.status = 409
+                duplicateError.existingId = errorData?.response?.existing_id
+                throw duplicateError
+              }
+              // Re-throw other axios errors
+              throw axiosError
+            }
+          }
+        } else {
+          // Fallback to direct axios if apiClient is not available
+          try {
             const apiEndpoint = getApiEndpoint()
             const baseURL = `${apiEndpoint}/v1/store-paste`
             
@@ -2251,28 +2415,18 @@ function activate(context) {
             })
             
             response = axiosResponse.data
+          } catch (axiosError) {
+            // Handle 409 conflicts properly
+            if (axiosError.response && axiosError.response.status === 409) {
+              const errorData = axiosError.response.data
+              const duplicateError = new Error(errorData?.response?.message || 'Duplicate paste detected')
+              duplicateError.status = 409
+              duplicateError.existingId = errorData?.response?.existing_id
+              throw duplicateError
+            }
+            // Re-throw other axios errors
+            throw axiosError
           }
-        } else {
-          // Fallback to direct axios if apiClient is not available
-          const apiEndpoint = getApiEndpoint()
-          const baseURL = `${apiEndpoint}/v1/store-paste`
-          
-          const axiosResponse = await axios.post(baseURL, {
-            paste: selectedText,
-            recipient_gh_username: 'unknown'
-          }, {
-            decompress: false,
-            responseType: 'json',
-            timeout: 30000,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-          })
-          
-          response = axiosResponse.data
         }
 
         const responseData = response
@@ -2286,8 +2440,6 @@ function activate(context) {
           throw new Error('Paste ID not received from server')
         }
 
-        console.log('Paste stored successfully - ID:', id)
-        
         // Update status bar to reflect successful connection
         updateStatusBar(true)
         
@@ -2300,16 +2452,14 @@ function activate(context) {
               await authTreeProvider.loadPastes()
             }
           } catch (refreshError) {
-            // Non-critical error - just log it
-            console.log('Failed to refresh pastes list:', refreshError.message)
+            // Non-critical error - silently fail
           }
         }
         
-        const clipboardText = multiLineClipboard(id)
+        const clipboardText = multiLineClipboard(id, null, nameToUse)
         await vscode.env.clipboard.writeText(clipboardText)
         
         vscode.window.showInformationMessage(`Paste shared! ID: ${id}. Instructions copied to clipboard.`)
-        console.log('Instructions copied to clipboard')
       } catch (error) {
         console.error('Error storing paste:', error)
         
@@ -2363,24 +2513,27 @@ function activate(context) {
     }
   )
 
+  /**
+   * Get encrypted paste command - specifically for retrieving password-protected pastes
+   */
   const get_encrypted_paste = vscode.commands.registerCommand(
     'pasteportal.get-encrypted-paste',
     async function () {
-      // check if user has accepted the service agreement or not
-      if (!(await checkServiceAgreement())) {
-        return
-      }
-
-      console.log('Command: pasteportal.get-encrypted-paste - started')
-      // get the active text editor
-      const editor = vscode.window.activeTextEditor
-      // check if there is an active text editor
-      if (!editor) throw new Error('No active text editor.')
-      console.log('Active text editor found')
-
+      /**
+       * Get an encrypted paste from the API and decrypt it
+       * @returns {void}
+       * @throws {Error}
+       */
       try {
+        if (!(await checkServiceAgreement())) {
+          return
+        }
+
+        const editor = vscode.window.activeTextEditor
+        if (!editor) throw new Error('No active text editor.')
+
         const prompt = await vscode.window.showInputBox({
-          prompt: 'Enter the paste ID or URL (e.g., abc123 or https://pasteportal.app/?id=abc123)'
+          prompt: 'Enter the encrypted paste ID or URL (e.g., abc123 or https://pasteportal.app/?id=abc123)'
         })
 
         if (!prompt) {
@@ -2388,232 +2541,268 @@ function activate(context) {
           return
         }
 
-        console.log('Prompt: ', prompt)
-
         const pasteId = getPasteId(prompt)
-        console.log('Paste ID: ', pasteId)
-
         if (!pasteId) {
           vscode.window.showErrorMessage('Invalid paste ID or URL format. Please provide a valid ID (6-character hex or UUID) or URL.')
           return
         }
 
-        // ask for the password
+        // Prompt for password first
         const password = await vscode.window.showInputBox({
           prompt: 'Enter the password to decrypt the paste',
-          password: true
+          password: true,
+          ignoreFocusOut: true
         })
 
         if (!password) {
-          vscode.window.showErrorMessage('Password is required')
+          vscode.window.showWarningMessage('Password is required to decrypt this paste.')
           return
         }
 
         const apiEndpoint = getApiEndpoint()
-        const baseURL = `${apiEndpoint}/get-paste?id=${pasteId}`
+        const baseURL = `${apiEndpoint}/v1/get-paste?id=${pasteId}`
         
-        const response = await axios.get(baseURL, {
-          decompress: false,
-          responseType: 'json',
-          timeout: 10000,
-          headers: {
-            'Accept': 'application/json'
-          },
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity
-        })
-        const responseData = response.data
-
-        if (!responseData || !responseData.response) {
-          throw new Error('Invalid response format from server')
-        }
-
-        const { paste, id, is_password_encrypted } = responseData.response
-
-        if (!paste) {
-          throw new Error('Paste content not found in response')
-        }
-
-        if (!is_password_encrypted) {
-          vscode.window.showWarningMessage('This paste does not appear to be password-encrypted. It will be inserted as-is.')
-        }
-
-        console.log('Retrieved encrypted paste - ID:', id)
-
-        // Decrypt the text
         try {
-          const decryptedText = decrypt(password, paste)
-          console.log('Decrypted successfully')
+          const response = await axios.get(baseURL, {
+            responseType: 'json',
+            timeout: 10000,
+            headers: {
+              'Accept': 'application/json'
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+          })
 
-          // Update status bar to reflect successful connection
+          let responseData = response.data
+          if (typeof responseData === 'string') {
+            try {
+              responseData = JSON.parse(responseData)
+            } catch (parseError) {
+              throw new Error(`Failed to parse response as JSON: ${parseError.message}`)
+            }
+          }
+
+          if (!responseData) {
+            throw new Error('Empty response from server')
+          }
+
+          let pasteData = responseData
+          if (responseData.response) {
+            pasteData = responseData.response
+          }
+
+          if (!pasteData || typeof pasteData !== 'object') {
+            throw new Error(`Invalid response format from server. Expected object, got ${typeof pasteData}`)
+          }
+
+          const { paste } = pasteData
+
+          if (!paste) {
+            throw new Error('Paste content not found in response')
+          }
+
           updateStatusBar(true)
 
-          // insert the paste content into the active editor
-          await editor.edit((editBuilder) => {
-            editBuilder.insert(editor.selection.active, decryptedText)
-          })
-          
-          vscode.window.showInformationMessage('Encrypted paste retrieved and decrypted successfully.')
-          return // Success, exit early
-        } catch (decryptError) {
-          console.error('Decryption error:', decryptError)
-          // Check if it's a validation error
-          if (decryptError.message && decryptError.message.includes('Password')) {
-            throw new Error('Decryption failed: ' + decryptError.message)
-          } else if (decryptError.message && decryptError.message.includes('Decryption')) {
-            throw new Error('Decryption failed. Please check the password and try again.')
-          } else {
-            throw decryptError
+          // Decrypt the paste
+          try {
+            const decryptedText = decrypt(password, paste)
+            
+            await editor.edit((editBuilder) => {
+              editBuilder.insert(editor.selection.active, decryptedText)
+            })
+            
+            vscode.window.showInformationMessage('Encrypted paste retrieved and decrypted successfully.')
+          } catch (decryptError) {
+            vscode.window.showErrorMessage(`Decryption failed: ${decryptError.message}`)
           }
-        }
-
-      } catch (error) {
-        console.error('Error retrieving encrypted paste:', error)
-        
-        let errorMessage = 'Failed to retrieve encrypted paste'
-        if (error.response) {
-          const status = error.response.status
-          const errorData = error.response.data
-          const serverMessage = (errorData && errorData.response && errorData.response.message) || error.message
+        } catch (error) {
+          console.error('Error retrieving encrypted paste:', error)
           
-          if (status === 400) {
-            errorMessage = `Invalid paste ID or paste not found: ${serverMessage}`
-          } else if (status === 404) {
-            errorMessage = 'Paste not found. Please check the ID and try again.'
-          } else if (status >= 500) {
-            errorMessage = 'Server error. Please try again later.'
-          } else {
-            errorMessage = serverMessage
-          }
-        } else if (error.request) {
-          errorMessage = 'Network error. Please check your internet connection.'
-          // Update status bar to reflect connection failure
-          updateStatusBar(false)
-        } else {
-          // Check if it's a decryption error
-          if (error.message && error.message.includes('Decryption')) {
-            errorMessage = 'Decryption failed. Please check the password and try again.'
+          let errorMessage = 'Failed to retrieve encrypted paste'
+          if (error.response) {
+            const status = error.response.status
+            const errorData = error.response.data
+            const serverMessage = (errorData && errorData.response && errorData.response.message) || error.message
+            
+            if (status === 400) {
+              errorMessage = `Invalid paste ID or paste not found: ${serverMessage}`
+            } else if (status === 404) {
+              errorMessage = 'Paste not found. Please check the ID and try again.'
+            } else if (status >= 500) {
+              errorMessage = 'Server error. Please try again later.'
+            } else {
+              errorMessage = serverMessage
+            }
+          } else if (error.request) {
+            errorMessage = 'Network error. Please check your internet connection.'
+            updateStatusBar(false)
           } else {
             errorMessage = error.message || 'An unexpected error occurred'
           }
+          
+          vscode.window.showErrorMessage(`Failed to retrieve encrypted paste: ${errorMessage}`)
         }
-        
+      } catch (error) {
+        console.error('Error in get-encrypted-paste command:', error)
+        const errorMessage = error.message || 'An unexpected error occurred'
         vscode.window.showErrorMessage(`Failed to retrieve encrypted paste: ${errorMessage}`)
       }
     }
   )
 
+  /**
+   * Store encrypted paste command - specifically for creating password-protected pastes
+   */
   const store_encrypted_paste = vscode.commands.registerCommand(
     'pasteportal.store-encrypted-paste',
     async function () {
+      /**
+       * Store an encrypted paste in the API
+       * @returns {void}
+       * @throws {Error}
+       */
       try {
-        // check if user has accepted the service agreement or not
         if (!(await checkServiceAgreement())) {
           return
         }
-        console.log('Command: pasteportal.store-encrypted-paste - started')
-        // get the active text editor
+
         const editor = vscode.window.activeTextEditor
-        //  check if there is an active text editor and if there isnt thwor an error using the catch
         if (!editor) throw new Error('No active text editor.')
-        console.log('Active text editor found')
-        // Get the selected text
+
         const selectedText = editor.document.getText(editor.selection)
         if (!selectedText) throw new Error('No text selected.')
-        console.log('Selected text found')
 
-        // check if the selected text is more than 400kb
         if (selectedText.length > 400000) {
-          throw new Error(
-            'The selected text is more than 400kb. Please select a smaller text.'
-          )
+          throw new Error('The selected text is more than 400kb. Please select a smaller text.')
         }
-        console.log(
-          'Selected text is less than 400kb. Text length: ',
-          selectedText.length,
-          'bytes'
-        )
 
-        // Ask user for password option: random or custom
+        // Ask user if they want to generate a random password or enter their own
         const passwordOption = await vscode.window.showQuickPick(
           [
             {
-              label: '$(key) Use Random Password',
-              description: 'A secure password will be generated automatically',
-              id: 'random'
+              label: '$(key) Generate Random Password',
+              description: 'Automatically generate a secure random password',
+              value: 'generate'
             },
             {
-              label: '$(edit) Use Custom Password',
-              description: 'Enter your own password',
-              id: 'custom'
+              label: '$(edit) Enter My Own Password',
+              description: 'Create a custom password',
+              value: 'custom'
             }
           ],
           {
-            placeHolder: 'Choose password option for encryption',
+            placeHolder: 'Choose how to create the password for this encrypted paste',
             ignoreFocusOut: true
           }
         )
 
         if (!passwordOption) {
-          return // User cancelled
+          return
         }
 
-        let password = null
+        let password
 
-        // Check if random password option was selected
-        if (passwordOption.id === 'random' || passwordOption.label.includes('Random')) {
-          // Generate random password
+        if (passwordOption.value === 'generate') {
+          // Generate a random password
           password = generateRandomPassword(16)
-          console.log('Random password generated')
+          
+          // Copy password to clipboard first
+          await vscode.env.clipboard.writeText(password)
+          
+          // Show the generated password in an input box (read-only) so user can see and copy it
+          await vscode.window.showInputBox({
+            prompt: 'Random password generated (already copied to clipboard)',
+            value: password,
+            ignoreFocusOut: true,
+            password: false, // Show the password so user can see it
+            title: 'Save this password securely!'
+          })
+          
+          // Confirm they've saved the password
+          const confirmSaved = await vscode.window.showInformationMessage(
+            'Password has been copied to clipboard. Have you saved it securely?',
+            'Yes, Continue',
+            'Copy Again',
+            'Cancel'
+          )
+
+          if (confirmSaved === 'Cancel') {
+            return
+          }
+
+          if (confirmSaved === 'Copy Again') {
+            await vscode.env.clipboard.writeText(password)
+            vscode.window.showInformationMessage('Password copied to clipboard again!')
+          }
         } else {
-          // Get custom password from user
+          // Prompt for custom password
           password = await vscode.window.showInputBox({
-            prompt: 'Enter the password to encrypt the paste (8-30 characters, no spaces)',
+            prompt: 'Enter a password to encrypt this paste',
             password: true,
-            placeHolder: 'Enter password',
             ignoreFocusOut: true,
             validateInput: (value) => {
-              if (!value || value.trim().length === 0) {
-                return 'Password cannot be empty'
+              if (!value) {
+                return 'Password is required for encrypted pastes'
               }
-              if (value.length < passwordLengthMin) {
-                return `Password must be at least ${passwordLengthMin} characters long`
-              }
-              if (value.length > passwordLengthMax) {
-                return `Password must be less than ${passwordLengthMax} characters long`
-              }
-              if (/[\s\t\n\r\v\f\0]/.test(value)) {
-                return 'Password should not contain whitespace characters'
+              const validation = validatePasswordForUI(value)
+              if (!validation.isValid) {
+                return validation.errors.join('; ')
               }
               return null
             }
           })
 
           if (!password) {
-            return // User cancelled or validation failed
+            vscode.window.showWarningMessage('Password is required for encrypted pastes.')
+            return
+          }
+
+          // Confirm password
+          const passwordConfirm = await vscode.window.showInputBox({
+            prompt: 'Confirm the password',
+            password: true,
+            ignoreFocusOut: true
+          })
+
+          if (password !== passwordConfirm) {
+            vscode.window.showErrorMessage('Passwords do not match. Please try again.')
+            return
           }
         }
 
-        // Encrypt the paste content
-        let encryptedPaste
-        try {
-          encryptedPaste = encrypt(password, selectedText)
-          console.log('Selected text encrypted successfully')
-        } catch (encryptError) {
-          console.error('Encryption error:', encryptError)
-          vscode.window.showErrorMessage(`Encryption failed: ${encryptError.message || 'Unknown error'}`)
+        // Prompt for optional name
+        const pasteName = await vscode.window.showInputBox({
+          prompt: 'Optional: Enter a name for this paste',
+          placeHolder: 'Leave empty to skip',
+          ignoreFocusOut: true
+        })
+        
+        if (pasteName === undefined) {
+          return
+        }
+        
+        // Prompt for optional tags
+        const pasteTags = await vscode.window.showInputBox({
+          prompt: 'Optional: Enter tags (comma-separated)',
+          placeHolder: 'e.g., code, snippet, example',
+          ignoreFocusOut: true
+        })
+        
+        if (pasteTags === undefined) {
           return
         }
 
-        // Check if apiClient is available and use it if authenticated, otherwise fallback to direct axios
+        const nameToUse = pasteName && pasteName.trim() ? pasteName.trim() : null
+        const tagsToUse = pasteTags && pasteTags.trim() ? pasteTags.trim() : null
+
+        // Encrypt the text
+        const encryptedText = encrypt(password, selectedText)
+
+        // Store the encrypted paste
         let response
         if (apiClient) {
           try {
-            // Use ApiClient which handles authentication automatically
-            // For password-protected pastes, we need to pass the password so it can be stored
-            response = await apiClient.storePaste(encryptedPaste, 'unknown', null, password)
-            
-            // Wrap response to match expected format
+            response = await apiClient.storePaste(encryptedText, 'unknown', nameToUse, password, tagsToUse)
             response = {
               response: {
                 id: response.id,
@@ -2622,15 +2811,71 @@ function activate(context) {
               }
             }
           } catch (apiError) {
-            // If ApiClient fails (e.g., not authenticated), fallback to direct axios
-            console.log('ApiClient failed, falling back to direct axios:', apiError.message)
+            if (apiError.status === 409) {
+              throw apiError
+            }
             
-            // Fallback to direct axios
+            try {
+              const apiEndpoint = getApiEndpoint()
+              const baseURL = `${apiEndpoint}/v1/store-paste`
+              
+              const requestBody = {
+                paste: encryptedText,
+                recipient_gh_username: 'unknown',
+                password: password
+              }
+              
+              if (nameToUse) {
+                requestBody.name = nameToUse
+              }
+              if (tagsToUse) {
+                requestBody.tags = tagsToUse
+              }
+              
+              const os = require('os')
+              const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Platform': 'vscode'
+              }
+              
+              try {
+                const hostname = os.hostname()
+                if (hostname) {
+                  headers['X-Hostname'] = hostname
+                }
+              } catch (hostnameError) {
+                console.debug('Could not retrieve hostname:', hostnameError.message)
+              }
+              
+              const axiosResponse = await axios.post(baseURL, requestBody, {
+                decompress: false,
+                responseType: 'json',
+                timeout: 30000,
+                headers,
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity
+              })
+              
+              response = axiosResponse.data
+            } catch (axiosError) {
+              if (axiosError.response && axiosError.response.status === 409) {
+                const errorData = axiosError.response.data
+                const duplicateError = new Error(errorData?.response?.message || 'Duplicate paste detected')
+                duplicateError.status = 409
+                duplicateError.existingId = errorData?.response?.existing_id
+                throw duplicateError
+              }
+              throw axiosError
+            }
+          }
+        } else {
+          try {
             const apiEndpoint = getApiEndpoint()
             const baseURL = `${apiEndpoint}/v1/store-paste`
             
             const axiosResponse = await axios.post(baseURL, {
-              paste: encryptedPaste,
+              paste: encryptedText,
               recipient_gh_username: 'unknown',
               password: password
             }, {
@@ -2646,29 +2891,16 @@ function activate(context) {
             })
             
             response = axiosResponse.data
+          } catch (axiosError) {
+            if (axiosError.response && axiosError.response.status === 409) {
+              const errorData = axiosError.response.data
+              const duplicateError = new Error(errorData?.response?.message || 'Duplicate paste detected')
+              duplicateError.status = 409
+              duplicateError.existingId = errorData?.response?.existing_id
+              throw duplicateError
+            }
+            throw axiosError
           }
-        } else {
-          // Fallback to direct axios if apiClient is not available
-          const apiEndpoint = getApiEndpoint()
-          const baseURL = `${apiEndpoint}/v1/store-paste`
-          
-          const axiosResponse = await axios.post(baseURL, {
-            paste: encryptedPaste,
-            recipient_gh_username: 'unknown',
-            password: password
-          }, {
-            decompress: false,
-            responseType: 'json',
-            timeout: 30000,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-          })
-          
-          response = axiosResponse.data
         }
 
         const responseData = response
@@ -2682,34 +2914,48 @@ function activate(context) {
           throw new Error('Paste ID not received from server')
         }
 
-        console.log('Encrypted paste stored successfully - ID:', id)
-        
-        // Update status bar to reflect successful connection
         updateStatusBar(true)
         
-        // Refresh My Pastes view if user is authenticated
         if (authTreeProvider && apiClient && auth) {
           try {
             const isAuthenticated = await auth.isAuthenticated()
             if (isAuthenticated) {
-              // Refresh pastes list to show the new paste
               await authTreeProvider.loadPastes()
             }
           } catch (refreshError) {
-            // Non-critical error - just log it
-            console.log('Failed to refresh pastes list:', refreshError.message)
+            // Non-critical error - silently fail
           }
         }
         
-        const clipboardText = multiLineClipboard(id, password)
+        const clipboardText = multiLineClipboard(id, password, nameToUse)
         await vscode.env.clipboard.writeText(clipboardText)
         
-        vscode.window.showInformationMessage(`Encrypted paste shared! ID: ${id}. Instructions (including password) copied to clipboard.`)
-        console.log('Instructions copied to clipboard')
+        vscode.window.showInformationMessage(`Encrypted paste shared! ID: ${id}. Instructions with password copied to clipboard.`)
       } catch (error) {
         console.error('Error storing encrypted paste:', error)
         
         let errorMessage = 'Failed to store encrypted paste'
+        
+        if (error.status === 409 && error.existingId) {
+          const existingId = error.existingId
+          errorMessage = `This paste was already submitted. Existing paste ID: ${existingId}`
+          
+          vscode.window.showWarningMessage(
+            errorMessage,
+            'Copy Paste ID',
+            'Open Paste'
+          ).then(selection => {
+            if (selection === 'Copy Paste ID') {
+              vscode.env.clipboard.writeText(existingId)
+              vscode.window.showInformationMessage(`Paste ID ${existingId} copied to clipboard`)
+            } else if (selection === 'Open Paste') {
+              const pasteUrl = `https://pasteportal.app/?id=${existingId}`
+              vscode.env.openExternal(vscode.Uri.parse(pasteUrl))
+            }
+          })
+          return
+        }
+        
         if (error.response) {
           const status = error.response.status
           const errorData = error.response.data
@@ -2724,15 +2970,9 @@ function activate(context) {
           }
         } else if (error.request) {
           errorMessage = 'Network error. Please check your internet connection.'
-          // Update status bar to reflect connection failure
           updateStatusBar(false)
         } else {
-          // Check if it's an encryption error
-          if (error.message && error.message.includes('Password')) {
-            errorMessage = `Encryption failed: ${error.message}`
-          } else {
-            errorMessage = error.message || 'An unexpected error occurred'
-          }
+          errorMessage = error.message || 'An unexpected error occurred'
         }
         
         vscode.window.showErrorMessage(`Failed to store encrypted paste: ${errorMessage}`)
@@ -2745,181 +2985,14 @@ function activate(context) {
     await vscode.env.openExternal(vscode.Uri.parse(domain))
   })
 
-  const shareFileCommand = vscode.commands.registerCommand('pasteportal.shareFile', async () => {
-    try {
-      if (!(await checkServiceAgreement())) {
-        return
-      }
-      
-      const editor = vscode.window.activeTextEditor
-      if (!editor) {
-        vscode.window.showErrorMessage('No active text editor.')
-        return
-      }
-
-      // Get entire file content
-      const fileContent = editor.document.getText()
-      if (!fileContent) {
-        vscode.window.showErrorMessage('File is empty.')
-        return
-      }
-
-      // Check file size (400KB limit)
-      if (fileContent.length > 400000) {
-        vscode.window.showErrorMessage('The file is more than 400kb. Please select a smaller file.')
-        return
-      }
-
-      // Use ApiClient if available, otherwise fallback to direct axios
-      let response
-      if (apiClient) {
-        try {
-          // Use ApiClient which handles authentication automatically
-          response = await apiClient.storePaste(fileContent, 'unknown', null, null)
-          
-          // Wrap response to match expected format
-          response = {
-            response: {
-              id: response.id,
-              message: response.message,
-              timestamp: response.timestamp
-            }
-          }
-        } catch (apiError) {
-          // If ApiClient fails (e.g., not authenticated), fallback to direct axios
-          console.log('ApiClient failed, falling back to direct axios:', apiError.message)
-          
-          // Fallback to direct axios
-          const apiEndpoint = getApiEndpoint()
-          const baseURL = `${apiEndpoint}/v1/store-paste`
-          
-          const axiosResponse = await axios.post(baseURL, {
-            paste: fileContent,
-            recipient_gh_username: 'unknown'
-          }, {
-            decompress: false,
-            responseType: 'json',
-            timeout: 30000,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-          })
-          
-          response = axiosResponse.data
-        }
-      } else {
-        // Fallback to direct axios if apiClient is not available
-        const apiEndpoint = getApiEndpoint()
-        const baseURL = `${apiEndpoint}/v1/store-paste`
-        
-        const axiosResponse = await axios.post(baseURL, {
-          paste: fileContent,
-          recipient_gh_username: 'unknown'
-        }, {
-          decompress: false,
-          responseType: 'json',
-          timeout: 30000,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity
-        })
-        
-        response = axiosResponse.data
-      }
-
-      const responseData = response
-      if (!responseData || !responseData.response) {
-        throw new Error('Invalid response format from server')
-      }
-
-      const { id, message, timestamp } = responseData.response
-      
-      if (!id) {
-        throw new Error('Paste ID not received from server')
-      }
-
-      updateStatusBar(true)
-      
-      // Refresh My Pastes view if user is authenticated
-      if (authTreeProvider && apiClient && auth) {
-        try {
-          const isAuthenticated = await auth.isAuthenticated()
-          if (isAuthenticated) {
-            // Refresh pastes list to show the new paste
-            await authTreeProvider.loadPastes()
-          }
-        } catch (refreshError) {
-          // Non-critical error - just log it
-          console.log('Failed to refresh pastes list:', refreshError.message)
-        }
-      }
-      
-      const clipboardText = multiLineClipboard(id)
-      await vscode.env.clipboard.writeText(clipboardText)
-      
-      vscode.window.showInformationMessage(`File shared! ID: ${id}. Instructions copied to clipboard.`)
-    } catch (error) {
-      console.error('Error sharing file:', error)
-      let errorMessage = 'Failed to share file'
-      if (error.response) {
-        const status = error.response.status
-        const errorData = error.response.data
-        const serverMessage = (errorData && errorData.response && errorData.response.message) || error.message
-        
-        if (status === 400) {
-          errorMessage = `Invalid request: ${serverMessage}`
-        } else if (status >= 500) {
-          errorMessage = 'Server error. Please try again later.'
-        } else {
-          errorMessage = serverMessage
-        }
-      } else if (error.request) {
-        errorMessage = 'Network error. Please check your internet connection.'
-        updateStatusBar(false)
-      } else {
-        errorMessage = error.message || 'An unexpected error occurred'
-      }
-      
-      vscode.window.showErrorMessage(`Failed to share file: ${errorMessage}`)
-    }
-  })
-
-  const copyPasteIdCommand = vscode.commands.registerCommand('pasteportal.copyPasteId', async (arg) => {
-    // Handle different argument types: string (pasteId), object (tree item), or undefined
-    let pasteId = null
-    if (typeof arg === 'string') {
-      pasteId = arg
-    } else if (arg && (arg.pasteId || arg.id)) {
-      pasteId = arg.pasteId || arg.id
-    }
-
-    if (!pasteId) {
-      pasteId = await vscode.window.showInputBox({
-        prompt: 'Enter the paste ID to copy',
-        placeHolder: 'abc123 or UUID',
-        ignoreFocusOut: true
-      })
-    }
-
-    if (pasteId) {
-      await vscode.env.clipboard.writeText(pasteId)
-      vscode.window.showInformationMessage(`Paste ID copied to clipboard: ${pasteId}`)
-    }
-  })
+  // Removed: pasteportal.shareFile command
+  // Removed: pasteportal.copyPasteId command
 
   context.subscriptions.push(get_paste)
   context.subscriptions.push(store_paste)
   context.subscriptions.push(get_encrypted_paste)
   context.subscriptions.push(store_encrypted_paste)
   context.subscriptions.push(openInBrowserCommand)
-  context.subscriptions.push(shareFileCommand)
-  context.subscriptions.push(copyPasteIdCommand)
 }
 
 

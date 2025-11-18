@@ -2,7 +2,7 @@
   "name": "pasteportal",
   "displayName": "PastePortal",
   "description": "Share and retrieve text snippets with PastePortal - A secure paste service for developers",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "publisher": "JohnStilia",
   "icon": "media/icon.png",
   "engines": {
@@ -21,11 +21,15 @@
     "encryption"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onCommand:pasteportal.store-paste",
     "onCommand:pasteportal.get-paste",
+    "onCommand:pasteportal.store-encrypted-paste",
+    "onCommand:pasteportal.get-encrypted-paste",
     "onCommand:pasteportal.sign-in",
     "onView:pasteportal-auth",
     "onView:pasteportal-my-pastes",
+    "onView:pasteportal-operations",
     "onUri"
   ],
   "main": "./extension.js",
@@ -42,11 +46,6 @@
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.get-encrypted-paste",
-        "title": "Retrieve Encrypted Paste",
-        "category": "PastePortal"
-      },
-      {
         "command": "pasteportal.store-paste",
         "title": "Store Paste",
         "category": "PastePortal"
@@ -57,8 +56,8 @@
         "category": "PastePortal"
       },
       {
-        "command": "pasteportal.view-paste",
-        "title": "View Paste",
+        "command": "pasteportal.get-encrypted-paste",
+        "title": "Get Encrypted Paste",
         "category": "PastePortal"
       },
       {
@@ -74,31 +73,6 @@
       {
         "command": "pasteportal.openInBrowser",
         "title": "Open PastePortal in Browser",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.shareFile",
-        "title": "Share File to PastePortal",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.share-paste",
-        "title": "Share Paste",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.retrieve-password",
-        "title": "Retrieve Password",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.delete-paste",
-        "title": "Delete Paste",
-        "category": "PastePortal"
-      },
-      {
-        "command": "pasteportal.copyPasteId",
-        "title": "Copy Paste ID",
         "category": "PastePortal"
       },
       {
@@ -155,61 +129,25 @@
           "group": "pasteportal"
         },
         {
-          "command": "pasteportal.store-encrypted-paste",
-          "when": "editorHasSelection",
-          "group": "pasteportal"
-        },
-        {
-          "command": "pasteportal.shareFile",
-          "group": "pasteportal"
-        },
-        {
           "command": "pasteportal.get-paste",
           "group": "pasteportal"
-        },
-        {
-          "command": "pasteportal.get-encrypted-paste",
-          "group": "pasteportal"
         }
       ],
-      "explorer/context": [
+      "explorer/context": [],
+      "view/item/context": [],
+      "editor/title": [],
+      "commandPalette": [
         {
-          "command": "pasteportal.shareFile",
-          "when": "resourceLangId != markdown",
-          "group": "pasteportal"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "pasteportal.share-paste",
-          "when": "view == pasteportal-my-pastes && viewItem == paste",
-          "group": "pasteportal@1"
+          "command": "workbench.view.pasteportal-auth",
+          "when": "false"
         },
         {
-          "command": "pasteportal.share-paste",
-          "when": "view == pasteportal-my-pastes && viewItem == paste.encrypted",
-          "group": "pasteportal@1"
+          "command": "workbench.view.pasteportal-my-pastes",
+          "when": "false"
         },
         {
-          "command": "pasteportal.retrieve-password",
-          "when": "view == pasteportal-my-pastes && viewItem == paste.encrypted",
-          "group": "pasteportal@2"
-        },
-        {
-          "command": "pasteportal.delete-paste",
-          "when": "view == pasteportal-my-pastes && viewItem == paste",
-          "group": "pasteportal@3"
-        },
-        {
-          "command": "pasteportal.delete-paste",
-          "when": "view == pasteportal-my-pastes && viewItem == paste.encrypted",
-          "group": "pasteportal@3"
-        }
-      ],
-      "editor/title": [
-        {
-          "command": "pasteportal.shareFile",
-          "group": "navigation"
+          "command": "workbench.view.pasteportal-operations",
+          "when": "false"
         }
       ]
     },
@@ -249,13 +187,13 @@
         },
         "pasteportal.supabase.url": {
           "type": "string",
-          "default": "",
-          "description": "Supabase project URL (required for authentication)"
+          "default": "https://fzyhbybnjhpilugkokzu.supabase.co",
+          "description": "Supabase project URL (defaults to production PastePortal instance, override for self-hosting)"
         },
         "pasteportal.supabase.anonKey": {
           "type": "string",
-          "default": "",
-          "description": "Supabase anonymous key (required for authentication)"
+          "default": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6eWhieWJuamhwaWx1Z2tva3p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MjgwNTYsImV4cCI6MjA3NzUwNDA1Nn0.8lF2lIjJM2wQD6ToJHWyMHiycrhyPMceBlBGU_0txsI",
+          "description": "Supabase anonymous key (defaults to production PastePortal instance, override for self-hosting)"
         },
         "pasteportal.pastes.updateInterval": {
           "type": "number",
@@ -277,11 +215,11 @@
     "lint": "echo \"No linter configured\""
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0"
+    "@types/vscode": "^1.74.1"
   },
   "dependencies": {
-    "axios": "^1.6.0",
-    "@supabase/supabase-js": "^2.39.0"
+    "axios": "^1.13.2",
+    "@supabase/supabase-js": "^2.81.1"
   },
   "repository": {
     "type": "git",

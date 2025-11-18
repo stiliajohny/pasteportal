@@ -182,11 +182,7 @@ class AuthTreeProvider {
 
     // Add paste items
     this.pastes.forEach(paste => {
-      const pasteItem = new PasteTreeItem(paste, {
-        command: 'pasteportal.view-paste',
-        title: 'View Paste',
-        arguments: [paste.id]
-      })
+      const pasteItem = new PasteTreeItem(paste, null)
       pasteItem.id = paste.id // Store ID for context menu
       items.push(pasteItem)
     })

@@ -51,78 +51,165 @@ class LoginTreeProvider {
    * @returns {Promise<vscode.TreeItem[]>}
    */
   async getChildren(element) {
-    if (element) {
-      return []
-    }
+    try {
+      if (element) {
+        return []
+      }
 
-    // Check if Supabase is configured
-    if (!this.auth.isConfigured()) {
+      // Check if auth is available
+      if (!this.auth) {
+        return [
+          new LoginTreeItem(
+            'Initializing...',
+            vscode.TreeItemCollapsibleState.None
+          )
+        ]
+      }
+
+      // Check if Supabase is configured
+      let isConfigured = false
+      try {
+        isConfigured = this.auth.isConfigured()
+      } catch (error) {
+        console.error('Error checking if auth is configured:', error)
+        return [
+          new LoginTreeItem(
+            'Error: Authentication not configured',
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'workbench.action.openSettings',
+              title: 'Open Settings',
+              arguments: ['@id:pasteportal.supabase']
+            },
+            'alert'
+          )
+        ]
+      }
+
+      if (!isConfigured) {
+        return [
+          new LoginTreeItem(
+            'Supabase not configured',
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'workbench.action.openSettings',
+              title: 'Open Settings',
+              arguments: ['@id:pasteportal.supabase']
+            },
+            'alert'
+          ),
+          new LoginTreeItem(
+            'Configure Supabase URL and Anon Key in settings',
+            vscode.TreeItemCollapsibleState.None
+          )
+        ]
+      }
+
+      // Check authentication status
+      let isAuthenticated = false
+      try {
+        isAuthenticated = await this.auth.isAuthenticated()
+      } catch (error) {
+        console.error('Error checking authentication status:', error)
+        return [
+          new LoginTreeItem(
+            'Error checking authentication',
+            vscode.TreeItemCollapsibleState.None,
+            null,
+            'error'
+          ),
+          new LoginTreeItem(
+            'Sign In',
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'pasteportal.sign-in',
+              title: 'Sign In'
+            },
+            'sign-in'
+          )
+        ]
+      }
+
+      if (!isAuthenticated) {
+        // Show authentication options
+        return [
+          new LoginTreeItem(
+            'Sign In',
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'pasteportal.sign-in',
+              title: 'Sign In'
+            },
+            'sign-in'
+          ),
+          new LoginTreeItem(
+            'Sign Up',
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'pasteportal.sign-up',
+              title: 'Sign Up'
+            },
+            'add'
+          )
+        ]
+      }
+
+      // User is authenticated - show user info and sign out
+      let user = null
+      try {
+        user = await this.auth.getCurrentUser()
+      } catch (error) {
+        console.error('Error getting current user:', error)
+        // Still show sign out option even if we can't get user info
+        return [
+          new LoginTreeItem(
+            'Signed in',
+            vscode.TreeItemCollapsibleState.None,
+            null,
+            'account'
+          ),
+          new LoginTreeItem(
+            'Sign Out',
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'pasteportal.sign-out',
+              title: 'Sign Out'
+            },
+            'sign-out'
+          )
+        ]
+      }
+
+      const userEmail = user?.email || 'Unknown'
+
       return [
         new LoginTreeItem(
-          'Supabase not configured',
+          userEmail,
           vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'workbench.action.openSettings',
-            title: 'Open Settings',
-            arguments: ['@id:pasteportal.supabase']
-          },
-          'alert'
+          null,
+          'account'
         ),
         new LoginTreeItem(
-          'Configure Supabase URL and Anon Key in settings',
-          vscode.TreeItemCollapsibleState.None
+          'Sign Out',
+          vscode.TreeItemCollapsibleState.None,
+          {
+            command: 'pasteportal.sign-out',
+            title: 'Sign Out'
+          },
+          'sign-out'
+        )
+      ]
+    } catch (error) {
+      console.error('Error in LoginTreeProvider.getChildren:', error)
+      return [
+        new LoginTreeItem(
+          `Error: ${error.message || 'Unknown error'}`,
+          vscode.TreeItemCollapsibleState.None,
+          null,
+          'error'
         )
       ]
     }
-
-    // Check authentication status
-    const isAuthenticated = await this.auth.isAuthenticated()
-
-    if (!isAuthenticated) {
-      // Show authentication options
-      return [
-        new LoginTreeItem(
-          'Sign In',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-in',
-            title: 'Sign In'
-          },
-          'sign-in'
-        ),
-        new LoginTreeItem(
-          'Sign Up',
-          vscode.TreeItemCollapsibleState.None,
-          {
-            command: 'pasteportal.sign-up',
-            title: 'Sign Up'
-          },
-          'add'
-        )
-      ]
-    }
-
-    // User is authenticated - show user info and sign out
-    const user = await this.auth.getCurrentUser()
-    const userEmail = user?.email || 'Unknown'
-
-    return [
-      new LoginTreeItem(
-        userEmail,
-        vscode.TreeItemCollapsibleState.None,
-        null,
-        'account'
-      ),
-      new LoginTreeItem(
-        'Sign Out',
-        vscode.TreeItemCollapsibleState.None,
-        {
-          command: 'pasteportal.sign-out',
-          title: 'Sign Out'
-        },
-        'sign-out'
-      )
-    ]
   }
 }
 

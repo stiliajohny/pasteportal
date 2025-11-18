@@ -1,5 +1,6 @@
 const vscode = require('vscode')
 const axios = require('axios')
+const os = require('os')
 
 /**
  * API Client for PastePortal
@@ -58,8 +59,21 @@ class ApiClient {
    * @returns {Promise<Object>}
    */
   async _getHeaders() {
+    // Always set platform to 'vscode' for VS Code extension
     const headers = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Platform': 'vscode'  // Always set platform for VS Code extension
+    }
+
+    // Add hostname header if available
+    try {
+      const hostname = os.hostname()
+      if (hostname && hostname.trim()) {
+        headers['X-Hostname'] = hostname.trim()
+      }
+    } catch (error) {
+      // Log error for debugging
+      console.error('[ApiClient] _getHeaders - Could not retrieve hostname:', error.message)
     }
 
     // Get access token if authenticated
@@ -74,7 +88,7 @@ class ApiClient {
         console.error('Error getting access token:', error.message)
       }
     }
-
+    
     return headers
   }
 
@@ -122,10 +136,11 @@ class ApiClient {
    * @param {string} recipientGhUsername - Recipient GitHub username
    * @param {string|null} name - Optional paste name
    * @param {string|null} password - Optional password for password-protected paste
+   * @param {string|null} tags - Optional tags (comma-separated string)
    * @returns {Promise<Object>}
    * @throws {Error}
    */
-  async storePaste(content, recipientGhUsername = 'unknown', name = null, password = null) {
+  async storePaste(content, recipientGhUsername = 'unknown', name = null, password = null, tags = null) {
     try {
       const headers = await this._getHeaders()
       const url = `${this.apiEndpoint}/v1/store-paste`
@@ -142,6 +157,9 @@ class ApiClient {
       if (password) {
         body.password = password
       }
+      if (tags) {
+        body.tags = tags
+      }
 
       // Add user_id if authenticated
       if (this.auth) {
@@ -154,7 +172,26 @@ class ApiClient {
         }
       }
 
-      const response = await axios.post(url, body, { headers })
+      // Ensure headers are properly formatted for axios
+      // Axios should preserve header case, but let's be explicit
+      const axiosConfig = {
+        headers: {
+          ...headers,
+          // Explicitly set headers to ensure they're sent
+          'X-Platform': headers['X-Platform'] || 'vscode',
+          'X-Hostname': headers['X-Hostname'] || undefined,
+        },
+        // Remove undefined headers
+      }
+      
+      // Clean up undefined headers
+      Object.keys(axiosConfig.headers).forEach(key => {
+        if (axiosConfig.headers[key] === undefined) {
+          delete axiosConfig.headers[key]
+        }
+      })
+      
+      const response = await axios.post(url, body, axiosConfig)
       
       if (!response.data || !response.data.response) {
         throw new Error('Invalid response format from server')
@@ -209,32 +246,47 @@ class ApiClient {
         headers,
         timeout: 30000, // 30 second timeout
         validateStatus: (status) => status < 500, // Don't throw on 4xx errors
-        decompress: false,
+        decompress: true, // Allow automatic decompression of gzip/deflate responses
         maxContentLength: Infinity,
         maxBodyLength: Infinity
       })
+      
+      // Parse response data if it's a string (axios sometimes doesn't auto-parse)
+      let responseData = response.data
+      if (typeof responseData === 'string') {
+        try {
+          responseData = JSON.parse(responseData)
+        } catch (parseError) {
+          console.error('[ApiClient] listUserPastes() - Failed to parse JSON:', parseError)
+          throw new Error('Invalid JSON response from server')
+        }
+      }
       
       // Check for error status codes
       if (response.status === 401) {
         throw new Error('Authentication required. Please sign in.')
       }
       if (response.status === 403) {
-        const errorData = response.data
+        const errorData = responseData
         const message = (errorData && errorData.error) || 'Forbidden'
         throw new Error(`Forbidden: ${message}`)
       }
       if (response.status >= 400) {
-        const errorData = response.data
+        const errorData = responseData
         const message = (errorData && errorData.error) || `HTTP ${response.status} error`
         throw new Error(`API error: ${message}`)
       }
       
-      if (!response.data) {
+      if (!responseData) {
         throw new Error('Invalid response format from server')
       }
 
-      return response.data
+      return responseData
     } catch (error) {
+      console.error('[ApiClient] listUserPastes() - Error caught:', error)
+      console.error('[ApiClient] listUserPastes() - Error type:', error.constructor.name)
+      console.error('[ApiClient] listUserPastes() - Error message:', error.message)
+      
       // Handle axios errors
       if (error.response) {
         const status = error.response.status

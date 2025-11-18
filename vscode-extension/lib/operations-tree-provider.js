@@ -45,22 +45,22 @@ class OperationsTreeProvider {
         new vscode.ThemeIcon('cloud-upload')
       ),
       new OperationTreeItem(
-        'Share Selection (Encrypted)',
-        'Share selected text with password protection',
-        'pasteportal.store-encrypted-paste',
-        new vscode.ThemeIcon('lock')
-      ),
-      new OperationTreeItem(
         'Get Paste',
         'Retrieve paste by ID',
         'pasteportal.get-paste',
         new vscode.ThemeIcon('cloud-download')
       ),
       new OperationTreeItem(
+        'Share Encrypted Paste',
+        'Share selected text as password-protected paste',
+        'pasteportal.store-encrypted-paste',
+        new vscode.ThemeIcon('lock')
+      ),
+      new OperationTreeItem(
         'Get Encrypted Paste',
-        'Retrieve password-protected paste',
+        'Retrieve and decrypt password-protected paste',
         'pasteportal.get-encrypted-paste',
-        new vscode.ThemeIcon('key')
+        new vscode.ThemeIcon('unlock')
       ),
       new OperationTreeItem(
         'Open PastePortal',

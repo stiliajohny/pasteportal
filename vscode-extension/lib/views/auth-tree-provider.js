@@ -60,6 +60,7 @@ class AuthTreeProvider {
     this.loading = false
     this.error = null
     this.sortAscending = true // true = ascending (oldest first), false = descending (newest first)
+    this.hasAttemptedLoad = false // Track if we've attempted to load pastes
   }
 
   /**
@@ -84,16 +85,52 @@ class AuthTreeProvider {
    * @returns {Promise<vscode.TreeItem[]>}
    */
   async getChildren(element) {
-    if (element) {
-      return []
-    }
+    try {
+      if (element) {
+        return []
+      }
 
-    // Check authentication status
-    const isAuthenticated = await this.auth.isAuthenticated()
+      // Check if auth is available
+      if (!this.auth) {
+        return [
+          new AuthTreeItem(
+            'Initializing...',
+            vscode.TreeItemCollapsibleState.None
+          )
+        ]
+      }
 
-    if (!isAuthenticated) {
-      // Return empty array when not authenticated
-      return []
+      // Check authentication status
+      let isAuthenticated = false
+      try {
+        isAuthenticated = await this.auth.isAuthenticated()
+      } catch (error) {
+        console.error('[AuthTreeProvider] Error checking authentication status:', error)
+        return [
+          new AuthTreeItem(
+            'Error checking authentication',
+            vscode.TreeItemCollapsibleState.None,
+            null,
+            'error'
+          )
+        ]
+      }
+
+      if (!isAuthenticated) {
+        // Return empty array when not authenticated
+        this.hasAttemptedLoad = false // Reset flag when not authenticated
+        return []
+      }
+
+    // User is authenticated - automatically load pastes if not already loaded
+    if (!this.hasAttemptedLoad && !this.loading && this.apiClient) {
+      // Trigger load in background (don't await to avoid blocking UI)
+      this.hasAttemptedLoad = true
+      this.loadPastes().catch(error => {
+        console.error('[AuthTreeProvider] Error auto-loading pastes:', error)
+        // Reset flag on error so we can retry
+        this.hasAttemptedLoad = false
+      })
     }
 
     // User is authenticated - show refresh button, sort toggle, and pastes
@@ -157,16 +194,23 @@ class AuthTreeProvider {
 
     // Add paste items
     sortedPastes.forEach(paste => {
-      const pasteItem = new PasteTreeItem(paste, {
-        command: 'pasteportal.view-paste',
-        title: 'View Paste',
-        arguments: [paste.id]
-      })
+      const pasteItem = new PasteTreeItem(paste, null)
       pasteItem.id = paste.id // Store ID for context menu
       items.push(pasteItem)
     })
 
     return items
+    } catch (error) {
+      console.error('Error in AuthTreeProvider.getChildren:', error)
+      return [
+        new AuthTreeItem(
+          `Error: ${error.message || 'Unknown error'}`,
+          vscode.TreeItemCollapsibleState.None,
+          null,
+          'error'
+        )
+      ]
+    }
   }
 
   /**
@@ -175,26 +219,35 @@ class AuthTreeProvider {
   async loadPastes() {
     // First verify authentication before loading
     const isAuthenticated = await this.auth.isAuthenticated()
+    
     if (!isAuthenticated) {
       // Don't set error - just clear pastes and refresh to show sign-in options
       this.error = null
       this.loading = false
       this.pastes = []
+      this.hasAttemptedLoad = false // Reset flag when not authenticated
       this.refresh()
       return
     }
 
     this.loading = true
     this.error = null
+    this.hasAttemptedLoad = true
     this.refresh()
 
     try {
       const result = await this.apiClient.listUserPastes()
+      
       this.pastes = result.pastes || []
+      
       this.loading = false
       this.error = null
       this.refresh()
     } catch (error) {
+      console.error('[AuthTreeProvider] loadPastes() - Error occurred:', error)
+      console.error('[AuthTreeProvider] loadPastes() - Error message:', error.message)
+      console.error('[AuthTreeProvider] loadPastes() - Error stack:', error.stack)
+      
       // Check if it's an authentication error
       if (error.message && (error.message.includes('Authentication required') || error.message.includes('401'))) {
         // Clear error state and refresh to re-check authentication
@@ -202,6 +255,7 @@ class AuthTreeProvider {
         this.error = null
         this.pastes = []
         this.loading = false
+        this.hasAttemptedLoad = false // Reset flag on auth error
         this.refresh()
       } else {
         // Show other errors (network, server errors, etc.)
@@ -219,6 +273,7 @@ class AuthTreeProvider {
     this.pastes = []
     this.error = null
     this.loading = false
+    this.hasAttemptedLoad = false // Reset flag when clearing
     this.refresh()
   }
 
