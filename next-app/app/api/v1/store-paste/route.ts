@@ -1,23 +1,23 @@
+import { corsOptionsResponse } from '@/lib/cors';
+import { validateCsrf } from '@/lib/csrf';
 import { encrypt } from '@/lib/encryption';
-import { detectSecrets, redactSecrets, getSecretTags } from '@/lib/secret-detection';
+import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
+import { detectSecrets, getSecretTags, redactSecrets } from '@/lib/secret-detection';
 import { supabase } from '@/lib/supabase';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import {
-  generateBanterComment,
-  generatePasteId,
-  generateResponse,
-  hashPasteContent,
-  sanitizeError,
-  sanitizeGitHubUsername,
-  sanitizePasteName,
-  sanitizeTags,
-  secureLogError,
-  validateInputLength,
-  validateRequestSize,
+    generateBanterComment,
+    generatePasteId,
+    generateResponse,
+    hashPasteContent,
+    sanitizeError,
+    sanitizeGitHubUsername,
+    sanitizePasteName,
+    sanitizeTags,
+    secureLogError,
+    validateInputLength,
+    validateRequestSize,
 } from '@/lib/utils';
-import { validateCsrf } from '@/lib/csrf';
-import { corsOptionsResponse } from '@/lib/cors';
-import { applyRateLimit, rateLimitConfigs } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
 
 /**
@@ -215,6 +215,127 @@ export async function POST(request: NextRequest) {
     // Hash paste content for duplicate detection
     // Hash is computed on original content before any modifications (secret redaction, encryption)
     const contentHash = hashPasteContent(pasteContent);
+
+    // Detect platform and hostname from request headers
+    // Platform can be explicitly set via X-Platform header, or detected from User-Agent
+    // Note: HTTP headers are case-insensitive, Next.js Headers API normalizes to lowercase
+    let platform: string | null = null;
+    let hostname: string | null = null;
+    let platformSource: string = 'unknown';
+    
+    // First, try direct get (Next.js normalizes headers to lowercase)
+    // This is the most reliable method
+    const platformHeader = request.headers.get('x-platform');
+    const hostnameHeader = request.headers.get('x-hostname');
+    
+    // Log raw header values for debugging
+    console.log('[store-paste] ===== HEADER DETECTION DEBUG =====');
+    console.log('[store-paste] Raw header values:', {
+      'x-platform': platformHeader,
+      'x-hostname': hostnameHeader,
+      'x-platform-type': typeof platformHeader,
+      'x-hostname-type': typeof hostnameHeader,
+    });
+    
+    if (platformHeader) {
+      const sanitizedPlatform = platformHeader.trim().toLowerCase().substring(0, 50);
+      console.log('[store-paste] Platform header processing:', {
+        original: platformHeader,
+        sanitized: sanitizedPlatform,
+        regexTest: /^[a-z0-9_-]+$/.test(sanitizedPlatform),
+      });
+      if (/^[a-z0-9_-]+$/.test(sanitizedPlatform)) {
+        platform = sanitizedPlatform;
+        platformSource = 'X-Platform header (direct)';
+        console.log('[store-paste] Platform set from X-Platform header:', platform);
+      } else {
+        console.warn('[store-paste] Platform header failed regex validation:', {
+          original: platformHeader,
+          sanitized: sanitizedPlatform,
+        });
+      }
+    } else {
+      console.log('[store-paste] No X-Platform header found');
+    }
+    
+    if (hostnameHeader) {
+      const sanitizedHostname = hostnameHeader.trim().toLowerCase().substring(0, 255);
+      console.log('[store-paste] Hostname header processing:', {
+        original: hostnameHeader,
+        sanitized: sanitizedHostname,
+        regexTest: /^[a-z0-9.-]+$/.test(sanitizedHostname),
+      });
+      if (/^[a-z0-9.-]+$/.test(sanitizedHostname)) {
+        hostname = sanitizedHostname;
+        console.log('[store-paste] Hostname set from X-Hostname header:', hostname);
+      } else {
+        console.warn('[store-paste] Hostname header failed regex validation:', {
+          original: hostnameHeader,
+          sanitized: sanitizedHostname,
+        });
+      }
+    } else {
+      console.log('[store-paste] No X-Hostname header found');
+    }
+    
+    // Fallback: Iterate through all headers (in case direct get doesn't work)
+    if (!platform || !hostname) {
+      console.log('[store-paste] Falling back to header iteration...');
+      request.headers.forEach((value, key) => {
+        const lowerKey = key.toLowerCase();
+        
+        if (lowerKey === 'x-platform' && !platform) {
+          const sanitizedPlatform = value.trim().toLowerCase().substring(0, 50);
+          if (/^[a-z0-9_-]+$/.test(sanitizedPlatform)) {
+            platform = sanitizedPlatform;
+            platformSource = 'X-Platform header (iteration)';
+            console.log('[store-paste] Platform set from iteration:', platform);
+          }
+        }
+        
+        if (lowerKey === 'x-hostname' && !hostname) {
+          const sanitizedHostname = value.trim().toLowerCase().substring(0, 255);
+          if (/^[a-z0-9.-]+$/.test(sanitizedHostname)) {
+            hostname = sanitizedHostname;
+            console.log('[store-paste] Hostname set from iteration:', hostname);
+          }
+        }
+      });
+    }
+    
+    // If platform still not found, detect from User-Agent
+    if (!platform) {
+      const userAgent = request.headers.get('user-agent') || '';
+      console.log('[store-paste] No platform header found, checking User-Agent:', userAgent);
+      if (userAgent.toLowerCase().includes('vscode') || userAgent.toLowerCase().includes('code')) {
+        platform = 'vscode';
+        platformSource = 'User-Agent (vscode detected)';
+      } else if (userAgent) {
+        // Default to 'web' for browser requests
+        platform = 'web';
+        platformSource = 'User-Agent (web default)';
+      } else {
+        // Fallback: default to 'web' if no User-Agent
+        platform = 'web';
+        platformSource = 'fallback (no User-Agent)';
+      }
+      console.log('[store-paste] Platform set from User-Agent/fallback:', platform);
+    }
+
+    // Debug logging (always log to help diagnose issues)
+    console.log('[store-paste] ===== PASTE CREATION DEBUG =====');
+    console.log('[store-paste] Final Platform:', platform);
+    console.log('[store-paste] Final Hostname:', hostname);
+    console.log('[store-paste] Platform source:', platformSource);
+    console.log('[store-paste] User-Agent:', request.headers.get('user-agent'));
+    
+    // Log ALL headers to see what's actually being received
+    const allHeaders: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      allHeaders[key] = value.length > 100 ? value.substring(0, 100) + '...' : value;
+    });
+    console.log('[store-paste] All headers received:', JSON.stringify(allHeaders, null, 2));
+    console.log('[store-paste] ===================================');
 
     // Security: Validate user authentication
     // Only require authentication if password is provided (for password-protected pastes)
@@ -450,12 +571,46 @@ export async function POST(request: NextRequest) {
       insertData.password = encrypt(password);
     }
 
+    // Add platform and hostname (platform should always be set, hostname is optional)
+    // Ensure platform is always set (should never be null due to fallback logic above)
+    insertData.platform = platform || 'unknown';
+    if (hostname) {
+      insertData.hostname = hostname;
+    }
+
+    // Debug logging (always log to help diagnose issues)
+    console.log('[store-paste] ===== DATABASE INSERT DEBUG =====');
+    console.log('[store-paste] Insert data includes:', {
+      platform: insertData.platform,
+      hostname: insertData.hostname,
+      hasPlatform: !!insertData.platform,
+      hasHostname: !!insertData.hostname,
+      platformValue: insertData.platform,
+      hostnameValue: insertData.hostname,
+      insertDataKeys: Object.keys(insertData),
+    });
+    console.log('[store-paste] Platform variable before insert:', platform);
+    console.log('[store-paste] Hostname variable before insert:', hostname);
+    console.log('[store-paste] Platform source:', platformSource);
+
     // Use authenticated client if user is authenticated, otherwise use anon key client
     // RLS policies will enforce security at database level:
     // - Anonymous users (anon key): can insert with user_id = NULL (auth.uid() IS NULL)
     // - Authenticated users: can insert with user_id = auth.uid() (must match authenticated user)
     const dbClient = authenticatedUserId ? createServerSupabaseClient(request) : supabase;
+    
+    // Log what we're about to insert (excluding sensitive data)
+    console.log('[store-paste] About to insert with platform:', insertData.platform, 'hostname:', insertData.hostname);
+    console.log('[store-paste] Using authenticated client:', !!authenticatedUserId);
+    console.log('[store-paste] ===================================');
+    
     const { error, data } = await dbClient.from('pastes').insert(insertData);
+    
+    if (error) {
+      console.error('[store-paste] Database insert error:', error);
+    } else {
+      console.log('[store-paste] Database insert successful, inserted ID:', insertData.id);
+    }
 
     if (error) {
       // Log detailed error information for debugging
@@ -518,5 +673,10 @@ export async function POST(request: NextRequest) {
 
 // Handle OPTIONS for CORS
 export async function OPTIONS(request: NextRequest) {
-  return corsOptionsResponse(request, 'POST, OPTIONS');
+  // Allow custom headers: X-Platform, X-Hostname, X-CSRF-Token, Authorization
+  return corsOptionsResponse(
+    request, 
+    'POST, OPTIONS',
+    'Content-Type, X-Platform, X-Hostname, X-CSRF-Token, Authorization'
+  );
 }

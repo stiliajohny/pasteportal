@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     // Query pastes for this user
     const { data, error } = await supabase
       .from('pastes')
-      .select('id, name, timestamp, created_at, is_password_encrypted, password, tags')
+      .select('id, name, timestamp, created_at, is_password_encrypted, password, tags, platform, hostname')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -165,6 +165,8 @@ export async function GET(request: NextRequest) {
         is_password_encrypted: paste.is_password_encrypted || false,
         password: decryptedPassword, // Decrypted password (only for user's own pastes)
         tags: decryptedTags, // Decrypted tags (comma-separated)
+        platform: (paste.platform && paste.platform.trim()) ? paste.platform.trim() : null, // Platform where paste was created
+        hostname: (paste.hostname && paste.hostname.trim()) ? paste.hostname.trim() : null, // Hostname of device where paste was created
         // Generate display name: use custom name or formatted timestamp
         display_name: decryptedName || new Date(paste.created_at).toLocaleString(),
       };
