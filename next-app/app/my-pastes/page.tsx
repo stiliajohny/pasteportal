@@ -15,6 +15,8 @@ interface Paste {
   is_password_encrypted: boolean;
   password: string | null; // Decrypted password (only available for user's own pastes)
   tags: string | null; // Comma-separated tags
+  platform: string | null; // Platform where paste was created (e.g., 'web', 'vscode')
+  hostname: string | null; // Hostname of device where paste was created
   display_name: string;
 }
 
@@ -33,9 +35,13 @@ export default function MyPastesPage() {
   const [copiedPasswordId, setCopiedPasswordId] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [tagSearch, setTagSearch] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [showPasswordProtectedOnly, setShowPasswordProtectedOnly] = useState<boolean>(false);
   const [showClipboardBanner, setShowClipboardBanner] = useState(false);
   const [pendingClipboardText, setPendingClipboardText] = useState<string | null>(null);
+  const [selectedPastes, setSelectedPastes] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   /**
    * Fetch user's pastes from API
@@ -72,7 +78,25 @@ export default function MyPastesPage() {
       }
 
       const data = await response.json();
-      setPastes(data.pastes || []);
+      const pastesData = data.pastes || [];
+      
+      // Debug logging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[my-pastes] Received pastes:', pastesData.length);
+        if (pastesData.length > 0) {
+          console.log('[my-pastes] First paste sample:', {
+            id: pastesData[0].id,
+            platform: pastesData[0].platform,
+            hostname: pastesData[0].hostname,
+            hasPlatform: !!pastesData[0].platform,
+            hasHostname: !!pastesData[0].hostname,
+          });
+        }
+      }
+      
+      setPastes(pastesData);
+      // Clear selection when pastes are refreshed
+      setSelectedPastes(new Set());
     } catch (err: any) {
       setError(err.message || 'Failed to load pastes');
       console.error('Error fetching pastes:', err);
@@ -166,12 +190,128 @@ export default function MyPastesPage() {
 
       // Remove the paste from the list
       setPastes(pastes.filter(p => p.id !== pasteId));
+      // Remove from selected if it was selected
+      setSelectedPastes(prev => {
+        const next = new Set(prev);
+        next.delete(pasteId);
+        return next;
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to delete paste');
       console.error('Error deleting paste:', err);
     } finally {
       setDeletingId(null);
     }
+  };
+
+  /**
+   * Toggle selection of a paste
+   * @param pasteId - ID of the paste to toggle
+   */
+  const togglePasteSelection = (pasteId: string) => {
+    setSelectedPastes(prev => {
+      const next = new Set(prev);
+      if (next.has(pasteId)) {
+        next.delete(pasteId);
+      } else {
+        next.add(pasteId);
+      }
+      return next;
+    });
+  };
+
+  /**
+   * Toggle select all pastes (based on filtered list)
+   * @param filteredPastes - Array of filtered pastes to select/deselect
+   */
+  const toggleSelectAll = (filteredPastes: Paste[]) => {
+    const allSelected = filteredPastes.every(p => selectedPastes.has(p.id));
+    
+    setSelectedPastes(prev => {
+      const next = new Set(prev);
+      if (allSelected) {
+        // Deselect all filtered pastes
+        filteredPastes.forEach(p => next.delete(p.id));
+      } else {
+        // Select all filtered pastes
+        filteredPastes.forEach(p => next.add(p.id));
+      }
+      return next;
+    });
+  };
+
+  /**
+   * Delete multiple pastes
+   * @param pasteIds - Array of paste IDs to delete
+   */
+  const handleBulkDelete = async (pasteIds: string[]) => {
+    const count = pasteIds.length;
+    if (!confirm(`Are you sure you want to delete ${count} paste${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setBulkDeleting(true);
+    setError(null);
+
+    const headers = getHeadersWithCsrf({
+      'Content-Type': 'application/json',
+    });
+    
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const results = {
+      success: [] as string[],
+      failed: [] as { id: string; error: string }[],
+    };
+
+    // Delete pastes sequentially to avoid overwhelming the server
+    for (const pasteId of pasteIds) {
+      try {
+        const response = await fetch(`/api/v1/delete-paste?id=${pasteId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers,
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            router.push('/');
+            setBulkDeleting(false);
+            return;
+          }
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete paste');
+        }
+
+        results.success.push(pasteId);
+      } catch (err: any) {
+        results.failed.push({
+          id: pasteId,
+          error: err.message || 'Failed to delete paste',
+        });
+      }
+    }
+
+    // Update the pastes list by removing successfully deleted ones
+    if (results.success.length > 0) {
+      setPastes(pastes.filter(p => !results.success.includes(p.id)));
+      // Clear selection
+      setSelectedPastes(new Set());
+    }
+
+    // Show error message if any failed
+    if (results.failed.length > 0) {
+      const failedCount = results.failed.length;
+      const successCount = results.success.length;
+      setError(
+        `Failed to delete ${failedCount} paste${failedCount > 1 ? 's' : ''}. ` +
+        (successCount > 0 ? `${successCount} paste${successCount > 1 ? 's' : ''} deleted successfully.` : '')
+      );
+    }
+
+    setBulkDeleting(false);
   };
 
   useEffect(() => {
@@ -185,6 +325,52 @@ export default function MyPastesPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, session, authLoading, router]);
+
+  /**
+   * Clear selections for pastes that are no longer visible after filtering
+   */
+  useEffect(() => {
+    // Build filtered list based on all active filters
+    const filteredIds = new Set(
+      pastes
+        .filter((paste) => {
+          // Unified search filter
+          if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            const matchesSearch = 
+              paste.display_name?.toLowerCase().includes(query) ||
+              paste.tags?.toLowerCase().includes(query) ||
+              paste.id.toLowerCase().includes(query) ||
+              paste.hostname?.toLowerCase().includes(query);
+            if (!matchesSearch) return false;
+          }
+          
+          // Platform filter
+          if (selectedPlatform && paste.platform !== selectedPlatform) {
+            return false;
+          }
+          
+          // Password protection filter
+          if (showPasswordProtectedOnly && !paste.is_password_encrypted) {
+            return false;
+          }
+          
+          return true;
+        })
+        .map(p => p.id)
+    );
+    
+    // Remove selections for pastes that are no longer in the filtered list
+    setSelectedPastes(prev => {
+      const next = new Set(prev);
+      prev.forEach(id => {
+        if (!filteredIds.has(id)) {
+          next.delete(id);
+        }
+      });
+      return next;
+    });
+  }, [searchQuery, selectedPlatform, showPasswordProtectedOnly, pastes]);
 
   if (authLoading || loading) {
     return (
@@ -219,22 +405,23 @@ export default function MyPastesPage() {
         </div>
       )}
 
-      {/* Tag Search */}
+      {/* Unified Search */}
       {pastes.length > 0 && (
-        <div className="mb-6">
-          <label htmlFor="tag-search" className="sr-only">Search by tags</label>
+        <div className="mb-6 space-y-4">
+          <label htmlFor="search-query" className="sr-only">Search all pastes</label>
           <div className="relative">
             <input
-              id="tag-search"
+              id="search-query"
               type="text"
-              value={tagSearch}
-              onChange={(e) => setTagSearch(e.target.value)}
-              placeholder="Search by tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search all pastes (name, tags, ID, hostname)..."
               className="w-full px-4 py-2.5 bg-surface border border-divider/60 rounded-lg text-text placeholder:text-text-secondary/70 focus:outline-none focus:ring-1 focus:ring-neon-teal focus:border-neon-teal transition-all duration-200 text-sm"
+              aria-label="Search all pastes by name, tags, ID, or hostname"
             />
-            {tagSearch && (
+            {searchQuery && (
               <button
-                onClick={() => setTagSearch('')}
+                onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text transition-colors"
                 aria-label="Clear search"
               >
@@ -243,6 +430,66 @@ export default function MyPastesPage() {
                 </svg>
               </button>
             )}
+          </div>
+
+          {/* Quick Filters */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+            <div className="flex items-center gap-2 flex-nowrap min-w-max">
+              {/* Platform Filters */}
+              <button
+                onClick={() => setSelectedPlatform(null)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                  selectedPlatform === null
+                    ? 'bg-positive-highlight text-black'
+                    : 'bg-surface-variant border border-divider/60 text-text hover:bg-surface hover:border-positive-highlight/50'
+                }`}
+                aria-label="Show all platforms"
+                aria-pressed={selectedPlatform === null}
+              >
+                All
+              </button>
+              {(() => {
+                const availablePlatforms = Array.from(
+                  new Set(pastes.map(p => p.platform).filter((p): p is string => Boolean(p)))
+                ).sort();
+                
+                return availablePlatforms.map((platform) => {
+                  const displayName = platform === 'vscode' ? 'VS Code' : platform.charAt(0).toUpperCase() + platform.slice(1);
+                  return (
+                    <button
+                      key={platform}
+                      onClick={() => setSelectedPlatform(platform)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                        selectedPlatform === platform
+                          ? 'bg-positive-highlight text-black'
+                          : 'bg-surface-variant border border-divider/60 text-text hover:bg-surface hover:border-positive-highlight/50'
+                      }`}
+                      aria-label={`Filter by ${displayName}`}
+                      aria-pressed={selectedPlatform === platform}
+                    >
+                      {displayName}
+                    </button>
+                  );
+                });
+              })()}
+              
+              {/* Password Protected Filter */}
+              <button
+                onClick={() => setShowPasswordProtectedOnly(!showPasswordProtectedOnly)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  showPasswordProtectedOnly
+                    ? 'bg-positive-highlight text-black'
+                    : 'bg-surface-variant border border-divider/60 text-text hover:bg-surface hover:border-positive-highlight/50'
+                }`}
+                aria-label="Filter password protected pastes"
+                aria-pressed={showPasswordProtectedOnly}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Password
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -261,43 +508,165 @@ export default function MyPastesPage() {
         </div>
       ) : (() => {
         const filteredPastes = pastes.filter((paste) => {
-          if (!tagSearch.trim()) return true;
-          if (!paste.tags) return false;
-          const searchLower = tagSearch.toLowerCase();
-          const pasteTags = paste.tags.toLowerCase().split(',').map(t => t.trim());
-          return pasteTags.some(tag => tag.includes(searchLower));
+          // Unified search filter
+          if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            const matchesSearch = 
+              paste.display_name?.toLowerCase().includes(query) ||
+              paste.tags?.toLowerCase().includes(query) ||
+              paste.id.toLowerCase().includes(query) ||
+              paste.hostname?.toLowerCase().includes(query);
+            if (!matchesSearch) return false;
+          }
+          
+          // Platform filter
+          if (selectedPlatform && paste.platform !== selectedPlatform) {
+            return false;
+          }
+          
+          // Password protection filter
+          if (showPasswordProtectedOnly && !paste.is_password_encrypted) {
+            return false;
+          }
+          
+          return true;
         });
 
-        if (filteredPastes.length === 0 && tagSearch.trim()) {
+        // Check if any filters are active
+        const hasActiveFilters = searchQuery.trim() || selectedPlatform !== null || showPasswordProtectedOnly;
+
+        if (filteredPastes.length === 0 && hasActiveFilters) {
+          const activeFilters: string[] = [];
+          if (searchQuery.trim()) activeFilters.push(`search "${searchQuery}"`);
+          if (selectedPlatform) {
+            const platformName = selectedPlatform === 'vscode' ? 'VS Code' : selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1);
+            activeFilters.push(`platform "${platformName}"`);
+          }
+          if (showPasswordProtectedOnly) activeFilters.push('password protected');
+
           return (
             <div className="bg-surface border border-divider rounded-lg p-12 text-center">
               <p className="text-text-secondary text-lg mb-4">
-                No pastes found matching &quot;{tagSearch}&quot;
+                No pastes found matching {activeFilters.join(' and ')}
               </p>
               <button
-                onClick={() => setTagSearch('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedPlatform(null);
+                  setShowPasswordProtectedOnly(false);
+                }}
                 className="px-6 py-2 bg-positive-highlight text-black font-semibold rounded hover:opacity-90 transition-opacity"
               >
-                Clear Search
+                Clear All Filters
               </button>
             </div>
           );
         }
 
+        const allSelected = filteredPastes.length > 0 && filteredPastes.every(p => selectedPastes.has(p.id));
+        const someSelected = filteredPastes.some(p => selectedPastes.has(p.id));
+        const selectedCount = Array.from(selectedPastes).filter(id => 
+          filteredPastes.some(p => p.id === id)
+        ).length;
+
         return (
           <div className="space-y-3">
+            {/* Results Count */}
+            {hasActiveFilters && filteredPastes.length > 0 && (
+              <div className="text-sm text-text-secondary mb-2">
+                Showing {filteredPastes.length} of {pastes.length} paste{filteredPastes.length !== 1 ? 's' : ''}
+              </div>
+            )}
+            {/* Bulk Actions Bar */}
+            {(someSelected || selectedCount > 0) && (
+              <div className="bg-surface border border-positive-highlight/50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-text font-medium">
+                    {selectedCount} paste{selectedCount !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedPastes(new Set())}
+                    className="px-4 py-2 bg-surface-variant border border-divider rounded text-text hover:bg-surface hover:border-positive-highlight/50 transition-all text-sm font-medium"
+                  >
+                    Clear Selection
+                  </button>
+                  <button
+                    onClick={() => handleBulkDelete(Array.from(selectedPastes).filter(id => 
+                      filteredPastes.some(p => p.id === id)
+                    ))}
+                    disabled={bulkDeleting || selectedCount === 0}
+                    className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded hover:bg-red-500/30 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    {bulkDeleting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Selected
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Select All Checkbox */}
+            {filteredPastes.length > 0 && (
+              <div className="flex items-center gap-3 pb-3 border-b border-divider/60 mb-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => toggleSelectAll(filteredPastes)}
+                    className="w-5 h-5 rounded border-2 border-divider bg-surface accent-positive-highlight text-positive-highlight focus:ring-2 focus:ring-positive-highlight focus:ring-offset-2 focus:ring-offset-surface cursor-pointer transition-all"
+                    style={{ accentColor: 'var(--color-positive-highlight)' }}
+                    aria-label="Select all pastes"
+                  />
+                  <span className="text-sm text-text font-medium group-hover:text-positive-highlight transition-colors">
+                    Select all ({filteredPastes.length})
+                  </span>
+                </label>
+              </div>
+            )}
+
             {filteredPastes.map((paste) => {
               const pasteTags = paste.tags ? paste.tags.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
               return (
             <div
               key={paste.id}
               className={`bg-surface border rounded-lg p-3 sm:p-4 transition-all duration-200 ${
-                paste.is_password_encrypted
+                selectedPastes.has(paste.id)
+                  ? 'border-positive-highlight shadow-lg shadow-positive-highlight/10'
+                  : paste.is_password_encrypted
                   ? 'border-yellow-500/40 shadow-lg shadow-yellow-500/5 hover:border-yellow-500/60 hover:shadow-yellow-500/10'
                   : 'border-divider hover:border-positive-highlight/50 hover:shadow-lg hover:shadow-positive-highlight/5'
               }`}
             >
               <div className="flex flex-col lg:flex-row lg:items-start gap-3">
+                {/* Checkbox */}
+                <div className="flex items-start pt-1 flex-shrink-0">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedPastes.has(paste.id)}
+                      onChange={() => togglePasteSelection(paste.id)}
+                      className="w-5 h-5 rounded border-2 border-divider bg-surface accent-positive-highlight text-positive-highlight focus:ring-2 focus:ring-positive-highlight focus:ring-offset-2 focus:ring-offset-surface cursor-pointer transition-all"
+                      style={{ accentColor: 'var(--color-positive-highlight)' }}
+                      aria-label={`Select ${paste.display_name}`}
+                    />
+                  </label>
+                </div>
+
                 {/* Left Section: Name, Metadata, Password Badge */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-start gap-2 mb-2">
@@ -323,6 +692,22 @@ export default function MyPastesPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <span>Created: {formatDate(paste.created_at)}</span>
+                      {(paste.platform && paste.platform.trim()) && (
+                        <span className="ml-2 px-1.5 py-0.5 bg-surface-variant border border-divider/60 rounded text-xs font-medium">
+                          {paste.platform}
+                        </span>
+                      )}
+                      {(paste.hostname && paste.hostname.trim()) && (
+                        <span 
+                          className="ml-1.5 px-1.5 py-0.5 bg-surface-variant/60 border border-divider/40 rounded text-xs font-medium text-text-secondary/90 flex items-center gap-1"
+                          title={`Hostname: ${paste.hostname}`}
+                        >
+                          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span className="font-mono">{paste.hostname}</span>
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-start gap-1.5 text-xs text-text-secondary font-mono">
                       <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

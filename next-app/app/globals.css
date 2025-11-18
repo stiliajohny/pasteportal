@@ -328,6 +328,48 @@ select option:focus {
   }
 }
 
+/* Checkbox styling for better visibility */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--color-divider);
+  background-color: var(--color-surface);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--color-positive-highlight);
+  box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.1);
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--color-positive-highlight);
+  border-color: var(--color-positive-highlight);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 4px;
+  height: 8px;
+  border: solid var(--color-background);
+  border-width: 0 2px 2px 0;
+}
+
+input[type="checkbox"]:focus {
+  outline: 2px solid var(--color-positive-highlight);
+  outline-offset: 2px;
+}
+
 /* Prism syntax highlighting - custom theme colors */
 code[class*="language-"],
 pre[class*="language-"],
