@@ -1,0 +1,41 @@
+name: VS Code Extension Lint and Validate
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "vscode-extension/**"
+            - ".github/workflows/vscode-extension-ci.yaml"
+    pull_request:
+        paths:
+            - "vscode-extension/**"
+            - ".github/workflows/vscode-extension-ci.yaml"
+    workflow_dispatch:
+
+jobs:
+    lint-and-validate:
+        name: Lint and validate VS Code extension
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: vscode-extension
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: npm
+                  cache-dependency-path: vscode-extension/package-lock.json
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run lint
+              run: npm run lint
+
+            - name: Validate extension entry point
+              run: node --check extension.js
